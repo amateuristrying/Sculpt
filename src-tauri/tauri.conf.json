@@ -1,0 +1,43 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Sculpt",
+  "version": "0.1.0",
+  "identifier": "com.sculpt.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [{
+      "label": "main",
+      "title": "Sculpt",
+      "width": 1440,
+      "height": 940,
+      "minWidth": 1080,
+      "minHeight": 720,
+      "center": true,
+      "resizable": true,
+      "fullscreen": false,
+      "transparent": false,
+      "titleBarStyle": "Overlay",
+      "hiddenTitle": true,
+      "backgroundColor": "#111315",
+      "dragDropEnabled": false
+    }],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost blob: data:; connect-src ipc: http://ipc.localhost 'self'; font-src 'self' data:; worker-src 'self' blob:",
+      "devCsp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost blob: data:; connect-src ipc: http://ipc.localhost 'self' ws://localhost:1420 http://localhost:1420; font-src 'self' data:; worker-src 'self' blob:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg"],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns"],
+    "category": "GraphicsAndDesign",
+    "shortDescription": "A local 3D asset workspace",
+    "longDescription": "Generate, inspect, refine, and export 3D assets on your own hardware. This prototype uses simulated inference.",
+    "macOS": { "minimumSystemVersion": "12.0", "signingIdentity": "-" }
+  }
+}

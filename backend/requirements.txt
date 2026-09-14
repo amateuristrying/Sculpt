@@ -1,0 +1,14 @@
+# Native Apple Silicon wheels; inference runs in an isolated Python process.
+torch==2.8.0
+numpy==2.2.6
+Pillow==11.3.0
+omegaconf==2.3.0
+einops==0.8.1
+transformers==4.44.2
+huggingface-hub==0.36.2
+trimesh==4.7.4
+scikit-image==0.25.2
+rembg==2.0.69
+onnxruntime==1.22.1
+imageio==2.37.0
+pytest==8.4.2
