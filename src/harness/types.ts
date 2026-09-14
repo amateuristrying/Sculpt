@@ -28,7 +28,7 @@ export interface EngineProfile {
   implemented: boolean
 }
 
-export type RuntimeKind = 'mock' | 'mlx' | 'cuda-pytorch' | 'onnx' | 'webgpu' | 'native'
+export type RuntimeKind = 'mock' | 'pytorch' | 'mlx' | 'cuda-pytorch' | 'onnx' | 'webgpu' | 'native'
 export type ModelState = 'not-installed' | 'downloading' | 'ready' | 'loading' | 'loaded' | 'error'
 
 /** Future adapters may launch a Python worker or native process; Rust owns orchestration. */
@@ -51,15 +51,13 @@ export interface ModelArtifact {
 
 export interface GenerationRequest {
   engineId: string
-  /** Prototype fixture identity only. No image pixels are passed to an AI engine yet.
-   * A real adapter should receive a native-owned source asset ID after image import,
-   * letting Rust validate/decode the local file without exposing paths to model UI code.
-   */
+  /** Native-owned validated image. Required for real inference. */
+  sourceId?: string
   imageName: string
   geometry: 'draft' | 'balanced' | 'high'
 }
 
-export type GenerationStage = 'analyzing' | 'geometry' | 'surface' | 'preparing' | 'complete' | 'cancelled' | 'failed'
+export type GenerationStage = 'analyzing' | 'loading' | 'geometry' | 'surface' | 'preparing' | 'complete' | 'cancelled' | 'failed'
 
 export interface GenerationProgress {
   jobId: string
@@ -72,12 +70,33 @@ export interface GeneratedAsset {
   id: string
   seed: number
   generatedAt: string
-  simulated: true
+  simulated: boolean
+  metrics?: { device: string; totalSeconds: number; faces: number; vertices: number; sourceSha256?: string }
+}
+
+export interface SourceAsset {
+  id: string
+  name: string
+  mimeType: string
+  width: number
+  height: number
+  sha256: string
+}
+
+export interface BackendStatus {
+  installed: boolean
+  engine: string
+  runtimePath: string
+  message: string
+  mpsAvailable: boolean
 }
 
 export interface SculptHarness {
   detectHardware(): Promise<HardwareProfile>
   getEngines(profile: HardwareProfile): Promise<EngineProfile[]>
+  backendStatus(): Promise<BackendStatus>
+  importSource(name: string, dataUrl: string): Promise<SourceAsset | null>
+  readGeneratedAsset(assetId: string): Promise<ArrayBuffer>
   generate(request: GenerationRequest, onProgress: (progress: GenerationProgress) => void, signal?: AbortSignal): Promise<GeneratedAsset>
   saveGlb(bytes: ArrayBuffer, defaultName: string): Promise<string | null>
 }

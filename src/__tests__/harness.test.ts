@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { detectHardware, generate, getEngines, previewHardware, saveGlb } from '../harness'
+import { backendStatus, importSource, readGeneratedAsset, detectHardware, generate, getEngines, previewHardware, saveGlb } from '../harness'
 import type { GenerationProgress, GenerationRequest, HardwareProfile } from '../harness'
 
 vi.mock('@tauri-apps/api/core', () => ({ isTauri: vi.fn(() => false), invoke: vi.fn() }))
 vi.mock('@tauri-apps/api/event', () => ({ listen: vi.fn() }))
 
-const request: GenerationRequest = { engineId: 'sf3d-apple', imageName: 'study.png', geometry: 'draft' }
+const request: GenerationRequest = { engineId: 'demo', imageName: 'study.png', geometry: 'draft' }
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -26,12 +26,12 @@ describe('hardware-aware engine catalog', () => {
     expect((await detectHardware()).computeBackends).toContain('Metal')
   })
 
-  it('recommends the M4 target without claiming an engine has been implemented', async () => {
+  it('offers only explicit demo generation in a browser', async () => {
     const catalog = await getEngines(previewHardware)
-    expect(catalog.find(engine => engine.id === 'sf3d-apple')?.compatibility).toBe('recommended')
+    expect(catalog.find(engine => engine.id === 'triposr')?.compatibility).toBe('unsupported')
     expect(catalog.find(engine => engine.id === 'trellis-2')?.compatibility).toBe('unsupported')
-    expect(catalog.every(engine => !engine.implemented)).toBe(true)
-    expect(catalog.find(engine => engine.id === 'sf3d-apple')?.reason).toMatch(/not installed or integrated/)
+    expect(catalog.find(engine => engine.id === 'demo')?.implemented).toBe(true)
+    expect(catalog.find(engine => engine.id === 'triposr')?.reason).toMatch(/desktop app/)
   })
 
   it.each<[string, Partial<HardwareProfile>]>([
@@ -41,9 +41,9 @@ describe('hardware-aware engine catalog', () => {
     ['Apple Silicon below the memory target', { memoryGb: 8 }],
   ])('does not offer the Apple target on %s', async (_name, changes) => {
     const catalog = await getEngines({ ...previewHardware, ...changes })
-    expect(catalog.find(engine => engine.id === 'sf3d-apple')?.compatibility).toBe('unsupported')
-    expect(catalog.find(engine => engine.id === 'lightweight')?.compatibility).toBe('recommended')
-    expect(catalog.every(engine => !engine.implemented)).toBe(true)
+    expect(catalog.find(engine => engine.id === 'triposr')?.compatibility).toBe('unsupported')
+    expect(catalog.find(engine => engine.id === 'demo')?.compatibility).toBe('recommended')
+    expect(catalog.find(engine => engine.id === 'demo')?.implemented).toBe(true)
   })
 })
 
@@ -102,7 +102,7 @@ describe('mock generation job lifecycle', () => {
   it.each([
     [{ ...request, imageName: '  ' }, /source image/],
     [{ ...request, engineId: 'unknown-engine' }, /Unknown engine/],
-    [{ ...request, engineId: 'trellis-2' }, /unavailable/],
+    [{ ...request, engineId: 'trellis-2' }, /not been integrated/],
   ] as const)('rejects unavailable input before emitting progress', async (invalid, message) => {
     const onProgress = vi.fn()
     await expect(generate(invalid, onProgress)).rejects.toThrow(message)
@@ -124,6 +124,26 @@ describe('GLB save boundary', () => {
 })
 
 describe('native harness bridge', () => {
+  it('passes actual image bytes to Rust and receives an opaque source ID', async () => {
+    vi.mocked(isTauri).mockReturnValue(true)
+    vi.mocked(invoke).mockResolvedValueOnce({ id: 'source-1', sha256: 'abc' })
+    expect(await importSource('banana.png', 'data:image/png;base64,cGl4ZWxz')).toMatchObject({ id: 'source-1' })
+    expect(invoke).toHaveBeenCalledWith('import_source', { name: 'banana.png', dataUrl: 'data:image/png;base64,cGl4ZWxz' })
+  })
+  it('decodes native asset bytes and never manufactures a mock result on failure', async () => {
+    vi.mocked(isTauri).mockReturnValue(true)
+    vi.mocked(invoke).mockResolvedValueOnce(btoa('glTF'))
+    expect(new TextDecoder().decode(await readGeneratedAsset('asset-id'))).toBe('glTF')
+    vi.mocked(invoke).mockRejectedValueOnce(new Error('Asset unavailable'))
+    await expect(readGeneratedAsset('missing')).rejects.toThrow('Asset unavailable')
+  })
+  it('reports browser inference unavailable without invoking native commands', async () => {
+    expect((await backendStatus()).installed).toBe(false)
+    expect(await importSource('image.png', 'data:')).toBe(null)
+    await expect(readGeneratedAsset('id')).rejects.toThrow('desktop')
+    expect(invoke).not.toHaveBeenCalled()
+  })
+
   it('uses detected native hardware rather than the browser fixture', async () => {
     vi.mocked(isTauri).mockReturnValue(true)
     const nativeHardware: HardwareProfile = { ...previewHardware, chip: 'Intel Core i7', isAppleSilicon: false, detectionSource: 'native' }

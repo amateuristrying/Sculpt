@@ -27,16 +27,27 @@ Native bundles appear under `src-tauri/target/release/bundle/`. Local builds use
 ## What works
 
 - Native hardware inspection and a machine-specific engine planning catalog.
-- Local PNG, JPG, and WEBP selection, a source preview, cancellable generation progress, and a procedural 3D asset.
+- Native PNG, JPG, and WEBP import into a Rust-owned source registry with size/type/dimension checks and SHA-256 identity.
+- Local TripoSR reconstruction on Apple Silicon/Metal through an isolated Python worker, with cancellable progress, GLB validation, vertex colors, and real asset loading in the viewport.
 - Orbit, pan, zoom, camera reset, grid, lighting, material color, and material/wireframe/points/technical views.
 - Draft, balanced, and high geometry detail, an asset processing stack, and live geometry metadata.
 - Binary glTF (`.glb`) export through the native macOS save dialog. The file contains asset geometry, UVs, and a material; viewport grids, lights, and technical overlays are excluded.
 
+## Local runtime setup
+
+The first real adapter is TripoSR. Its Python environment, source checkout, model weights, and U2Net background model are intentionally kept outside Git under `.sculpt-runtime/`. Install them once on the development machine:
+
+```sh
+npm run backend:setup
+```
+
+This downloads roughly 2 GB of model/runtime data and requires at least 4 GB free. Generation itself runs offline after setup. The desktop app checks the runtime manifest before enabling the TripoSR button; it never silently falls back to the procedural demo. Browser/Vite previews cannot launch local inference and expose only the explicit Workspace Demo.
+
 ## Deliberate prototype limits
 
-Generation is **simulated**. The image stays local and acts as a source reference; no image reconstruction or AI inference occurs. The result is a procedural study, with a repeatable variation derived from the image filename. No model is downloaded, installed, or loaded.
+TripoSR is a single-image, single-object reconstruction model. It infers unseen surfaces, so clear images with one isolated object produce the most useful results. It does not understand a full scene, guarantee semantic identity, or produce production-ready topology. The current adapter writes geometry and vertex colors; texture baking, cleanup, retopology, UV processing, and OBJ/STL export remain planned stages. The Workspace Demo is still available, but it is explicitly labelled and never presented as an AI result.
 
-SF3D/Apple and the lightweight engine are planning profiles, not functioning model integrations. Their recommendations express hardware suitability targets. The SF3D size is an estimate, and its proposed Apple adapter still requires validation. TRELLIS.2 is unavailable. Mesh cleanup, retopology, UV work, and texture-generation controls describe future stages; enabling them does not execute those algorithms. OBJ and STL are listed as future export formats; GLB is the working format. Projects are session-based rather than a durable project-file system.
+TRELLIS.2, SF3D, MLX, CUDA, ONNX, WebGPU, and native alternatives remain replaceable runtime/engine slots; they are not claimed to be available. Projects are session-based rather than a durable project-file system.
 
 ## Inference boundary
 
@@ -45,7 +56,7 @@ React workspace
     ↓ SculptHarness interface
 Tauri commands / SculptInferenceHarness (Rust)
     ↓ InferenceRuntime adapter
-MockRuntime now; MLX / CUDA-PyTorch / ONNX / WebGPU / native later
+PythonRuntime → TripoSR (PyTorch / Metal); MockRuntime → explicit demo
     ↓ engine + user's hardware
 ```
 
@@ -53,8 +64,9 @@ MockRuntime now; MLX / CUDA-PyTorch / ONNX / WebGPU / native later
 - `src/harness/index.ts` routes native calls through Tauri and supplies the browser-only design preview.
 - `src-tauri/src/harness/hardware.rs` reads macOS `system_profiler`, `sysctl`, `sw_vers`, and `diskutil` results. Missing fields remain unknown. Detected Metal describes a hardware API, not an installed ML runtime; Rosetta does not hide Apple Silicon detection.
 - `src-tauri/src/harness/catalog.rs` gates engine recommendations against detected capabilities and memory.
-- `src-tauri/src/harness/mod.rs` owns job admission, compatibility validation, events, and cancellation. It currently selects `MockRuntime` explicitly.
-- `src-tauri/src/harness/runtime.rs` defines the replaceable runtime adapter. A future implementation can supervise a Python worker or native library without exposing a model SDK to the UI or rewriting the ML ecosystem in Rust. ONNX is one option, not a required conversion target.
-- `src/geometry/sculpture.ts` owns the demo geometry, metadata, and GLB export; the viewport uses the same underlying geometry for its visualization modes.
+- `src-tauri/src/harness/mod.rs` owns source/job registries, compatibility validation, events, cancellation, and explicit runtime selection.
+- `src-tauri/src/harness/python.rs` supervises one isolated Python worker per job, enforces a timeout, validates protocol messages and GLB output, and records metrics. `runtime.rs` remains the replaceable adapter contract.
+- `src-tauri/src/harness/assets.rs` validates image inputs and keeps worker paths out of the UI. `src/geometry/importedAsset.ts` parses and fits returned GLBs without changing their export bytes.
+- `src/geometry/sculpture.ts` owns the explicit demo geometry, metadata, and demo GLB export.
 
-Model download, load/unload, memory policy, runtime selection, and fallbacks belong behind the harness. Their contracts are scaffolding in this version, not completed subsystems. Application assets and studio lighting are local; running the prototype requires no Sculpt GPU server or per-generation network request.
+Model download, load/unload, memory policy, runtime selection, and fallbacks belong behind the harness. Download is currently a developer CLI step; an in-app installer, resumable downloads, model checksums, cache eviction, and a larger image benchmark are the next backend milestones. Application assets and studio lighting are local; no Sculpt GPU server or per-generation cloud request is used.

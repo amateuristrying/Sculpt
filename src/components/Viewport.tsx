@@ -9,7 +9,8 @@ import {
   Lightformer,
   OrbitControls,
 } from '@react-three/drei'
-import { MOUSE, TOUCH, type BufferGeometry, type MeshPhysicalMaterial } from 'three'
+import { MOUSE, TOUCH, type BufferGeometry, type Material, type MeshPhysicalMaterial } from 'three'
+import type { ImportedAsset } from '../geometry/importedAsset'
 import {
   createSculptureGeometry,
   createSculptureMaterial,
@@ -36,6 +37,7 @@ export interface ViewportProps {
   resetKey: number
   navigationMode?: 'orbit' | 'pan'
   assetSeed: number
+  importedAsset?: ImportedAsset | null
   geometryQuality: GeometryQuality
   onMetadata: (metadata: AssetMetadata) => void
   onReady?: (api: ViewportApi) => void
@@ -46,7 +48,7 @@ const CAMERA_TARGET: [number, number, number] = [0, 1.6, 0]
 
 function Asset({ geometry, material, mode }: {
   geometry: BufferGeometry
-  material: MeshPhysicalMaterial
+  material: Material | Material[]
   mode: ViewportMode
 }) {
   return (
@@ -102,13 +104,13 @@ function Scene({ geometry, material, ...props }: ViewportProps & {
 
   useEffect(() => {
     readyCallback.current?.({
-      exportGlb: () => exportSculptureGlb(geometry, props.materialColor),
+      exportGlb: () => props.importedAsset ? Promise.resolve(props.importedAsset.bytes.slice(0)) : exportSculptureGlb(geometry, props.materialColor),
       capturePreview: () => {
         gl.render(scene, camera)
         return gl.domElement.toDataURL('image/png')
       },
     })
-  }, [geometry, props.materialColor, gl, scene, camera])
+  }, [geometry, props.materialColor, props.importedAsset, gl, scene, camera])
 
   const light = Math.max(0.1, props.lightIntensity)
 
@@ -125,9 +127,12 @@ function Scene({ geometry, material, ...props }: ViewportProps & {
         <Lightformer form="rect" intensity={2} color="#fff8e7" position={[1, 5, -2]} rotation={[Math.PI / 2, 0, 0]} scale={[5, 4, 1]} />
         <Lightformer form="rect" intensity={3} color="#e0e9ed" position={[4, 2, 0]} rotation={[0, -Math.PI / 2, 0]} scale={[2, 5, 1]} />
       </Environment>
-      <Asset geometry={geometry} material={material} mode={props.mode} />
+      <group>{props.importedAsset
+        ? props.importedAsset.parts.map((part, index) => <Asset key={index} {...part} mode={props.mode} />)
+        : <Asset geometry={geometry} material={material} mode={props.mode} />}</group>
       {/* Keep shadow render targets alive across display-mode changes. */}
       <ContactShadows
+        key={props.importedAsset?.metadata.vertices ?? props.assetSeed}
         position={[0, 0, 0]}
         visible={props.mode === 'material'}
         frames={props.mode === 'material' ? 1 : 0}
@@ -195,7 +200,7 @@ class ViewportBoundary extends Component<{ children: ReactNode }, { failed: bool
   render() { return this.state.failed ? <WebGLFallback /> : this.props.children }
 }
 
-function useDisposeOnRelease(resource: { dispose: () => void }) {
+function useDisposeOnRelease(resource: { dispose: () => void } | null) {
   const active = useRef<typeof resource | null>(null)
   useEffect(() => {
     active.current = resource
@@ -204,7 +209,7 @@ function useDisposeOnRelease(resource: { dispose: () => void }) {
       // StrictMode immediately replays effects. Keep a resource if that replay
       // still uses it; dispose replaced/unmounted GPU resources once released.
       queueMicrotask(() => {
-        if (active.current !== resource) resource.dispose()
+        if (active.current !== resource) resource?.dispose()
       })
     }
   }, [resource])
@@ -216,11 +221,12 @@ export default function Viewport(props: ViewportProps) {
   const metadataCallback = useRef(props.onMetadata)
   metadataCallback.current = props.onMetadata
 
-  useEffect(() => { metadataCallback.current(getAssetMetadata(geometry)) }, [geometry])
+  useEffect(() => { metadataCallback.current(props.importedAsset?.metadata ?? getAssetMetadata(geometry)) }, [geometry, props.importedAsset])
   // These shared objects are supplied as props, so this component owns their
   // lifetime. R3F independently disposes each view's declarative overlay material.
   useDisposeOnRelease(geometry)
   useDisposeOnRelease(material)
+  useDisposeOnRelease(props.importedAsset ?? null)
 
   return (
     <div className="viewport-canvas" style={{ width: '100%', height: '100%', touchAction: 'none' }} aria-label="Interactive 3D asset viewport. Drag to orbit, right-drag to pan, scroll to zoom.">

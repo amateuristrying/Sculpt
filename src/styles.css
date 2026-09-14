@@ -28,3 +28,8 @@
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 
 .source-panel{overflow:hidden}.source-controls{flex:1;min-height:0;overflow-y:auto;padding-bottom:5px}.generation-bottom{flex-shrink:0;border-top:1px solid #2d3931;background:#191c1c;padding-top:17px;padding-bottom:15px}.local-note{flex-shrink:0;margin-top:0}.help-button{flex-shrink:0;margin-top:0;padding-top:0}.generation-bottom>p{margin-top:10px}@media(max-height:900px){.local-note{display:none}}
+/* Native reconstruction feedback remains visible until dismissed or retried. */
+.generation-error { margin-bottom: 12px; padding: 12px; border: 1px solid #765b48; border-radius: 8px; background: #29251f; font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+.generation-error strong { color: #e0c7ab; font-weight: 500; }
+.generation-error p { color: #c4b7a8; margin: 6px 0; }
+.material-swatch:disabled { opacity: .3; cursor: default; }

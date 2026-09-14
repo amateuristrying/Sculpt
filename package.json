@@ -10,7 +10,10 @@
     "tauri": "tauri",
     "desktop": "tauri dev",
     "desktop:build": "tauri build",
-    "test": "vitest run"
+    "test": "vitest run",
+    "backend:setup": "python3 backend/setup_runtime.py",
+    "backend:test": ".sculpt-runtime/venv/bin/python -m pytest backend/tests -q",
+    "backend:generate": ".sculpt-runtime/venv/bin/python backend/generate.py"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

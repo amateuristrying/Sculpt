@@ -1,6 +1,8 @@
 pub mod catalog;
 pub mod hardware;
 pub mod runtime;
+pub mod assets;
+pub mod python;
 
 use runtime::{GeneratedAsset, GenerationRequest, InferenceRuntime, JobContext, MockRuntime};
 use std::{
@@ -10,13 +12,15 @@ use std::{
         Arc, Mutex,
     },
 };
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, State, Manager};
 
 /// Owns job lifetime, compatibility, cancellation and runtime selection. Future model
 /// download/load/fallback policies belong here, never inside the React workspace.
 #[derive(Default)]
 pub struct SculptInferenceHarness {
     jobs: Mutex<HashMap<String, Arc<AtomicBool>>>,
+    sources: Mutex<HashMap<String, assets::SourceRecord>>,
+    outputs: Mutex<HashMap<String, std::path::PathBuf>>,
 }
 
 #[tauri::command]
@@ -38,7 +42,7 @@ pub async fn generate_asset(
     request: GenerationRequest,
     job_id: String,
 ) -> Result<GeneratedAsset, String> {
-    if job_id.is_empty() || job_id.len() > 128 {
+    if uuid::Uuid::parse_str(&job_id).is_err() {
         return Err("Invalid job identifier".into());
     }
     if request.image_name.trim().is_empty() {
@@ -54,6 +58,21 @@ pub async fn generate_asset(
     if engine.compatibility == "unsupported" {
         return Err(engine.reason);
     }
+    let output_dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?.join("jobs").join(&job_id);
+    let runtime: Box<dyn InferenceRuntime> = if request.engine_id == "triposr" {
+        let source = harness.sources.lock().map_err(|_| "Source registry unavailable")?
+            .get(request.source_id.as_deref().ok_or("Import an image before generating")?).cloned().ok_or("Unknown source image; import it again")?;
+        let worker = if cfg!(debug_assertions) {
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().join("backend/worker.py")
+        } else {
+            app.path().resource_dir().map_err(|e| e.to_string())?.join("backend/worker.py")
+        };
+        Box::new(python::PythonRuntime { root: python::runtime_root(), worker, source: source.path, source_sha256: source.asset.sha256, output_dir: output_dir.clone() })
+    } else if request.engine_id == "demo" {
+        Box::new(MockRuntime)
+    } else {
+        return Err("This engine is not implemented. Select TripoSR or the explicit demo.".into());
+    };
     let cancelled = Arc::new(AtomicBool::new(false));
     {
         let mut jobs = harness.jobs.lock().map_err(|_| "Job state unavailable")?;
@@ -67,9 +86,7 @@ pub async fn generate_asset(
         }
         jobs.insert(job_id.clone(), cancelled.clone());
     }
-    // Explicit mock routing. Selecting a future profile does not invoke that engine.
-    let runtime: Box<dyn InferenceRuntime> = Box::new(MockRuntime);
-    debug_assert!(matches!(runtime.kind(), runtime::RuntimeKind::Mock));
+    let _runtime_kind = runtime.kind();
     let context = JobContext {
         id: job_id.clone(),
         cancelled,
@@ -80,6 +97,9 @@ pub async fn generate_asset(
     let result = runtime.generate(request, context).await;
     if let Ok(mut jobs) = harness.jobs.lock() {
         jobs.remove(&job_id);
+    }
+    if result.as_ref().is_ok_and(|asset| !asset.simulated) {
+        harness.outputs.lock().map_err(|_| "Asset registry unavailable")?.insert(job_id, output_dir.join("mesh.glb"));
     }
     result
 }

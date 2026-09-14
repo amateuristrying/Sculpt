@@ -13,9 +13,10 @@ use std::{
 #[serde(rename_all = "camelCase")]
 pub struct GenerationRequest {
     pub engine_id: String,
-    // Fixture identity only: this prototype never sends source pixels to a model.
-    // A future native image importer will provide a validated source asset ID.
     pub image_name: String,
+    /// Registered by native image import; the UI never supplies a worker path.
+    #[serde(default)]
+    pub source_id: Option<String>,
     pub geometry: GeometryQuality,
 }
 
@@ -44,6 +45,8 @@ pub struct GeneratedAsset {
     /// Milliseconds since epoch internally; the facade normalizes this to ISO 8601.
     pub generated_at: String,
     pub simulated: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metrics: Option<serde_json::Value>,
 }
 
 /// These runtimes are alternatives, not a requirement to convert every model to ONNX.
@@ -53,6 +56,7 @@ pub struct GeneratedAsset {
 pub enum RuntimeKind {
     Mock,
     Mlx,
+    Pytorch,
     CudaPytorch,
     Onnx,
     Webgpu,
@@ -89,7 +93,7 @@ pub struct JobContext {
 }
 
 impl JobContext {
-    fn emit(&self, stage: &str, progress: f64, message: &str) {
+    pub fn emit(&self, stage: &str, progress: f64, message: &str) {
         (self.progress)(GenerationProgress {
             job_id: self.id.clone(),
             stage: stage.into(),
@@ -165,6 +169,7 @@ impl InferenceRuntime for MockRuntime {
                     .as_millis()
                     .to_string(),
                 simulated: true,
+                metrics: None,
             };
             context.emit("complete", 100.0, "Preview asset ready");
             Ok(result)
@@ -187,8 +192,9 @@ mod tests {
             progress: Arc::new(move |event| collected.lock().unwrap().push(event)),
         };
         let request = GenerationRequest {
-            engine_id: "lightweight".into(),
+            engine_id: "demo".into(),
             image_name: "source.png".into(),
+            source_id: None,
             geometry: GeometryQuality::Balanced,
         };
         let result = tauri::async_runtime::block_on(MockRuntime.generate(request, context));

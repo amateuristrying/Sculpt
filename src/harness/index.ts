@@ -1,6 +1,6 @@
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import type { EngineProfile, GeneratedAsset, GenerationProgress, GenerationRequest, HardwareProfile, SculptHarness } from './types'
+import type { BackendStatus, SourceAsset, EngineProfile, GeneratedAsset, GenerationProgress, GenerationRequest, HardwareProfile, SculptHarness } from './types'
 
 export type * from './types'
 
@@ -16,33 +16,46 @@ export async function detectHardware(): Promise<HardwareProfile> {
   return { ...previewHardware, computeBackends: [...previewHardware.computeBackends] }
 }
 
-function previewEngines(profile: HardwareProfile): EngineProfile[] {
-  const appleReady = profile.isAppleSilicon && profile.computeBackends.includes('Metal') && profile.memoryGb >= 16
+function previewEngines(_profile: HardwareProfile): EngineProfile[] {
   return [
     {
-      id: 'sf3d-apple', name: 'SF3D', subtitle: 'Apple Optimized · Planned',
-      description: 'Target balance of quality and local performance. Apple adapter requires validation.',
-      modelSizeGb: 4, runtime: 'MLX / Metal · planned', compatibility: appleReady ? 'recommended' : 'unsupported',
-      reason: appleReady
-        ? 'Hardware matches the prototype target. SF3D is not installed or integrated; this selection runs simulated generation. The 4 GB size is a planning estimate.'
-        : 'Prototype target requires Apple Silicon, detected Metal, and 16 GB memory. No validated adapter is included.',
-      implemented: false,
+      id: 'triposr', name: 'TripoSR', subtitle: 'Local reconstruction · Desktop required',
+      description: 'Real geometry and vertex colors from a single image.',
+      modelSizeGb: 1.8, runtime: 'PyTorch / Metal', compatibility: 'unsupported',
+      reason: 'Open the Tauri desktop app for local inference. Browser previews cannot launch the Python worker.',
+      implemented: true,
     },
     {
-      id: 'lightweight', name: 'Lightweight Engine', subtitle: 'Small footprint · Planned',
-      description: 'A future low-memory option for quick shape studies.', modelSizeGb: null,
-      runtime: 'Portable runtime · planned', compatibility: appleReady ? 'available' : 'recommended',
-      reason: 'Portable engine selection is still under evaluation. This prototype runs simulated generation without downloading models.',
-      implemented: false,
+      id: 'demo', name: 'Workspace Demo', subtitle: 'Procedural sample · No AI',
+      description: 'Explore the viewport. Does not reconstruct your image.',
+      modelSizeGb: null, runtime: 'Local simulator', compatibility: 'recommended',
+      reason: 'An explicit workspace demonstration using a procedural sculpture.',
+      implemented: true,
     },
     {
-      id: 'trellis-2', name: 'TRELLIS.2', subtitle: 'High quality',
-      description: 'A demanding engine profile reserved for a future supported runtime.', modelSizeGb: null,
+      id: 'trellis-2', name: 'TRELLIS.2', subtitle: 'Future adapter',
+      description: 'No validated adapter is included.', modelSizeGb: null,
       runtime: 'CUDA / PyTorch · planned', compatibility: 'unsupported',
-      reason: 'No validated runtime or model adapter is included. Not recommended for this Mac; installation and generation are unavailable.',
-      implemented: false,
+      reason: 'This engine has not been integrated.', implemented: false,
     },
   ]
+}
+
+export async function backendStatus(): Promise<BackendStatus> {
+  if (isTauri()) return invoke<BackendStatus>('backend_status')
+  return { installed: false, engine: 'triposr', runtimePath: '', mpsAvailable: false,
+    message: 'Open Sculpt desktop to use local AI reconstruction.' }
+}
+
+export async function importSource(name: string, dataUrl: string): Promise<SourceAsset | null> {
+  if (!isTauri()) return null
+  return invoke<SourceAsset>('import_source', { name, dataUrl })
+}
+
+export async function readGeneratedAsset(assetId: string): Promise<ArrayBuffer> {
+  if (!isTauri()) throw new Error('Real assets require the desktop app')
+  const base64 = await invoke<string>('read_generated_asset', { assetId })
+  return Uint8Array.from(atob(base64), char => char.charCodeAt(0)).buffer
 }
 
 export async function getEngines(profile: HardwareProfile): Promise<EngineProfile[]> {
@@ -154,4 +167,4 @@ export async function saveGlb(bytes: ArrayBuffer, defaultName: string): Promise<
   return anchor.download
 }
 
-export const sculptHarness: SculptHarness = { detectHardware, getEngines, generate, saveGlb }
+export const sculptHarness: SculptHarness = { detectHardware, getEngines, backendStatus, importSource, readGeneratedAsset, generate, saveGlb }

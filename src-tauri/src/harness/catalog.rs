@@ -24,21 +24,21 @@ pub fn engines(profile: &HardwareProfile) -> Vec<EngineProfile> {
         && profile.memory_gb >= 16.0;
     vec![
         EngineProfile {
-            id: "sf3d-apple".into(), name: "SF3D".into(), subtitle: "Apple Optimized · Planned".into(),
-            description: "Target balance of quality and local performance. Apple adapter requires validation.".into(),
-            model_size_gb: Some(4.0), runtime: "MLX / Metal · planned".into(),
+            id: "triposr".into(), name: "TripoSR".into(), subtitle: "Local reconstruction · Experimental".into(),
+            description: "Reconstruct a single object with geometry and vertex colors.".into(),
+            model_size_gb: Some(1.8), runtime: "PyTorch / Metal".into(),
             compatibility: if apple_ready { "recommended" } else { "unsupported" }.into(),
             reason: if apple_ready {
-                "Hardware matches the prototype target. SF3D is not installed or integrated; this selection runs simulated generation. The 4 GB size is a planning estimate."
+                "Runs locally through an isolated Python worker. Best with one clearly visible object. Unseen surfaces are inferred; quality varies. One-time runtime setup is required."
             } else {
-                "Prototype target requires Apple Silicon, detected Metal, and 16 GB memory. No validated adapter is included."
-            }.into(), implemented: false,
+                "This first adapter targets Apple Silicon with Metal and at least 16 GB memory. Other hardware has not been validated."
+            }.into(), implemented: true,
         },
         EngineProfile {
-            id: "lightweight".into(), name: "Lightweight Engine".into(), subtitle: "Small footprint · Planned".into(),
-            description: "A future low-memory option for quick shape studies.".into(), model_size_gb: None,
-            runtime: "Portable runtime · planned".into(), compatibility: if apple_ready { "available" } else { "recommended" }.into(),
-            reason: "Portable engine selection is still under evaluation. This prototype runs simulated generation without downloading models.".into(), implemented: false,
+            id: "demo".into(), name: "Workspace Demo".into(), subtitle: "Procedural sample · No AI".into(),
+            description: "Explore the viewport with a sample sculpture. Does not reconstruct your image.".into(), model_size_gb: None,
+            runtime: "Local simulator".into(), compatibility: if apple_ready { "available" } else { "recommended" }.into(),
+            reason: "An explicit demonstration of the workspace. Output is a procedural sculpture, not an AI reconstruction.".into(), implemented: true,
         },
         EngineProfile {
             id: "trellis-2".into(), name: "TRELLIS.2".into(), subtitle: "High quality".into(),
@@ -70,10 +70,12 @@ mod tests {
     }
 
     #[test]
-    fn m4_recommendation_never_claims_real_inference() {
+    fn m4_recommends_implemented_adapter_and_keeps_future_engines_disabled() {
         let profiles = engines(&m4());
         assert_eq!(profiles[0].compatibility, "recommended");
-        assert!(profiles.iter().all(|profile| !profile.implemented));
+        assert_eq!(profiles[0].id, "triposr");
+        assert!(profiles[0].implemented);
+        assert!(!profiles[2].implemented);
         assert_eq!(profiles[2].compatibility, "unsupported");
     }
 

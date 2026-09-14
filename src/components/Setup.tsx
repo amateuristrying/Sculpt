@@ -1,9 +1,10 @@
 import { ArrowRight, Check, ChevronRight, Cpu, HardDrive, Info, LoaderCircle, LockKeyhole, Monitor, ShieldCheck, Zap } from 'lucide-react';
-import type { EngineProfile, HardwareProfile } from '../harness/types';
+import type { BackendStatus, EngineProfile, HardwareProfile } from '../harness/types';
 import { Brand, SculptMark } from './Brand';
 
-export default function Setup({ hardware, engines, selectedEngine, onSelect, onContinue, error, onRetry }: {
+export default function Setup({ hardware, engines, selectedEngine, onSelect, onContinue, error, onRetry, backend }: {
   hardware: HardwareProfile | null;
+  backend: BackendStatus | null;
   engines: EngineProfile[];
   selectedEngine: string;
   onSelect: (id: string) => void;
@@ -25,7 +26,7 @@ export default function Setup({ hardware, engines, selectedEngine, onSelect, onC
           <div className="hardware-checks">
             <Capability label={hardware?.isAppleSilicon ? 'Apple Silicon' : 'Processor detected'} value={hardware?.architecture || 'Checking'} ready={!!hardware} />
             <Capability label={metal ? 'Metal GPU' : 'Compute backend'} value={metal ? 'Supported' : hardware?.computeBackends.join(', ') || 'Checking'} ready={!!metal} />
-            <Capability label="Local generation" value="Simulator ready" ready={!!hardware} />
+            <Capability label="Local generation" value={backend?.installed ? 'Model installed' : 'Setup required'} ready={!!backend?.installed} />
             <Capability label="Engine profile" value={engines.length ? 'Matched to your Mac' : 'Checking'} ready={engines.length > 0} />
           </div>
           <div className="device-details"><span><Monitor size={13} /> {hardware ? `${hardware.os} ${hardware.osVersion}` : 'macOS'}</span><span><HardDrive size={13} /> {hardware?.storageGb ? `${Math.round(hardware.storageGb)} GB storage` : 'Local storage'}</span></div>
@@ -34,11 +35,11 @@ export default function Setup({ hardware, engines, selectedEngine, onSelect, onC
         <section className="engine-setup">
           <div className="card-heading"><span>02</span> YOUR ENGINE</div><h2>The right fit for your hardware.</h2><p className="engine-intro">One thoughtful starting point. Room to grow.</p>
           <div className="engine-options">{engines.map((engine, index) => <button key={engine.id} className={`engine-option ${selectedEngine === engine.id ? 'selected' : ''} ${engine.compatibility === 'unsupported' ? 'unsupported' : ''}`} aria-pressed={selectedEngine === engine.id} disabled={engine.compatibility === 'unsupported'} onClick={() => onSelect(engine.id)} title={engine.reason}>
-            <span className="engine-symbol">{index === 0 ? <Zap size={19} /> : index === 1 ? <Cpu size={19} /> : <SculptMark size={19} />}</span><span className="engine-copy"><span className="engine-title">{engine.name}<span className={`engine-tag ${engine.compatibility === 'recommended' ? 'recommended' : ''}`}>{engine.compatibility === 'recommended' ? 'RECOMMENDED' : engine.compatibility === 'unsupported' ? 'UNSUPPORTED' : 'LIGHTWEIGHT'}</span></span><span className="engine-subtitle">{engine.subtitle}</span><span className="engine-description">{engine.description}</span><span className="engine-footnote">{engine.modelSizeGb ? `~${engine.modelSizeGb} GB estimated model` : 'No model download'}<span>·</span>{engine.implemented ? 'Available' : 'Planned adapter'}</span></span><span className="radio-check">{selectedEngine === engine.id && <Check size={12} />}</span>
+            <span className="engine-symbol">{index === 0 ? <Zap size={19} /> : index === 1 ? <Cpu size={19} /> : <SculptMark size={19} />}</span><span className="engine-copy"><span className="engine-title">{engine.name}<span className={`engine-tag ${engine.compatibility === 'recommended' ? 'recommended' : ''}`}>{engine.compatibility === 'recommended' ? 'RECOMMENDED' : engine.compatibility === 'unsupported' ? 'UNSUPPORTED' : 'DEMO'}</span></span><span className="engine-subtitle">{engine.subtitle}</span><span className="engine-description">{engine.description}</span><span className="engine-footnote">{engine.modelSizeGb ? `~${engine.modelSizeGb} GB estimated model` : 'No model download'}<span>·</span>{engine.implemented ? engine.id === 'demo' ? 'No AI' : backend?.installed ? 'Installed' : 'Setup required' : 'Planned adapter'}</span></span><span className="radio-check">{selectedEngine === engine.id && <Check size={12} />}</span>
           </button>)}</div>
           {!hardware && !error && <div className="detecting"><LoaderCircle size={18} className="spin" /> Detecting your environment…</div>}
           {error && <div role="alert" className="error-box">{error}<button onClick={onRetry}>Try again <ChevronRight size={12} /></button></div>}
-          <div className="setup-note"><Info size={15} /><p><strong>A preview of what’s next.</strong> This build uses simulated generation. Engine choices are compatibility profiles; no AI models are installed or run.</p></div>
+          <div className="setup-note"><Info size={15} /><p><strong>{backend?.installed ? 'Your local engine is ready.' : 'A local engine, a one-time setup.'}</strong> {backend?.message || 'Checking the reconstruction runtime…'} {hardware?.detectionSource === 'native' && !backend?.installed && <button className="text-button" onClick={onRetry}>Check again</button>}</p></div>
         </section>
       </div>
       <div className="setup-bottom"><div><ShieldCheck size={19} /><p><strong>Your hardware. Your files. Your inference.</strong><span>No uploads. No cloud credits. Just your creative process.</span></p></div><button className="primary-button setup-continue" onClick={onContinue} disabled={!hardware || !selectedEngine}>Open Sculpt <ArrowRight size={16} /></button></div>

@@ -57,6 +57,9 @@ pub fn run() {
             harness::get_engines,
             harness::generate_asset,
             harness::cancel_generation,
+            harness::assets::import_source,
+            harness::assets::read_generated_asset,
+            harness::python::backend_status,
             save_glb,
         ])
         .run(tauri::generate_context!())
