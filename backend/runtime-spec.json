@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "engine": "TripoSR",
+  "sourceRevision": "107cefdc244c39106fa830359024f6a2f1c78871",
+  "sourceArchiveSha256": "bcb414550dcfcb9f5ea6a7b9c12f2bbff889f5b4a564a493178393360d9034ec",
+  "modelRevision": "5b521936b01fbe1890f6f9baed0254ab6351c04a",
+  "dinoRevision": "f205d5d8e640a89a2b8ef0369670dfc37cc07fc2",
+  "artifacts": {
+    "models/triposr/config.yaml": "74ca708ce086bf68e97709ea6b3d91f14717921c04691e84043f0eb8fcc68e62",
+    "models/triposr/model.ckpt": "429e2c6b22a0923967459de24d67f05962b235f79cde6b032aa7ed2ffcd970ee",
+    "models/background/u2net.onnx": "8d10d2f3bb75ae3b6d527c77944fc5e7dcd94b29809d47a739a7a728a912b491"
+  },
+  "qualities": [
+    {"id": "draft", "resolution": 96, "estimatedMemoryGb": 3.5, "minimumAvailableGb": 2.5, "recommendedRamGb": 16},
+    {"id": "balanced", "resolution": 128, "estimatedMemoryGb": 4.5, "minimumAvailableGb": 3.0, "recommendedRamGb": 16},
+    {"id": "high", "resolution": 192, "estimatedMemoryGb": 6.0, "minimumAvailableGb": 4.5, "recommendedRamGb": 24}
+  ]
+}

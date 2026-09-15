@@ -31,17 +31,32 @@ content hash, then returns a local source asset ID. `GenerationRequest` carries 
 opaque ID; Rust resolves it for the selected runtime. The UI never supplies a worker
 path or model-specific input schema.
 
+## Installation and runtime health
+
+The frontend requests installation through `installRuntime`, listens for
+`sculpt://setup-progress`, and cancels through the shared operation registry. Rust
+bootstraps a pinned, checksummed uv executable and supervises the isolated installer.
+Python installs a hashed dependency lock, pinned source, and verified model files.
+Release resources resolve from the app bundle; runtime files live in Application
+Support. The developer CLI uses the same installer scripts.
+
+Rust and Python reject stale or modified runtime manifests. Full model hashes run
+at install/repair; lightweight file-identity checks run before jobs. Package cache
+clearing is forbidden during an active operation and never targets model/config
+caches. One process supervisor enforces cancellation and time limits for both setup
+and inference.
+
 ## Next adapter integration points
 
-- Move the one-time CLI installer behind a native setup flow with resumable downloads,
-  checksums, and model cache health.
-- Add memory-aware quality estimates and a benchmark suite covering isolated objects,
-  transparent PNGs, cluttered photos, and difficult poses.
+- Extend runtime profiles beyond the current validated Apple Silicon adapter.
+- Expand the benchmark beyond the current starter objects and synthetic stress
+  inputs. Add perceptual quality ratings rather than treating valid GLBs as likeness scores.
+- Add foreground preview/correction and durable projects.
 - Add cleanup, retopology, UV, and texture adapters as separate stages.
 - Add explicit fallback policy in the harness; never silently claim another engine
   generated the requested result.
 
 AI inference is implemented for the TripoSR adapter when the local runtime is set up.
-Model installation is currently a developer CLI operation; accounts and network
+Model installation is available in the app and the developer CLI; accounts and network
 inference do not exist. GLB export is real: reconstructed bytes are validated by Rust
 and written only to the path chosen in the native save dialog.

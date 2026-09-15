@@ -18,6 +18,16 @@ pub struct GenerationRequest {
     #[serde(default)]
     pub source_id: Option<String>,
     pub geometry: GeometryQuality,
+    #[serde(default)]
+    pub background: BackgroundMode,
+}
+
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum BackgroundMode {
+    #[default]
+    Auto,
+    Keep,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
@@ -196,6 +206,7 @@ mod tests {
             image_name: "source.png".into(),
             source_id: None,
             geometry: GeometryQuality::Balanced,
+            background: BackgroundMode::Auto,
         };
         let result = tauri::async_runtime::block_on(MockRuntime.generate(request, context));
         assert_eq!(result.unwrap_err(), "Generation cancelled");

@@ -5,9 +5,9 @@ import resource
 import sys
 import time
 
-from .config import MODEL_REVISION, UPSTREAM_REVISION
+from .config import MODEL_REVISION, UPSTREAM_REVISION, SPEC
 
-RESOLUTIONS = {"draft": 96, "balanced": 128, "high": 192}
+RESOLUTIONS = {profile['id']: profile['resolution'] for profile in SPEC['qualities']}
 
 
 def generate(request: dict, root: Path, emit) -> dict:
@@ -16,6 +16,7 @@ def generate(request: dict, root: Path, emit) -> dict:
 
     from .images import prepare_image
     from .marching import install_cpu_operator
+    from .memory import check_memory
 
     started = time.monotonic()
     requested_device = request.get("device", "auto")
@@ -35,10 +36,13 @@ def generate(request: dict, root: Path, emit) -> dict:
     quality = request.get("quality", "draft")
     if quality not in RESOLUTIONS:
         raise ValueError("Unknown geometry quality.")
+    import psutil
+    available_gb = psutil.virtual_memory().available / (1024**3)
+    check_memory(quality, available_gb)
     if not source.is_file() or source.stat().st_size > 30 * 1024 * 1024:
         raise ValueError("Source image is missing or exceeds 30 MB.")
-    emit("analyzing", 3, "Removing the background from your image")
-    image = prepare_image(source, output.parent / "input.png")
+    emit("analyzing", 3, "Preparing your source image" if request.get('background') == 'keep' else "Finding the foreground object")
+    image = prepare_image(source, output.parent / "input.png", request.get('background', 'auto'))
     prepare_seconds = time.monotonic() - started
     emit("loading", 12, f"Loading TripoSR on {'Metal' if device == 'mps' else 'CPU'}")
     sys.path.insert(0, str(root / "TripoSR"))
@@ -68,16 +72,23 @@ def generate(request: dict, root: Path, emit) -> dict:
         raise ValueError("The model returned an empty mesh. Try a clearer object image.")
     if not np.isfinite(mesh.vertices).all():
         raise ValueError("The generated mesh contains invalid coordinates.")
+    # Diagnostic metrics describe topology; they do not claim semantic accuracy.
+    mesh_quality = {'watertight': bool(mesh.is_watertight), 'windingConsistent': bool(mesh.is_winding_consistent),
+                    'components': int(len(mesh.split(only_watertight=False))),
+                    'degenerateFaces': int((mesh.area_faces <= 1e-12).sum())}
     extracted_at = time.monotonic()
     emit("preparing", 92, "Writing the reconstructed GLB asset")
     # TripoSR is Z-up. glTF is Y-up. Apply a proper rotation, not a reflection.
     mesh.apply_transform(np.array([[1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1]], dtype=float))
     mesh.metadata.update({"generator": "Sculpt / TripoSR", "simulated": False, "modelRevision": MODEL_REVISION})
-    mesh.export(output, file_type="glb", include_normals=True)
+    from .export import export_glb
+    export_glb(mesh, output)
     metrics = {
         "engine": "triposr", "device": device, "quality": quality,
         "modelRevision": MODEL_REVISION, "sourceRevision": UPSTREAM_REVISION,
         "torchVersion": torch.__version__, "faces": len(mesh.faces), "vertices": len(mesh.vertices),
+        "meshQuality": mesh_quality, "availableMemoryGbAtStart": round(available_gb, 2),
+        "background": request.get('background', 'auto'),
         "materials": 1, "textureResolution": "Vertex colors", "format": "GLB",
         "prepareSeconds": round(prepare_seconds, 2),
         "loadSeconds": round(loaded_at - started - prepare_seconds, 2),

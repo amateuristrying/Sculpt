@@ -1,10 +1,12 @@
-import { ArrowRight, Check, ChevronRight, Cpu, HardDrive, Info, LoaderCircle, LockKeyhole, Monitor, ShieldCheck, Zap } from 'lucide-react';
+import { ArrowRight, Check, ChevronRight, Cpu, HardDrive, LoaderCircle, LockKeyhole, Monitor, ShieldCheck, Zap } from 'lucide-react';
 import type { BackendStatus, EngineProfile, HardwareProfile } from '../harness/types';
 import { Brand, SculptMark } from './Brand';
+import RuntimeSetup, { type RuntimeSetupProps } from './RuntimeSetup';
 
-export default function Setup({ hardware, engines, selectedEngine, onSelect, onContinue, error, onRetry, backend }: {
+export default function Setup({ hardware, engines, selectedEngine, onSelect, onContinue, error, onRetry, backend, runtimeSetup }: {
   hardware: HardwareProfile | null;
   backend: BackendStatus | null;
+  runtimeSetup: RuntimeSetupProps;
   engines: EngineProfile[];
   selectedEngine: string;
   onSelect: (id: string) => void;
@@ -39,7 +41,7 @@ export default function Setup({ hardware, engines, selectedEngine, onSelect, onC
           </button>)}</div>
           {!hardware && !error && <div className="detecting"><LoaderCircle size={18} className="spin" /> Detecting your environment…</div>}
           {error && <div role="alert" className="error-box">{error}<button onClick={onRetry}>Try again <ChevronRight size={12} /></button></div>}
-          <div className="setup-note"><Info size={15} /><p><strong>{backend?.installed ? 'Your local engine is ready.' : 'A local engine, a one-time setup.'}</strong> {backend?.message || 'Checking the reconstruction runtime…'} {hardware?.detectionSource === 'native' && !backend?.installed && <button className="text-button" onClick={onRetry}>Check again</button>}</p></div>
+          <RuntimeSetup {...runtimeSetup} />
         </section>
       </div>
       <div className="setup-bottom"><div><ShieldCheck size={19} /><p><strong>Your hardware. Your files. Your inference.</strong><span>No uploads. No cloud credits. Just your creative process.</span></p></div><button className="primary-button setup-continue" onClick={onContinue} disabled={!hardware || !selectedEngine}>Open Sculpt <ArrowRight size={16} /></button></div>

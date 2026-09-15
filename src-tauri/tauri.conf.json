@@ -33,7 +33,7 @@
   },
   "bundle": {
     "active": true,
-    "resources": { "../backend/worker.py": "backend/worker.py", "../backend/sculpt_backend/*.py": "backend/sculpt_backend/" },
+    "resources": { "../backend/worker.py": "backend/worker.py", "../backend/setup_runtime.py": "backend/setup_runtime.py", "../backend/download_models.py": "backend/download_models.py", "../backend/requirements.lock": "backend/requirements.lock", "../backend/runtime-spec.json": "backend/runtime-spec.json", "../backend/sculpt_backend/*.py": "backend/sculpt_backend/" },
     "targets": ["app", "dmg"],
     "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns"],
     "category": "GraphicsAndDesign",

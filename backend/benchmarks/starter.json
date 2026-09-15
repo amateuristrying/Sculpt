@@ -1,0 +1,10 @@
+{
+  "cases": [
+    {"id": "banana-photo", "source": "../outputs/banana/source.jpg", "category": "photograph", "credit": "Banana-Single.jpg by Evan-Amos, CC BY-SA 3.0, https://commons.wikimedia.org/wiki/File:Banana-Single.jpg"},
+    {"id": "chair", "source": "../../.sculpt-runtime/TripoSR/examples/chair.png", "category": "thin structures", "credit": "TripoSR repository example, pinned source revision in runtime-spec.json"},
+    {"id": "teapot", "source": "../../.sculpt-runtime/TripoSR/examples/teapot.png", "category": "handle and spout", "credit": "TripoSR repository example"},
+    {"id": "toy-horse", "source": "../../.sculpt-runtime/TripoSR/examples/horse.png", "category": "animal figurine", "credit": "TripoSR repository example"},
+    {"id": "hamburger", "source": "../../.sculpt-runtime/TripoSR/examples/hamburger.png", "category": "layered object", "credit": "TripoSR repository example"},
+    {"id": "captured-photo", "source": "../../.sculpt-runtime/TripoSR/examples/captured.jpeg", "category": "photograph", "credit": "TripoSR repository example"}
+  ]
+}

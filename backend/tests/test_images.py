@@ -32,6 +32,14 @@ def test_missing_segmentation_model_does_not_attempt_a_download(tmp_path, monkey
         prepare_image(source, tmp_path / "input.png")
 
 
+def test_keep_background_bypasses_segmentation(tmp_path, monkeypatch):
+    monkeypatch.setenv("U2NET_HOME", str(tmp_path / "missing"))
+    source = tmp_path / 'object.png'
+    Image.new('RGB', (100, 100), (230, 180, 30)).save(source)
+    result = prepare_image(source, tmp_path / 'input.png', 'keep')
+    assert result.getpixel((256, 256)) == (230, 180, 30)
+
+
 @pytest.mark.parametrize("kind", ["tiny", "corrupt", "gif"])
 def test_invalid_input_is_rejected(tmp_path, kind):
     source = tmp_path / "invalid"

@@ -55,6 +55,7 @@ export interface GenerationRequest {
   sourceId?: string
   imageName: string
   geometry: 'draft' | 'balanced' | 'high'
+  background?: 'auto' | 'keep'
 }
 
 export type GenerationStage = 'analyzing' | 'loading' | 'geometry' | 'surface' | 'preparing' | 'complete' | 'cancelled' | 'failed'
@@ -71,7 +72,7 @@ export interface GeneratedAsset {
   seed: number
   generatedAt: string
   simulated: boolean
-  metrics?: { device: string; totalSeconds: number; faces: number; vertices: number; sourceSha256?: string }
+  metrics?: { device: string; totalSeconds: number; faces: number; vertices: number; sourceSha256?: string; meshQuality?: { watertight: boolean; windingConsistent: boolean; components: number; degenerateFaces: number } }
 }
 
 export interface SourceAsset {
@@ -89,12 +90,20 @@ export interface BackendStatus {
   runtimePath: string
   message: string
   mpsAvailable: boolean
+  state: 'missing' | 'repair' | 'ready'
+  downloadCacheBytes: number
+  recommendedQuality: 'draft' | 'balanced' | 'high'
+  qualities: { id: 'draft' | 'balanced' | 'high'; resolution: number; estimatedMemoryGb: number; recommendedRamGb: number }[]
 }
+
+export interface SetupProgress { jobId: string; stage: string; progress: number; message: string }
 
 export interface SculptHarness {
   detectHardware(): Promise<HardwareProfile>
   getEngines(profile: HardwareProfile): Promise<EngineProfile[]>
   backendStatus(): Promise<BackendStatus>
+  installRuntime(onProgress: (progress: SetupProgress) => void, signal?: AbortSignal): Promise<BackendStatus>
+  clearDownloadCache(): Promise<BackendStatus>
   importSource(name: string, dataUrl: string): Promise<SourceAsset | null>
   readGeneratedAsset(assetId: string): Promise<ArrayBuffer>
   generate(request: GenerationRequest, onProgress: (progress: GenerationProgress) => void, signal?: AbortSignal): Promise<GeneratedAsset>

@@ -1,8 +1,12 @@
+pub mod assets;
+pub mod cache;
 pub mod catalog;
 pub mod hardware;
-pub mod runtime;
-pub mod assets;
+pub mod paths;
+pub mod process;
 pub mod python;
+pub mod runtime;
+pub mod setup;
 
 use runtime::{GeneratedAsset, GenerationRequest, InferenceRuntime, JobContext, MockRuntime};
 use std::{
@@ -12,13 +16,13 @@ use std::{
         Arc, Mutex,
     },
 };
-use tauri::{AppHandle, Emitter, State, Manager};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 /// Owns job lifetime, compatibility, cancellation and runtime selection. Future model
 /// download/load/fallback policies belong here, never inside the React workspace.
 #[derive(Default)]
 pub struct SculptInferenceHarness {
-    jobs: Mutex<HashMap<String, Arc<AtomicBool>>>,
+    jobs: Arc<Mutex<HashMap<String, Arc<AtomicBool>>>>,
     sources: Mutex<HashMap<String, assets::SourceRecord>>,
     outputs: Mutex<HashMap<String, std::path::PathBuf>>,
 }
@@ -58,16 +62,33 @@ pub async fn generate_asset(
     if engine.compatibility == "unsupported" {
         return Err(engine.reason);
     }
-    let output_dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?.join("jobs").join(&job_id);
+    let output_dir = app
+        .path()
+        .app_local_data_dir()
+        .map_err(|e| e.to_string())?
+        .join("jobs")
+        .join(&job_id);
     let runtime: Box<dyn InferenceRuntime> = if request.engine_id == "triposr" {
-        let source = harness.sources.lock().map_err(|_| "Source registry unavailable")?
-            .get(request.source_id.as_deref().ok_or("Import an image before generating")?).cloned().ok_or("Unknown source image; import it again")?;
-        let worker = if cfg!(debug_assertions) {
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().join("backend/worker.py")
-        } else {
-            app.path().resource_dir().map_err(|e| e.to_string())?.join("backend/worker.py")
-        };
-        Box::new(python::PythonRuntime { root: python::runtime_root(), worker, source: source.path, source_sha256: source.asset.sha256, output_dir: output_dir.clone() })
+        let source = harness
+            .sources
+            .lock()
+            .map_err(|_| "Source registry unavailable")?
+            .get(
+                request
+                    .source_id
+                    .as_deref()
+                    .ok_or("Import an image before generating")?,
+            )
+            .cloned()
+            .ok_or("Unknown source image; import it again")?;
+        let worker = paths::backend_file(&app, "worker.py")?;
+        Box::new(python::PythonRuntime {
+            root: paths::runtime_dir(&app)?,
+            worker,
+            source: source.path,
+            source_sha256: source.asset.sha256,
+            output_dir: output_dir.clone(),
+        })
     } else if request.engine_id == "demo" {
         Box::new(MockRuntime)
     } else {
@@ -99,7 +120,11 @@ pub async fn generate_asset(
         jobs.remove(&job_id);
     }
     if result.as_ref().is_ok_and(|asset| !asset.simulated) {
-        harness.outputs.lock().map_err(|_| "Asset registry unavailable")?.insert(job_id, output_dir.join("mesh.glb"));
+        harness
+            .outputs
+            .lock()
+            .map_err(|_| "Asset registry unavailable")?
+            .insert(job_id, output_dir.join("mesh.glb"));
     }
     result
 }

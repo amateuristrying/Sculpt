@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { backendStatus, importSource, readGeneratedAsset, detectHardware, generate, getEngines, previewHardware, saveGlb } from '../harness'
+import { backendStatus, installRuntime, clearDownloadCache, importSource, readGeneratedAsset, detectHardware, generate, getEngines, previewHardware, saveGlb } from '../harness'
 import type { GenerationProgress, GenerationRequest, HardwareProfile } from '../harness'
 
 vi.mock('@tauri-apps/api/core', () => ({ isTauri: vi.fn(() => false), invoke: vi.fn() }))
@@ -124,6 +124,44 @@ describe('GLB save boundary', () => {
 })
 
 describe('native harness bridge', () => {
+  it('never offers installation or cache deletion in the browser', async () => {
+    await expect(installRuntime(() => {})).rejects.toThrow('desktop')
+    await expect(clearDownloadCache()).rejects.toThrow('desktop')
+    expect(invoke).not.toHaveBeenCalled()
+  })
+
+  it('cancels installation during listener registration without starting native work', async () => {
+    vi.mocked(isTauri).mockReturnValue(true)
+    const controller = new AbortController(), unlisten = vi.fn()
+    let register!: (callback: () => void) => void
+    vi.mocked(listen).mockReturnValueOnce(new Promise(resolve => { register = resolve }))
+    const running = installRuntime(() => {}, controller.signal)
+    const rejected = expect(running).rejects.toMatchObject({ name: 'AbortError' })
+    controller.abort(); register(unlisten)
+    await rejected
+    expect(invoke).not.toHaveBeenCalled()
+    expect(unlisten).toHaveBeenCalledOnce()
+  })
+
+  it('cleans up the setup listener after a native download failure', async () => {
+    vi.mocked(isTauri).mockReturnValue(true)
+    const unlisten = vi.fn()
+    vi.mocked(listen).mockResolvedValueOnce(unlisten)
+    vi.mocked(invoke).mockRejectedValueOnce('Download interrupted')
+    await expect(installRuntime(() => {})).rejects.toThrow('Download interrupted')
+    expect(unlisten).toHaveBeenCalledOnce()
+  })
+
+  it('returns the verified native installation status', async () => {
+    vi.mocked(isTauri).mockReturnValue(true)
+    const unlisten = vi.fn()
+    vi.mocked(listen).mockResolvedValueOnce(unlisten)
+    vi.mocked(invoke).mockResolvedValueOnce({ installed: true, state: 'ready' })
+    expect(await installRuntime(() => {})).toMatchObject({ installed: true, state: 'ready' })
+    expect(invoke).toHaveBeenCalledWith('install_runtime', { jobId: expect.any(String) })
+    expect(unlisten).toHaveBeenCalledOnce()
+  })
+
   it('passes actual image bytes to Rust and receives an opaque source ID', async () => {
     vi.mocked(isTauri).mockReturnValue(true)
     vi.mocked(invoke).mockResolvedValueOnce({ id: 'source-1', sha256: 'abc' })

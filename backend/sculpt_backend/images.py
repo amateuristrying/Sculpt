@@ -3,10 +3,13 @@ import os
 import warnings
 
 
-def prepare_image(source: Path, output: Path):
+def prepare_image(source: Path, output: Path, background: str = 'auto'):
     import numpy as np
     from PIL import Image, ImageOps
     import rembg
+
+    if background not in {'auto', 'keep'}:
+        raise ValueError('Unknown background mode.')
 
     Image.MAX_IMAGE_PIXELS = 40_000_000
     with warnings.catch_warnings():
@@ -19,10 +22,10 @@ def prepare_image(source: Path, output: Path):
             image = ImageOps.exif_transpose(opened).convert("RGBA")
     image.thumbnail((1024, 1024), Image.Resampling.LANCZOS)
     alpha = np.asarray(image.getchannel("A"))
-    if alpha.min() >= 250:
+    if background == 'auto' and alpha.min() >= 250:
         # Segment the actual image, not a guessed shape or filename class.
         if not (Path(os.environ.get("U2NET_HOME", "")) / "u2net.onnx").is_file():
-            raise ValueError("Background model is missing. Run npm run backend:setup; generation never downloads models.")
+            raise ValueError("Background model is missing. Repair the local runtime in Sculpt; generation never downloads models.")
         session = rembg.new_session("u2net", providers=["CPUExecutionProvider"])
         image = rembg.remove(image, session=session)
     data = np.asarray(image)

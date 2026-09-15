@@ -15,6 +15,7 @@ import time
 
 from sculpt_backend import PROTOCOL_VERSION
 from sculpt_backend.config import configure_environment, runtime_root
+from sculpt_backend.health import validate_install
 
 
 def main() -> int:
@@ -43,14 +44,14 @@ def main() -> int:
                 import torch
                 import rembg
                 import skimage
-                installed = (root / "ready.json").is_file()
+                installed = validate_install(root)
                 message("probe", installed=installed, mps=torch.backends.mps.is_available(), torchVersion=torch.__version__)
                 return 0
             if args.request is None:
                 raise ValueError("A request file is required.")
             request = json.loads(args.request.read_text())
-            if not (root / "ready.json").is_file():
-                raise ValueError("The local engine is not installed. Run npm run backend:setup first.")
+            if not validate_install(root):
+                raise ValueError("The local engine is not installed or needs repair. Open runtime setup in Sculpt.")
             from sculpt_backend.triposr import generate
             result = generate(request, root, lambda stage, progress, text: message("progress", stage=stage, progress=progress, message=text))
             message("result", metrics=result)

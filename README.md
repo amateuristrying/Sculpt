@@ -29,19 +29,44 @@ Native bundles appear under `src-tauri/target/release/bundle/`. Local builds use
 - Native hardware inspection and a machine-specific engine planning catalog.
 - Native PNG, JPG, and WEBP import into a Rust-owned source registry with size/type/dimension checks and SHA-256 identity.
 - Local TripoSR reconstruction on Apple Silicon/Metal through an isolated Python worker, with cancellable progress, GLB validation, vertex colors, and real asset loading in the viewport.
+- In-app runtime installation, cancellation, repair, checksum verification, and disposable package-cache clearing.
+- Memory estimates and headroom checks before loading the model, plus automatic background removal or explicit background preservation.
 - Orbit, pan, zoom, camera reset, grid, lighting, material color, and material/wireframe/points/technical views.
 - Draft, balanced, and high geometry detail, an asset processing stack, and live geometry metadata.
-- Binary glTF (`.glb`) export through the native macOS save dialog. The file contains asset geometry, UVs, and a material; viewport grids, lights, and technical overlays are excluded.
+- Binary glTF (`.glb`) export through the native macOS save dialog. Reconstructed assets contain geometry, normals, linear vertex colors, and an explicit nonmetallic material. Viewport grids, lights, and technical overlays are excluded. Generated UVs and texture maps are not implemented.
 
 ## Local runtime setup
 
-The first real adapter is TripoSR. Its Python environment, source checkout, model weights, and U2Net background model are intentionally kept outside Git under `.sculpt-runtime/`. Install them once on the development machine:
+Open Sculpt and choose **Install local engine** on the hardware setup screen. The installer prepares its own Python 3.11 environment, the pinned TripoSR engine, PyTorch dependencies, and the reconstruction/background-removal models. A bundled app does not require a separately installed Python, Git, or uv. Allow 5 GB free space and an internet connection for initial setup. The native installer currently targets Apple Silicon Macs with at least 16 GB memory.
+
+Progress represents installation stages, not byte-accurate download percentages. Cancel stops the installer and its child processes. Retry reuses cached downloads; **Verify / repair** checks model hashes and repairs damaged downloads. **Clear downloads** removes disposable package caches while preserving the installed runtime and offline model/config files.
+
+Runtime storage:
+
+- Development (`npm run desktop`): `.sculpt-runtime/` inside the checkout.
+- Packaged app: `~/Library/Application Support/com.sculpt.desktop/runtime/`.
+- `SCULPT_RUNTIME_DIR` can explicitly override the runtime location for development/testing.
+- Imported sources and generated jobs live in Sculpt's Application Support directory. They are local files, but the current project registry remains session-based. Export work you want to keep accessible.
+
+The developer CLI remains available when Python 3 and uv are already installed:
 
 ```sh
 npm run backend:setup
 ```
 
-This downloads roughly 2 GB of model/runtime data and requires at least 4 GB free. Generation itself runs offline after setup. The desktop app checks the runtime manifest before enabling the TripoSR button; it never silently falls back to the procedural demo. Browser/Vite previews cannot launch local inference and expose only the explicit Workspace Demo.
+Generation runs offline after setup. Both Rust and Python validate the runtime manifest, pinned revisions, dependency lockfile identity, and recorded file sizes/modification times before accepting a job. Full model checksums run at install/repair. The desktop Metal adapter reports an error if Metal is unavailable; it does not silently switch to CPU or the procedural demo. Browser/Vite previews expose only the explicit Workspace Demo.
+
+The 16 GB profile recommends Balanced geometry. High uses a denser extraction grid and is best on 24 GB or larger Macs; it does not use a more capable AI model. Working-memory estimates are conservative guidance rather than measured total GPU memory. Jobs also check remaining memory headroom before loading weights.
+
+## Verification and benchmarks
+
+See [benchmark procedure and findings](backend/benchmarks/README.md). The current suite has 30 frontend unit tests, 27 Python tests, and 12 Rust unit tests, plus opt-in real GPU/installer integration tests and Playwright workspace tests. The UI integration tests use an explicit IPC test double with actual generated GLBs; native process execution is verified separately in Rust.
+
+```sh
+npm run backend:test
+npm run test:ui                       # Installer UI; requires Google Chrome
+SCULPT_TEST_IMAGE=/absolute/path/to/object.jpg cargo test --manifest-path src-tauri/Cargo.toml real_image_runs_through_rust_supervisor -- --ignored --nocapture
+```
 
 ## Deliberate prototype limits
 
@@ -66,7 +91,9 @@ PythonRuntime → TripoSR (PyTorch / Metal); MockRuntime → explicit demo
 - `src-tauri/src/harness/catalog.rs` gates engine recommendations against detected capabilities and memory.
 - `src-tauri/src/harness/mod.rs` owns source/job registries, compatibility validation, events, cancellation, and explicit runtime selection.
 - `src-tauri/src/harness/python.rs` supervises one isolated Python worker per job, enforces a timeout, validates protocol messages and GLB output, and records metrics. `runtime.rs` remains the replaceable adapter contract.
+- `setup.rs`, `process.rs`, `paths.rs`, and `cache.rs` share native process supervision, packaged resource resolution, installation, and cache ownership. Installation and inference share a single active-operation lock.
+- `backend/runtime-spec.json` pins source/model revisions, model checksums, and quality profiles. `backend/requirements.lock` pins dependency versions and package hashes. Runtime processes remain replaceable behind the harness.
 - `src-tauri/src/harness/assets.rs` validates image inputs and keeps worker paths out of the UI. `src/geometry/importedAsset.ts` parses and fits returned GLBs without changing their export bytes.
 - `src/geometry/sculpture.ts` owns the explicit demo geometry, metadata, and demo GLB export.
 
-Model download, load/unload, memory policy, runtime selection, and fallbacks belong behind the harness. Download is currently a developer CLI step; an in-app installer, resumable downloads, model checksums, cache eviction, and a larger image benchmark are the next backend milestones. Application assets and studio lighting are local; no Sculpt GPU server or per-generation cloud request is used.
+Next priorities are foreground-mask preview and correction, a broader photographic evaluation set, separate mesh cleanup and texture-baking stages, and durable project files. Reconstruction quality still has substantial limits: noisy surfaces, uneven thin structures, and unreliable occluded/cluttered inputs. Competitive quality and cost parity with commercial generators have not been established. Application assets and studio lighting are local; no Sculpt GPU server or per-generation cloud request is used.

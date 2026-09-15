@@ -12,3 +12,4 @@ rembg==2.0.69
 onnxruntime==1.22.1
 imageio==2.37.0
 pytest==8.4.2
+psutil==7.0.0

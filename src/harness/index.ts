@@ -1,6 +1,6 @@
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import type { BackendStatus, SourceAsset, EngineProfile, GeneratedAsset, GenerationProgress, GenerationRequest, HardwareProfile, SculptHarness } from './types'
+import type { BackendStatus, SetupProgress, SourceAsset, EngineProfile, GeneratedAsset, GenerationProgress, GenerationRequest, HardwareProfile, SculptHarness } from './types'
 
 export type * from './types'
 
@@ -44,12 +44,45 @@ function previewEngines(_profile: HardwareProfile): EngineProfile[] {
 export async function backendStatus(): Promise<BackendStatus> {
   if (isTauri()) return invoke<BackendStatus>('backend_status')
   return { installed: false, engine: 'triposr', runtimePath: '', mpsAvailable: false,
+    state: 'missing', downloadCacheBytes: 0, recommendedQuality: 'balanced', qualities: [],
     message: 'Open Sculpt desktop to use local AI reconstruction.' }
+}
+
+export async function installRuntime(onProgress: (progress: SetupProgress) => void, signal?: AbortSignal): Promise<BackendStatus> {
+  if (!isTauri()) throw new Error('Runtime installation requires the Sculpt desktop app')
+  if (signal?.aborted) throw abortError()
+  const jobId = crypto.randomUUID()
+  let started = false
+  const cancel = () => { if (started) void invoke('cancel_generation', { jobId }).catch(() => {}) }
+  const unlisten = await listen<SetupProgress>('sculpt://setup-progress', event => {
+    if (event.payload.jobId !== jobId) return
+    started = true
+    if (signal?.aborted) cancel()
+    onProgress(event.payload)
+  })
+  signal?.addEventListener('abort', cancel, { once: true })
+  try {
+    if (signal?.aborted) throw abortError()
+    const status = await invoke<BackendStatus>('install_runtime', { jobId })
+    if (signal?.aborted) throw abortError()
+    return status
+  } catch (error) {
+    if (signal?.aborted) throw abortError()
+    throw error instanceof Error ? error : new Error(String(error))
+  } finally {
+    signal?.removeEventListener('abort', cancel)
+    unlisten()
+  }
 }
 
 export async function importSource(name: string, dataUrl: string): Promise<SourceAsset | null> {
   if (!isTauri()) return null
   return invoke<SourceAsset>('import_source', { name, dataUrl })
+}
+
+export async function clearDownloadCache(): Promise<BackendStatus> {
+  if (!isTauri()) throw new Error('Runtime storage requires the Sculpt desktop app')
+  return invoke<BackendStatus>('clear_download_cache')
 }
 
 export async function readGeneratedAsset(assetId: string): Promise<ArrayBuffer> {
@@ -167,4 +200,4 @@ export async function saveGlb(bytes: ArrayBuffer, defaultName: string): Promise<
   return anchor.download
 }
 
-export const sculptHarness: SculptHarness = { detectHardware, getEngines, backendStatus, importSource, readGeneratedAsset, generate, saveGlb }
+export const sculptHarness: SculptHarness = { detectHardware, getEngines, backendStatus, installRuntime, clearDownloadCache, importSource, readGeneratedAsset, generate, saveGlb }

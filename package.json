@@ -11,9 +11,11 @@
     "desktop": "tauri dev",
     "desktop:build": "tauri build",
     "test": "vitest run",
+    "test:ui": "playwright test",
     "backend:setup": "python3 backend/setup_runtime.py",
     "backend:test": ".sculpt-runtime/venv/bin/python -m pytest backend/tests -q",
-    "backend:generate": ".sculpt-runtime/venv/bin/python backend/generate.py"
+    "backend:generate": ".sculpt-runtime/venv/bin/python backend/generate.py",
+    "backend:benchmark": ".sculpt-runtime/venv/bin/python backend/benchmark.py"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
@@ -25,6 +27,7 @@
     "three": "^0.183.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tauri-apps/cli": "^2.10.0",
     "@types/node": "^22.19.0",
     "@types/react": "^19.2.0",
