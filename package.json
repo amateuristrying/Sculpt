@@ -15,7 +15,8 @@
     "backend:setup": "python3 backend/setup_runtime.py",
     "backend:test": ".sculpt-runtime/venv/bin/python -m pytest backend/tests -q",
     "backend:generate": ".sculpt-runtime/venv/bin/python backend/generate.py",
-    "backend:benchmark": ".sculpt-runtime/venv/bin/python backend/benchmark.py"
+    "backend:benchmark": ".sculpt-runtime/venv/bin/python backend/benchmark.py",
+    "backend:eval": ".sculpt-runtime/venv/bin/python backend/evaluate.py"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

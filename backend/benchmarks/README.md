@@ -1,5 +1,9 @@
 # Local reconstruction checks
 
+For quality regression work, use the [34-photo CC0 evaluation set](../evaluation/README.md)
+and its four-view comparison command. The showcase and synthetic inputs below remain
+legacy smoke tests and do **not** qualify as the independent real-photo evaluation set.
+
 These benchmarks test pipeline reliability and expose reconstruction failures. They
 do not measure semantic accuracy, establish Meshy parity, or imply production-ready
 topology. Review source images, material views, and reverse angles separately.
