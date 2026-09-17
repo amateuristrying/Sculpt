@@ -20,6 +20,35 @@ pub struct GenerationRequest {
     pub geometry: GeometryQuality,
     #[serde(default)]
     pub background: BackgroundMode,
+    /// Set only by the native refine command after resolving a saved parent.
+    #[serde(default)]
+    pub parent_asset_id: Option<String>,
+    #[serde(default)]
+    pub refinement: Option<RefinementSettings>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RefinementSettings {
+    pub resolution: u32,
+    pub density_threshold: f64,
+    pub remove_small_components: bool,
+    pub smoothing_iterations: u32,
+}
+
+impl RefinementSettings {
+    pub fn validate(&self) -> Result<(), String> {
+        if !(96..=256).contains(&self.resolution)
+            || !self.density_threshold.is_finite()
+            || !(10.0..=40.0).contains(&self.density_threshold)
+            || self.smoothing_iterations > 10
+        {
+            return Err(
+                "Refinement requires resolution 96–256, density 10–40, and smoothing 0–10.".into(),
+            );
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
@@ -47,7 +76,7 @@ pub struct GenerationProgress {
     pub message: String,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GeneratedAsset {
     pub id: String,
@@ -207,6 +236,8 @@ mod tests {
             source_id: None,
             geometry: GeometryQuality::Balanced,
             background: BackgroundMode::Auto,
+            parent_asset_id: None,
+            refinement: None,
         };
         let result = tauri::async_runtime::block_on(MockRuntime.generate(request, context));
         assert_eq!(result.unwrap_err(), "Generation cancelled");

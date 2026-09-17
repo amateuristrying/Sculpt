@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "id": "triposr",
+  "name": "TripoSR",
+  "licenseIdentifier": "MIT",
+  "engineRevision": "107cefdc244c39106fa830359024f6a2f1c78871",
+  "runtimeSpecPath": "backend/runtime-spec.json",
+  "adapter": "triposr",
+  "implemented": true,
+  "nativeHardwareRequired": true,
+  "targets": [
+    {
+      "platform": "macos",
+      "architecture": "arm64",
+      "computeBackend": "Metal",
+      "device": "mps",
+      "minimumRamGb": 16,
+      "requiresAppleSilicon": true,
+      "validated": true
+    },
+    {
+      "platform": "linux",
+      "architecture": "x86_64",
+      "computeBackend": "CUDA",
+      "device": "cuda",
+      "minimumRamGb": null,
+      "requiresAppleSilicon": false,
+      "validated": false
+    },
+    {
+      "platform": "windows",
+      "architecture": "x86_64",
+      "computeBackend": "CUDA",
+      "device": "cuda",
+      "minimumRamGb": null,
+      "requiresAppleSilicon": false,
+      "validated": false
+    },
+    {
+      "platform": "any",
+      "architecture": "any",
+      "computeBackend": "CPU",
+      "device": "cpu",
+      "minimumRamGb": null,
+      "requiresAppleSilicon": false,
+      "validated": false
+    }
+  ]
+}

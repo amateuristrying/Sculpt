@@ -56,6 +56,15 @@ export interface GenerationRequest {
   imageName: string
   geometry: 'draft' | 'balanced' | 'high'
   background?: 'auto' | 'keep'
+  parentAssetId?: string | null
+  refinement?: RefinementSettings | null
+}
+
+export interface RefinementSettings {
+  resolution: number
+  densityThreshold: number
+  removeSmallComponents: boolean
+  smoothingIterations: number
 }
 
 export type GenerationStage = 'analyzing' | 'loading' | 'geometry' | 'surface' | 'preparing' | 'complete' | 'cancelled' | 'failed'
@@ -72,7 +81,7 @@ export interface GeneratedAsset {
   seed: number
   generatedAt: string
   simulated: boolean
-  metrics?: { device: string; totalSeconds: number; faces: number; vertices: number; sourceSha256?: string; meshQuality?: { watertight: boolean; windingConsistent: boolean; components: number; degenerateFaces: number } }
+  metrics?: { device: string; totalSeconds: number; faces: number; vertices: number; sourceSha256?: string; canRefine?: boolean; operation?: 'generate' | 'refine'; resolution?: number; refinement?: RefinementSettings; meshQuality?: { watertight: boolean; windingConsistent: boolean; components: number; degenerateFaces: number } }
 }
 
 export interface SourceAsset {
@@ -82,6 +91,26 @@ export interface SourceAsset {
   width: number
   height: number
   sha256: string
+}
+
+export interface StoredSource { asset: SourceAsset; dataUrl: string; size: number }
+
+export interface GenerationJob {
+  id: string
+  request: GenerationRequest
+  state: 'running' | 'succeeded' | 'failed' | 'cancelled' | 'interrupted'
+  createdAt: string
+  updatedAt: string
+  error?: string | null
+  asset?: GeneratedAsset | null
+}
+
+export interface AccessStatus {
+  mode: 'development' | 'trial' | 'paid' | 'preview'
+  canGenerate: boolean
+  freeGenerationsRemaining: number | null
+  activationAvailable: boolean
+  message: string
 }
 
 export interface BackendStatus {
@@ -106,6 +135,12 @@ export interface SculptHarness {
   clearDownloadCache(): Promise<BackendStatus>
   importSource(name: string, dataUrl: string): Promise<SourceAsset | null>
   readGeneratedAsset(assetId: string): Promise<ArrayBuffer>
+  readSource(sourceId: string): Promise<StoredSource>
+  listGenerationJobs(): Promise<GenerationJob[]>
+  getAccessStatus(): Promise<AccessStatus>
+  activateLicense(signedLicense: string): Promise<AccessStatus>
   generate(request: GenerationRequest, onProgress: (progress: GenerationProgress) => void, signal?: AbortSignal): Promise<GeneratedAsset>
+  refine(parentAssetId: string, settings: RefinementSettings, onProgress: (progress: GenerationProgress) => void, signal?: AbortSignal): Promise<GeneratedAsset>
+  saveGeneratedGlb(assetId: string, defaultName: string): Promise<string | null>
   saveGlb(bytes: ArrayBuffer, defaultName: string): Promise<string | null>
 }

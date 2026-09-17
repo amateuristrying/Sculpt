@@ -1,5 +1,6 @@
 mod harness;
 
+use tauri::Manager;
 use tauri_plugin_dialog::DialogExt;
 
 #[tauri::command]
@@ -51,14 +52,25 @@ async fn save_glb(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .manage(harness::SculptInferenceHarness::default())
+        .setup(|app| {
+            app.manage(harness::SculptInferenceHarness::new(
+                harness::paths::library_dir(app.handle()),
+            ));
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             harness::detect_hardware,
             harness::get_engines,
             harness::generate_asset,
+            harness::refine_asset,
             harness::cancel_generation,
+            harness::list_generation_jobs,
+            harness::get_access_status,
+            harness::activate_license,
             harness::assets::import_source,
+            harness::assets::read_source,
             harness::assets::read_generated_asset,
+            harness::assets::save_generated_glb,
             harness::python::backend_status,
             harness::setup::install_runtime,
             harness::cache::clear_download_cache,

@@ -1,6 +1,6 @@
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import type { BackendStatus, SetupProgress, SourceAsset, EngineProfile, GeneratedAsset, GenerationProgress, GenerationRequest, HardwareProfile, SculptHarness } from './types'
+import type { RefinementSettings, AccessStatus, GenerationJob, StoredSource, BackendStatus, SetupProgress, SourceAsset, EngineProfile, GeneratedAsset, GenerationProgress, GenerationRequest, HardwareProfile, SculptHarness } from './types'
 
 export type * from './types'
 
@@ -87,8 +87,39 @@ export async function clearDownloadCache(): Promise<BackendStatus> {
 
 export async function readGeneratedAsset(assetId: string): Promise<ArrayBuffer> {
   if (!isTauri()) throw new Error('Real assets require the desktop app')
-  const base64 = await invoke<string>('read_generated_asset', { assetId })
-  return Uint8Array.from(atob(base64), char => char.charCodeAt(0)).buffer
+  // Tauri's binary IPC response avoids base64 and a second JSON-sized allocation.
+  const bytes = await invoke<ArrayBuffer | number[]>('read_generated_asset', { assetId })
+  return bytes instanceof ArrayBuffer ? bytes : Uint8Array.from(bytes).buffer
+}
+
+export async function saveGeneratedGlb(assetId: string, defaultName: string): Promise<string | null> {
+  if (!isTauri()) throw new Error('Saved asset export requires the Sculpt desktop app')
+  return invoke<string | null>('save_generated_glb', { assetId, defaultName })
+}
+
+const nativeAsset = (asset: GeneratedAsset): GeneratedAsset => ({ ...asset, generatedAt: new Date(Number(asset.generatedAt)).toISOString() })
+
+export async function readSource(sourceId: string): Promise<StoredSource> {
+  if (!isTauri()) throw new Error('Saved sources require the Sculpt desktop app')
+  return invoke<StoredSource>('read_source', { sourceId })
+}
+
+export async function listGenerationJobs(): Promise<GenerationJob[]> {
+  if (!isTauri()) return []
+  const jobs = await invoke<GenerationJob[]>('list_generation_jobs', { limit: 50 })
+  return jobs.map(job => ({ ...job, createdAt: new Date(Number(job.createdAt)).toISOString(),
+    updatedAt: new Date(Number(job.updatedAt)).toISOString(), asset: job.asset ? nativeAsset(job.asset) : null }))
+}
+
+export async function getAccessStatus(): Promise<AccessStatus> {
+  if (!isTauri()) return { mode: 'preview', canGenerate: false, freeGenerationsRemaining: null,
+    activationAvailable: false, message: 'Open Sculpt desktop to reconstruct images. The browser offers a workspace demo.' }
+  return invoke<AccessStatus>('get_access_status')
+}
+
+export async function activateLicense(signedLicense: string): Promise<AccessStatus> {
+  if (!isTauri()) throw new Error('License activation requires the Sculpt desktop app')
+  return invoke<AccessStatus>('activate_license', { signedLicense })
 }
 
 export async function getEngines(profile: HardwareProfile): Promise<EngineProfile[]> {
@@ -150,6 +181,15 @@ async function generatePreview(request: GenerationRequest, onProgress: (value: G
 
 export async function generate(request: GenerationRequest, onProgress: (value: GenerationProgress) => void, signal?: AbortSignal): Promise<GeneratedAsset> {
   if (!isTauri()) return generatePreview(request, onProgress, signal)
+  return runNativeOperation('generate_asset', { request }, onProgress, signal)
+}
+
+export async function refine(parentAssetId: string, settings: RefinementSettings, onProgress: (value: GenerationProgress) => void, signal?: AbortSignal): Promise<GeneratedAsset> {
+  if (!isTauri()) throw new Error('Refinement requires the Sculpt desktop app')
+  return runNativeOperation('refine_asset', { parentAssetId, settings }, onProgress, signal)
+}
+
+async function runNativeOperation(command: string, args: Record<string, unknown>, onProgress: (value: GenerationProgress) => void, signal?: AbortSignal): Promise<GeneratedAsset> {
   if (signal?.aborted) throw abortError()
   const jobId = crypto.randomUUID()
   let hasStarted = false
@@ -171,9 +211,9 @@ export async function generate(request: GenerationRequest, onProgress: (value: G
   try {
     // Abort may have happened while the asynchronous event listener was registered.
     if (signal?.aborted) throw abortError()
-    const asset = await invoke<GeneratedAsset>('generate_asset', { request, jobId })
+    const asset = await invoke<GeneratedAsset>(command, { ...args, jobId })
     if (signal?.aborted) throw abortError()
-    return { ...asset, generatedAt: new Date(Number(asset.generatedAt)).toISOString() }
+    return nativeAsset(asset)
   } catch (error) {
     if (signal?.aborted) throw abortError()
     throw error instanceof Error ? error : new Error(String(error))
@@ -200,4 +240,4 @@ export async function saveGlb(bytes: ArrayBuffer, defaultName: string): Promise<
   return anchor.download
 }
 
-export const sculptHarness: SculptHarness = { detectHardware, getEngines, backendStatus, installRuntime, clearDownloadCache, importSource, readGeneratedAsset, generate, saveGlb }
+export const sculptHarness: SculptHarness = { detectHardware, getEngines, backendStatus, installRuntime, clearDownloadCache, importSource, readGeneratedAsset, readSource, listGenerationJobs, getAccessStatus, activateLicense, generate, refine, saveGeneratedGlb, saveGlb }

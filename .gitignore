@@ -17,3 +17,5 @@ backend/.runtime/
 backend/.cache/
 backend/outputs/
 src-tauri/gen/
+*.sculpt-license
+*.pem

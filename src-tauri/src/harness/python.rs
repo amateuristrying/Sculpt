@@ -135,6 +135,8 @@ pub struct PythonRuntime {
     pub source: PathBuf,
     pub source_sha256: String,
     pub output_dir: PathBuf,
+    pub scene_cache: Option<PathBuf>,
+    pub device: String,
 }
 
 impl InferenceRuntime for PythonRuntime {
@@ -151,6 +153,8 @@ impl InferenceRuntime for PythonRuntime {
         let source = self.source.clone();
         let output_dir = self.output_dir.clone();
         let source_sha256 = self.source_sha256.clone();
+        let scene_cache = self.scene_cache.clone();
+        let device = self.device.clone();
         Box::pin(async move {
             tauri::async_runtime::spawn_blocking(move || {
                 run_worker(
@@ -161,6 +165,8 @@ impl InferenceRuntime for PythonRuntime {
                     &output_dir,
                     request,
                     context,
+                    scene_cache.as_deref(),
+                    &device,
                 )
             })
             .await
@@ -177,6 +183,8 @@ fn run_worker(
     output_dir: &Path,
     request: GenerationRequest,
     context: JobContext,
+    scene_cache: Option<&Path>,
+    device: &str,
 ) -> Result<GeneratedAsset, String> {
     if context.cancelled.load(Ordering::Relaxed) {
         return Err("Generation cancelled".into());
@@ -192,9 +200,12 @@ fn run_worker(
     std::fs::create_dir_all(output_dir).map_err(|e| e.to_string())?;
     let output = output_dir.join("mesh.glb");
     let request_file = output_dir.join("request.json");
-    // This adapter is offered as a validated Metal profile. CPU execution remains
-    // an explicit developer option, never a silent fallback from the desktop UI.
-    let body = serde_json::json!({"sourcePath":source, "outputPath":output, "quality":request.geometry, "background":request.background, "device":"mps"});
+    // The native planner selects an explicit validated device. Never silently
+    // substitute CPU execution when that device is unavailable.
+    let body = serde_json::json!({"sourcePath":source, "outputPath":output,
+        "quality":request.geometry, "background":request.background, "device":device,
+        "operation": if request.refinement.is_some() { "refine" } else { "generate" },
+        "sourceSha256":source_sha256, "sceneCachePath":scene_cache, "refinement":request.refinement});
     std::fs::write(
         &request_file,
         serde_json::to_vec(&body).map_err(|e| e.to_string())?,
@@ -276,11 +287,25 @@ fn run_worker(
     let mut metrics = result_metrics.ok_or("The worker exited without returning an asset")?;
     let _ = read_valid_glb(&output)?;
     metrics["sourceSha256"] = source_sha256.into();
-    std::fs::write(
-        output_dir.join("metrics.json"),
-        serde_json::to_vec_pretty(&metrics).map_err(|e| e.to_string())?,
-    )
-    .map_err(|e| e.to_string())?;
+    // The worker published metrics atomically; preserve that guarantee when
+    // appending the native source provenance record.
+    let metrics_temp = output_dir.join(format!(".metrics-{}.tmp", uuid::Uuid::new_v4()));
+    let published = (|| {
+        use std::io::Write;
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&metrics_temp)
+            .map_err(|e| e.to_string())?;
+        file.write_all(&serde_json::to_vec_pretty(&metrics).map_err(|e| e.to_string())?)
+            .map_err(|e| e.to_string())?;
+        file.sync_all().map_err(|e| e.to_string())?;
+        std::fs::rename(&metrics_temp, output_dir.join("metrics.json")).map_err(|e| e.to_string())
+    })();
+    if published.is_err() {
+        let _ = std::fs::remove_file(&metrics_temp);
+    }
+    published?;
     context.emit("complete", 100.0, "Your reconstructed 3D asset is ready");
     Ok(GeneratedAsset {
         id: context.id,
@@ -344,6 +369,8 @@ mod tests {
             image_name: "arbitrary-name.jpg".into(),
             geometry: GeometryQuality::Draft,
             background: BackgroundMode::Auto,
+            parent_asset_id: None,
+            refinement: None,
         };
         let asset = run_worker(
             &root,
@@ -353,6 +380,8 @@ mod tests {
             &output,
             request.clone(),
             context,
+            None,
+            "mps",
         )
         .unwrap();
         assert!(!asset.simulated);
@@ -388,6 +417,8 @@ mod tests {
             &cancelled_output,
             request,
             context,
+            None,
+            "mps",
         );
         assert!(result.unwrap_err().contains("cancelled"));
         assert!(!cancelled_output.join("mesh.glb").exists());

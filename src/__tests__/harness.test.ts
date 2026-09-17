@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { backendStatus, installRuntime, clearDownloadCache, importSource, readGeneratedAsset, detectHardware, generate, getEngines, previewHardware, saveGlb } from '../harness'
+import { backendStatus, installRuntime, clearDownloadCache, importSource, readGeneratedAsset, detectHardware, generate, getEngines, previewHardware, saveGlb, saveGeneratedGlb, refine, readSource, listGenerationJobs, getAccessStatus, activateLicense } from '../harness'
 import type { GenerationProgress, GenerationRequest, HardwareProfile } from '../harness'
 
 vi.mock('@tauri-apps/api/core', () => ({ isTauri: vi.fn(() => false), invoke: vi.fn() }))
@@ -10,7 +10,7 @@ vi.mock('@tauri-apps/api/event', () => ({ listen: vi.fn() }))
 const request: GenerationRequest = { engineId: 'demo', imageName: 'study.png', geometry: 'draft' }
 
 beforeEach(() => {
-  vi.clearAllMocks()
+  vi.resetAllMocks()
   vi.mocked(isTauri).mockReturnValue(false)
 })
 
@@ -170,8 +170,12 @@ describe('native harness bridge', () => {
   })
   it('decodes native asset bytes and never manufactures a mock result on failure', async () => {
     vi.mocked(isTauri).mockReturnValue(true)
-    vi.mocked(invoke).mockResolvedValueOnce(btoa('glTF'))
+    const binary = new TextEncoder().encode('glTF').buffer
+    vi.mocked(invoke).mockResolvedValueOnce(binary)
     expect(new TextDecoder().decode(await readGeneratedAsset('asset-id'))).toBe('glTF')
+    expect(invoke).toHaveBeenCalledWith('read_generated_asset', { assetId: 'asset-id' })
+    vi.mocked(invoke).mockResolvedValueOnce([103, 108, 84, 70])
+    expect(new TextDecoder().decode(await readGeneratedAsset('numeric-fallback'))).toBe('glTF')
     vi.mocked(invoke).mockRejectedValueOnce(new Error('Asset unavailable'))
     await expect(readGeneratedAsset('missing')).rejects.toThrow('Asset unavailable')
   })
@@ -213,6 +217,78 @@ describe('native harness bridge', () => {
     register(unlisten)
     await rejected
     expect(invoke).not.toHaveBeenCalled()
+    expect(unlisten).toHaveBeenCalledOnce()
+  })
+})
+
+describe('saved assets and refinement boundary', () => {
+  const settings = { resolution: 192, densityThreshold: 22, removeSmallComponents: true, smoothingIterations: 3 }
+
+  it('normalizes saved job and asset timestamps while preserving requests and failed records', async () => {
+    vi.mocked(isTauri).mockReturnValue(true)
+    const savedRequest = { ...request, engineId: 'triposr', sourceId: 'source-1' }
+    vi.mocked(invoke).mockResolvedValueOnce([
+      { id: 'saved-1', request: savedRequest, state: 'succeeded', createdAt: '1700000000000', updatedAt: '1700000001000', asset: { id: 'saved-1', seed: 0, simulated: false, generatedAt: '1700000001000' } },
+      { id: 'failed-2', request: savedRequest, state: 'failed', createdAt: '1700000002000', updatedAt: '1700000003000', error: 'No foreground found', asset: null },
+    ])
+    const jobs = await listGenerationJobs()
+    expect(invoke).toHaveBeenCalledWith('list_generation_jobs', { limit: 50 })
+    expect(jobs[0]).toMatchObject({ request: savedRequest, createdAt: '2023-11-14T22:13:20.000Z', updatedAt: '2023-11-14T22:13:21.000Z', asset: { generatedAt: '2023-11-14T22:13:21.000Z' } })
+    expect(jobs[1]).toMatchObject({ state: 'failed', asset: null, error: 'No foreground found' })
+  })
+
+  it('exports a saved asset by native ID without uploading GLB bytes through JSON', async () => {
+    vi.mocked(isTauri).mockReturnValue(true)
+    vi.mocked(invoke).mockResolvedValueOnce('/exports/banana.glb').mockResolvedValueOnce(null)
+    expect(await saveGeneratedGlb('asset-1', 'banana.glb')).toBe('/exports/banana.glb')
+    expect(invoke).toHaveBeenCalledWith('save_generated_glb', { assetId: 'asset-1', defaultName: 'banana.glb' })
+    expect(await saveGeneratedGlb('asset-1', 'banana.glb')).toBeNull()
+    expect(invoke).not.toHaveBeenCalledWith('save_glb', expect.anything())
+  })
+
+  it('browser preview cannot refine, activate, read saved sources, or export native assets', async () => {
+    await expect(refine('asset-1', settings, vi.fn())).rejects.toThrow(/desktop/)
+    await expect(readSource('source-1')).rejects.toThrow(/desktop/)
+    await expect(saveGeneratedGlb('asset-1', 'asset.glb')).rejects.toThrow(/desktop/)
+    await expect(activateLicense('license')).rejects.toThrow(/desktop/)
+    expect(await listGenerationJobs()).toEqual([])
+    expect(await getAccessStatus()).toMatchObject({ mode: 'preview', canGenerate: false })
+    expect(invoke).not.toHaveBeenCalled()
+  })
+
+  it('dispatches refinement settings against an existing asset and never starts image generation', async () => {
+    vi.mocked(isTauri).mockReturnValue(true)
+    const unlisten = vi.fn()
+    vi.mocked(listen).mockResolvedValueOnce(unlisten)
+    vi.mocked(invoke).mockResolvedValueOnce({ id: 'refined-1', seed: 0, simulated: false, generatedAt: '1700000001000' })
+    expect(await refine('original-1', settings, vi.fn())).toMatchObject({ id: 'refined-1', simulated: false, generatedAt: '2023-11-14T22:13:21.000Z' })
+    expect(invoke).toHaveBeenCalledExactlyOnceWith('refine_asset', { parentAssetId: 'original-1', settings, jobId: expect.any(String) })
+    expect(unlisten).toHaveBeenCalledOnce()
+  })
+
+  it('cancels a running refinement and releases its listener even when native reports an error', async () => {
+    vi.mocked(isTauri).mockReturnValue(true)
+    const unlisten = vi.fn(), controller = new AbortController(), progress = vi.fn()
+    let emit!: (event: { payload: GenerationProgress }) => void
+    let rejectNative!: (reason: unknown) => void
+    vi.mocked(listen).mockImplementationOnce(async (_event, handler) => {
+      emit = handler as typeof emit
+      return unlisten
+    })
+    vi.mocked(invoke).mockImplementation((command, args: any) => {
+      if (command === 'refine_asset') return new Promise((_resolve, reject) => {
+        rejectNative = reject
+        emit({ payload: { jobId: args.jobId, stage: 'surface', progress: 40, message: 'Rebuilding surface' } })
+      })
+      return Promise.resolve(undefined)
+    })
+    const running = refine('original-1', settings, progress, controller.signal)
+    const rejected = expect(running).rejects.toMatchObject({ name: 'AbortError' })
+    await vi.waitFor(() => expect(progress).toHaveBeenCalledOnce())
+    controller.abort(); rejectNative('Generation cancelled')
+    await rejected
+    const refineCall = vi.mocked(invoke).mock.calls.find(([command]) => command === 'refine_asset')
+    expect(invoke).toHaveBeenCalledWith('cancel_generation', { jobId: (refineCall?.[1] as any).jobId })
     expect(unlisten).toHaveBeenCalledOnce()
   })
 })

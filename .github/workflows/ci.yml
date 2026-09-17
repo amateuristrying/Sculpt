@@ -1,0 +1,73 @@
+name: Sculpt checks
+
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  desktop:
+    # Private repositories opt in manually to avoid unexpected macOS runner usage.
+    if: github.event.repository.private == false || github.event_name == 'workflow_dispatch'
+    # Standard Apple Silicon runner; no signing, model download, or GPU job.
+    runs-on: macos-15
+    timeout-minutes: 40
+    env:
+      HF_HUB_OFFLINE: '1'
+      TRANSFORMERS_OFFLINE: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Frontend and license issuer tests
+        run: |
+          npm test
+          node --test scripts/issue-license.test.mjs
+          npm run build
+      - name: Install Rust toolchain
+        run: rustup toolchain install stable --profile minimal --component rustfmt
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+      - name: Native format, compile, and unit tests
+        working-directory: src-tauri
+        run: |
+          cargo +stable fmt --check
+          cargo +stable check --locked
+          cargo +stable test --locked
+      - name: Install UI test browser
+        run: npx playwright install chrome
+      - name: Workspace UI tests
+        run: npm run test:ui
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: backend/requirements.lock
+      - name: Install locked worker dependencies without models
+        run: python -m pip install --require-hashes -r backend/requirements.lock
+      - name: Worker unit tests (CPU only, no weights)
+        run: python -m pytest backend/tests -q
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ui-failure-details
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore

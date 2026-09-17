@@ -16,12 +16,12 @@ pub struct EngineProfile {
 }
 
 pub fn engines(profile: &HardwareProfile) -> Vec<EngineProfile> {
-    let apple_ready = profile.is_apple_silicon
-        && profile
-            .compute_backends
-            .iter()
-            .any(|backend| backend == "Metal")
-        && profile.memory_gb >= 16.0;
+    let plan = super::engines::plan(profile, super::engines::manifests());
+    let reconstruction = plan
+        .iter()
+        .find(|engine| engine.engine_id == "triposr")
+        .expect("Bundled reconstruction descriptor");
+    let apple_ready = reconstruction.available;
     vec![
         EngineProfile {
             id: "triposr".into(), name: "TripoSR".into(), subtitle: "Local reconstruction · Experimental".into(),
@@ -31,7 +31,7 @@ pub fn engines(profile: &HardwareProfile) -> Vec<EngineProfile> {
             reason: if apple_ready {
                 "Runs locally through an isolated Python worker. Best with one clearly visible object. Unseen surfaces are inferred; quality varies. One-time runtime setup is required."
             } else {
-                "This first adapter targets Apple Silicon with Metal and at least 16 GB memory. Other hardware has not been validated."
+                &reconstruction.reason
             }.into(), implemented: true,
         },
         EngineProfile {
@@ -88,5 +88,17 @@ mod tests {
         hardware.compute_backends = vec!["CPU".into()];
         assert_eq!(engines(&hardware)[0].compatibility, "unsupported");
         assert_eq!(engines(&hardware)[1].compatibility, "recommended");
+    }
+
+    #[test]
+    fn catalog_and_native_resolver_agree_on_browser_and_unsupported_os() {
+        let mut hardware = m4();
+        hardware.detection_source = "browser".into();
+        assert_eq!(engines(&hardware)[0].compatibility, "unsupported");
+        assert!(engines(&hardware)[0].reason.contains("desktop app"));
+        hardware.detection_source = "native".into();
+        hardware.os = "linux".into();
+        assert_eq!(engines(&hardware)[0].compatibility, "unsupported");
+        assert!(super::super::engines::resolve("triposr", &hardware).is_err());
     }
 }
