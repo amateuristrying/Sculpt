@@ -42,7 +42,10 @@ pub fn run(
     }
     #[cfg(unix)]
     command.process_group(0);
-    command.stdin(Stdio::null()).stdout(Stdio::piped());
+    command
+        .env("SCULPT_PARENT_PID", std::process::id().to_string())
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped());
     let mut child = OwnedChild(
         command
             .spawn()
@@ -50,7 +53,9 @@ pub fn run(
         true,
     );
     let stdout = child.0.stdout.take().ok_or("Process output unavailable")?;
-    let (tx, rx) = mpsc::channel();
+    // Bound queued output as well as each line. A noisy or broken worker must
+    // not consume unbounded host memory while the UI handles progress events.
+    let (tx, rx) = mpsc::sync_channel(16);
     let reader = std::thread::spawn(move || {
         let mut reader = BufReader::new(stdout);
         loop {
@@ -159,5 +164,60 @@ mod tests {
         )
         .is_err());
         assert_eq!(lines, ["output"]);
+    }
+
+    #[test]
+    fn worker_knows_its_parent_before_startup() {
+        let mut parent = String::new();
+        run(
+            Command::new("/bin/sh").args(["-c", "echo $SCULPT_PARENT_PID"]),
+            &AtomicBool::new(false),
+            Duration::from_secs(2),
+            |line| {
+                parent = line.to_owned();
+                Ok(())
+            },
+        )
+        .unwrap();
+        assert_eq!(parent, std::process::id().to_string());
+    }
+
+    #[test]
+    fn cancelling_a_flooding_worker_does_not_block_on_its_output_queue() {
+        let cancelled = AtomicBool::new(false);
+        let started = Instant::now();
+        let error = run(
+            Command::new("/bin/sh").args(["-c", "while :; do echo progress; done"]),
+            &cancelled,
+            Duration::from_secs(5),
+            |_| {
+                // Allow the worker to fill the bounded queue before cancellation.
+                std::thread::sleep(Duration::from_millis(100));
+                cancelled.store(true, Ordering::Relaxed);
+                Ok(())
+            },
+        )
+        .unwrap_err();
+        assert!(error.contains("cancelled"));
+        assert!(started.elapsed() < Duration::from_secs(2));
+    }
+
+    #[test]
+    fn malformed_output_terminates_the_worker() {
+        for (script, expected) in [
+            ("printf '\\377\\n'; sleep 10", "invalid text"),
+            ("head -c 65537 /dev/zero; sleep 10", "oversized message"),
+        ] {
+            let started = Instant::now();
+            let error = run(
+                Command::new("/bin/sh").args(["-c", script]),
+                &AtomicBool::new(false),
+                Duration::from_secs(5),
+                |_| panic!("Malformed output reached the event parser"),
+            )
+            .unwrap_err();
+            assert!(error.contains(expected), "{error}");
+            assert!(started.elapsed() < Duration::from_secs(2));
+        }
     }
 }

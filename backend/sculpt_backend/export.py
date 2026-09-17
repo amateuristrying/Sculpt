@@ -11,6 +11,7 @@ def linear_vertex_colors(colors):
 def export_glb(mesh, output):
     from trimesh.visual.material import PBRMaterial
     from trimesh.visual.texture import TextureVisuals
+    from .files import atomic_write_bytes
 
     # glTF's implicit material is metallic. Most source objects are not metal;
     # make a neutral, rough surface explicit, retaining every reconstructed color.
@@ -22,4 +23,4 @@ def export_glb(mesh, output):
         metallicFactor=0.0, roughnessFactor=0.8))
     visual.vertex_attributes['color'] = colors
     mesh.visual = visual
-    mesh.export(output, file_type='glb', include_normals=True)
+    atomic_write_bytes(output, mesh.export(file_type='glb', include_normals=True))

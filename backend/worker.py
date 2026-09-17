@@ -10,6 +10,7 @@ from pathlib import Path
 import sys
 import traceback
 import os
+import signal
 import threading
 import time
 
@@ -18,15 +19,32 @@ from sculpt_backend.config import configure_environment, runtime_root
 from sculpt_backend.health import validate_install
 
 
-def main() -> int:
-    # A GUI quit or crash must not leave an orphan holding unified memory.
-    parent_pid = os.getppid()
+def start_parent_watchdog() -> None:
+    # Rust supplies the expected PID before spawning. Capturing only getppid()
+    # here misses a GUI crash that happens while the interpreter is starting.
+    parent_pid = int(os.environ.get("SCULPT_PARENT_PID", os.getppid()))
+
+    def check_parent():
+        if os.getppid() != parent_pid:
+            # Rust gives each worker its own group. Release any descendants as
+            # well, but never signal the caller's terminal group for CLI usage.
+            if os.name == "posix" and os.getpgrp() == os.getpid():
+                os.killpg(os.getpgrp(), signal.SIGKILL)
+            os._exit(130)
+
+    check_parent()
+
     def watch_parent():
         while True:
-            time.sleep(1)
-            if os.getppid() != parent_pid:
-                os._exit(130)
+            time.sleep(0.5)
+            check_parent()
+
     threading.Thread(target=watch_parent, daemon=True).start()
+
+
+def main() -> int:
+    # A GUI quit or crash must not leave an orphan holding unified memory.
+    start_parent_watchdog()
     parser = argparse.ArgumentParser()
     parser.add_argument("--request", type=Path)
     parser.add_argument("--probe", action="store_true")
