@@ -8,6 +8,9 @@ hand-held objects, busy backgrounds, pairs, thin structures, and cropped subject
 No photo comes from TripoSR's examples. It is a small diagnostic set, not a random
 sample of customer inputs or proof of commercial-generator parity.
 
+The [M4 baseline findings](FINDINGS.md) record 68 actual Metal reconstructions,
+four-view comparisons, numerical results, and visible failure cases.
+
 ## Data provenance and licenses
 
 Every selected photograph is marked **CC0** on its Wikimedia Commons file page.

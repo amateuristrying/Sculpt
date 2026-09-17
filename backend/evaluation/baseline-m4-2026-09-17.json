@@ -1,0 +1,2326 @@
+{
+  "schemaVersion": 1,
+  "datasetId": "sculpt-real-photos-v1",
+  "datasetSha256": "4c715370a3587525d810fa979fa1d4f7363ce411bd041a1891f75fc906e17580",
+  "hardware": {
+    "os": "Darwin",
+    "osVersion": "25.5.0",
+    "architecture": "arm64",
+    "chip": "Apple M4",
+    "ramBytes": 17179869184
+  },
+  "engine": "triposr",
+  "device": "mps",
+  "torchVersion": "2.8.0",
+  "inferenceSourceCommit": "639995a1993fadcc2394cc569002f100f3153b8a",
+  "inferenceSourceUnchanged": true,
+  "runtimeSpec": {
+    "version": 2,
+    "engine": "TripoSR",
+    "sourceRevision": "107cefdc244c39106fa830359024f6a2f1c78871",
+    "sourceArchiveSha256": "bcb414550dcfcb9f5ea6a7b9c12f2bbff889f5b4a564a493178393360d9034ec",
+    "modelRevision": "5b521936b01fbe1890f6f9baed0254ab6351c04a",
+    "dinoRevision": "f205d5d8e640a89a2b8ef0369670dfc37cc07fc2",
+    "artifacts": {
+      "models/triposr/config.yaml": "74ca708ce086bf68e97709ea6b3d91f14717921c04691e84043f0eb8fcc68e62",
+      "models/triposr/model.ckpt": "429e2c6b22a0923967459de24d67f05962b235f79cde6b032aa7ed2ffcd970ee",
+      "models/background/u2net.onnx": "8d10d2f3bb75ae3b6d527c77944fc5e7dcd94b29809d47a739a7a728a912b491"
+    },
+    "qualities": [
+      {
+        "id": "draft",
+        "resolution": 96,
+        "estimatedMemoryGb": 3.5,
+        "minimumAvailableGb": 2.5,
+        "recommendedRamGb": 16
+      },
+      {
+        "id": "balanced",
+        "resolution": 128,
+        "estimatedMemoryGb": 4.5,
+        "minimumAvailableGb": 3.0,
+        "recommendedRamGb": 16
+      },
+      {
+        "id": "high",
+        "resolution": 192,
+        "estimatedMemoryGb": 6.0,
+        "minimumAvailableGb": 4.5,
+        "recommendedRamGb": 24
+      }
+    ]
+  },
+  "comparisonMethod": "frozen-baseline-camera-u2net-alpha32-v1",
+  "referenceSha256": "ee7db8211fdfd95fb3a6b873af1f7f364b3ac6d86caf51ef1732751454da8dcb",
+  "comparisonSha256": "395a4e5f7c6d3b37fbe98353f2d1def9f07080b4126327db74bcf11927bda5cc",
+  "notes": [
+    "Existing Draft 96 and Balanced 128 presets, density 25, no smoothing or fragment removal. No output-quality code was changed.",
+    "Single sequential run per preset on a shared desktop, Draft first. Timings are observations, not controlled performance comparisons.",
+    "The first Balanced attempt was blocked by the unchanged 3 GB memory guard. The completed Balanced run began after available memory recovered.",
+    "Peak process RSS is not peak GPU allocation or total unified-memory pressure. Available GB is sampled at job start, not the minimum during inference.",
+    "The reference uses 33 automatic U2Net masks and 1 existing source alpha. These are not human ground truth.",
+    "Photo cameras are coarse estimates fitted on the Balanced baseline and frozen for both runs. Symmetric outlines may have ambiguous camera angles.",
+    "All 34 valid GLBs being watertight does not imply correct geometry, correct masks, printability, or good reconstruction quality."
+  ],
+  "profiles": {
+    "draft": {
+      "createdAt": "2026-09-17T14:22:17.236067+00:00",
+      "resolution": 96,
+      "reportSha256": "e7f7077e99a3556093de641d148fcdeaee291e1d631b913bb75cc2f7c824010a",
+      "attempted": 34,
+      "validGlbs": 34,
+      "medianWorkerSeconds": 9.9,
+      "medianWallSeconds": 11.005,
+      "minWorkerSeconds": 8.46,
+      "maxWorkerSeconds": 24.09,
+      "maxProcessRssMb": 4010.0,
+      "minimumAvailableGbAtJobStart": 2.96,
+      "medianFaces": 14020.0,
+      "minFaces": 2752,
+      "maxFaces": 32616,
+      "watertightMeshes": 34,
+      "meshesWithMultipleComponents": 24
+    },
+    "balanced": {
+      "createdAt": "2026-09-17T14:30:17.668129+00:00",
+      "resolution": 128,
+      "reportSha256": "c28e2ee26b145b8d60dee235e4270dbf13a9dc4a7d47bedaa4a00897b660a4b8",
+      "attempted": 34,
+      "validGlbs": 34,
+      "medianWorkerSeconds": 11.195,
+      "medianWallSeconds": 12.43,
+      "minWorkerSeconds": 8.43,
+      "maxWorkerSeconds": 17.61,
+      "maxProcessRssMb": 4022.6,
+      "minimumAvailableGbAtJobStart": 5.08,
+      "medianFaces": 25352.0,
+      "minFaces": 5004,
+      "maxFaces": 58560,
+      "watertightMeshes": 34,
+      "meshesWithMultipleComponents": 24
+    }
+  },
+  "comparisonSummary": {
+    "cases": 34,
+    "scoredPairs": 34,
+    "left": {
+      "successfulRenders": 34,
+      "scoredCases": 34,
+      "meanIou": 0.8262739598068901,
+      "pairedMeanIou": 0.8262739598068901,
+      "meanIouFailuresAsZero": 0.8262739598068901,
+      "medianSeconds": 9.899999999999999,
+      "medianFaces": 14020.0,
+      "maxProcessRssMb": 4010.0
+    },
+    "right": {
+      "successfulRenders": 34,
+      "scoredCases": 34,
+      "meanIou": 0.8211452103709369,
+      "pairedMeanIou": 0.8211452103709369,
+      "meanIouFailuresAsZero": 0.8211452103709369,
+      "medianSeconds": 11.195,
+      "medianFaces": 25352.0,
+      "maxProcessRssMb": 4022.6
+    },
+    "meanPairedDeltaIou": -0.005128749435953204
+  },
+  "categories": {
+    "clutter": {
+      "cases": 2,
+      "scoredPairs": 2,
+      "left": {
+        "successfulRenders": 2,
+        "scoredCases": 2,
+        "meanIou": 0.7563844774571249,
+        "pairedMeanIou": 0.7563844774571249,
+        "meanIouFailuresAsZero": 0.7563844774571249,
+        "medianSeconds": 10.055,
+        "medianFaces": 8452.0,
+        "maxProcessRssMb": 3513.4
+      },
+      "right": {
+        "successfulRenders": 2,
+        "scoredCases": 2,
+        "meanIou": 0.7570446555273314,
+        "pairedMeanIou": 0.7570446555273314,
+        "meanIouFailuresAsZero": 0.7570446555273314,
+        "medianSeconds": 11.469999999999999,
+        "medianFaces": 15382.0,
+        "maxProcessRssMb": 3706.0
+      },
+      "meanPairedDeltaIou": 0.0006601780702065185
+    },
+    "food": {
+      "cases": 4,
+      "scoredPairs": 4,
+      "left": {
+        "successfulRenders": 4,
+        "scoredCases": 4,
+        "meanIou": 0.8835098568510147,
+        "pairedMeanIou": 0.8835098568510147,
+        "meanIouFailuresAsZero": 0.8835098568510146,
+        "medianSeconds": 19.130000000000003,
+        "medianFaces": 27946.0,
+        "maxProcessRssMb": 3691.7
+      },
+      "right": {
+        "successfulRenders": 4,
+        "scoredCases": 4,
+        "meanIou": 0.8817724585781704,
+        "pairedMeanIou": 0.8817724585781704,
+        "meanIouFailuresAsZero": 0.8817724585781703,
+        "medianSeconds": 11.98,
+        "medianFaces": 49659.0,
+        "maxProcessRssMb": 3638.1
+      },
+      "meanPairedDeltaIou": -0.0017373982728442205
+    },
+    "furniture": {
+      "cases": 4,
+      "scoredPairs": 4,
+      "left": {
+        "successfulRenders": 4,
+        "scoredCases": 4,
+        "meanIou": 0.8439169858635698,
+        "pairedMeanIou": 0.8439169858635698,
+        "meanIouFailuresAsZero": 0.8439169858635698,
+        "medianSeconds": 17.465,
+        "medianFaces": 9220.0,
+        "maxProcessRssMb": 3634.9
+      },
+      "right": {
+        "successfulRenders": 4,
+        "scoredCases": 4,
+        "meanIou": 0.8340554049729944,
+        "pairedMeanIou": 0.8340554049729944,
+        "meanIouFailuresAsZero": 0.8340554049729944,
+        "medianSeconds": 9.91,
+        "medianFaces": 16330.0,
+        "maxProcessRssMb": 4022.6
+      },
+      "meanPairedDeltaIou": -0.009861580890575372
+    },
+    "mugs": {
+      "cases": 3,
+      "scoredPairs": 3,
+      "left": {
+        "successfulRenders": 3,
+        "scoredCases": 3,
+        "meanIou": 0.8778767906012663,
+        "pairedMeanIou": 0.8778767906012663,
+        "meanIouFailuresAsZero": 0.8778767906012663,
+        "medianSeconds": 9.54,
+        "medianFaces": 20672,
+        "maxProcessRssMb": 3687.9
+      },
+      "right": {
+        "successfulRenders": 3,
+        "scoredCases": 3,
+        "meanIou": 0.86838518597048,
+        "pairedMeanIou": 0.86838518597048,
+        "meanIouFailuresAsZero": 0.8683851859704799,
+        "medianSeconds": 11.23,
+        "medianFaces": 37052,
+        "maxProcessRssMb": 3951.4
+      },
+      "meanPairedDeltaIou": -0.009491604630786429
+    },
+    "plants": {
+      "cases": 4,
+      "scoredPairs": 4,
+      "left": {
+        "successfulRenders": 4,
+        "scoredCases": 4,
+        "meanIou": 0.7926898416081606,
+        "pairedMeanIou": 0.7926898416081606,
+        "meanIouFailuresAsZero": 0.7926898416081606,
+        "medianSeconds": 9.84,
+        "medianFaces": 16467.0,
+        "maxProcessRssMb": 3688.4
+      },
+      "right": {
+        "successfulRenders": 4,
+        "scoredCases": 4,
+        "meanIou": 0.7896032891908806,
+        "pairedMeanIou": 0.7896032891908806,
+        "meanIouFailuresAsZero": 0.7896032891908806,
+        "medianSeconds": 11.504999999999999,
+        "medianFaces": 30162.0,
+        "maxProcessRssMb": 3962.5
+      },
+      "meanPairedDeltaIou": -0.0030865524172798975
+    },
+    "reflective": {
+      "cases": 2,
+      "scoredPairs": 2,
+      "left": {
+        "successfulRenders": 2,
+        "scoredCases": 2,
+        "meanIou": 0.8343662267256123,
+        "pairedMeanIou": 0.8343662267256123,
+        "meanIouFailuresAsZero": 0.8343662267256123,
+        "medianSeconds": 12.73,
+        "medianFaces": 21066.0,
+        "maxProcessRssMb": 3861.4
+      },
+      "right": {
+        "successfulRenders": 2,
+        "scoredCases": 2,
+        "meanIou": 0.830823309323171,
+        "pairedMeanIou": 0.830823309323171,
+        "meanIouFailuresAsZero": 0.830823309323171,
+        "medianSeconds": 12.925,
+        "medianFaces": 37732.0,
+        "maxProcessRssMb": 3543.0
+      },
+      "meanPairedDeltaIou": -0.0035429174024412813
+    },
+    "shoes": {
+      "cases": 4,
+      "scoredPairs": 4,
+      "left": {
+        "successfulRenders": 4,
+        "scoredCases": 4,
+        "meanIou": 0.8601666505554274,
+        "pairedMeanIou": 0.8601666505554274,
+        "meanIouFailuresAsZero": 0.8601666505554274,
+        "medianSeconds": 9.085,
+        "medianFaces": 13475.0,
+        "maxProcessRssMb": 3769.5
+      },
+      "right": {
+        "successfulRenders": 4,
+        "scoredCases": 4,
+        "meanIou": 0.8595846020928012,
+        "pairedMeanIou": 0.8595846020928012,
+        "meanIouFailuresAsZero": 0.8595846020928012,
+        "medianSeconds": 9.184999999999999,
+        "medianFaces": 24540.0,
+        "maxProcessRssMb": 4020.4
+      },
+      "meanPairedDeltaIou": -0.0005820484626261613
+    },
+    "tools": {
+      "cases": 4,
+      "scoredPairs": 4,
+      "left": {
+        "successfulRenders": 4,
+        "scoredCases": 4,
+        "meanIou": 0.7753590616171923,
+        "pairedMeanIou": 0.7753590616171923,
+        "meanIouFailuresAsZero": 0.7753590616171923,
+        "medianSeconds": 9.285,
+        "medianFaces": 3754.0,
+        "maxProcessRssMb": 3881.5
+      },
+      "right": {
+        "successfulRenders": 4,
+        "scoredCases": 4,
+        "meanIou": 0.7666209261308147,
+        "pairedMeanIou": 0.7666209261308147,
+        "meanIouFailuresAsZero": 0.7666209261308147,
+        "medianSeconds": 13.8,
+        "medianFaces": 6822.0,
+        "maxProcessRssMb": 3716.6
+      },
+      "meanPairedDeltaIou": -0.008738135486377585
+    },
+    "toys": {
+      "cases": 4,
+      "scoredPairs": 4,
+      "left": {
+        "successfulRenders": 4,
+        "scoredCases": 4,
+        "meanIou": 0.7333414668984636,
+        "pairedMeanIou": 0.7333414668984636,
+        "meanIouFailuresAsZero": 0.7333414668984635,
+        "medianSeconds": 8.89,
+        "medianFaces": 13033.0,
+        "maxProcessRssMb": 4010.0
+      },
+      "right": {
+        "successfulRenders": 4,
+        "scoredCases": 4,
+        "meanIou": 0.7298015442053014,
+        "pairedMeanIou": 0.7298015442053014,
+        "meanIouFailuresAsZero": 0.7298015442053014,
+        "medianSeconds": 10.530000000000001,
+        "medianFaces": 23437.0,
+        "maxProcessRssMb": 4014.2
+      },
+      "meanPairedDeltaIou": -0.003539922693162126
+    },
+    "transparent": {
+      "cases": 3,
+      "scoredPairs": 3,
+      "left": {
+        "successfulRenders": 3,
+        "scoredCases": 3,
+        "meanIou": 0.9074157998965596,
+        "pairedMeanIou": 0.9074157998965596,
+        "meanIouFailuresAsZero": 0.9074157998965596,
+        "medianSeconds": 10.72,
+        "medianFaces": 14804,
+        "maxProcessRssMb": 3943.4
+      },
+      "right": {
+        "successfulRenders": 3,
+        "scoredCases": 3,
+        "meanIou": 0.8974309214385201,
+        "pairedMeanIou": 0.8974309214385201,
+        "meanIouFailuresAsZero": 0.8974309214385201,
+        "medianSeconds": 12.68,
+        "medianFaces": 26360,
+        "maxProcessRssMb": 3540.8
+      },
+      "meanPairedDeltaIou": -0.009984878458039562
+    }
+  },
+  "cases": [
+    {
+      "id": "shoe-leather",
+      "category": "shoes",
+      "sourceSha256": "0900bdb76171bb7ed7162af7233e75bc7266fed588866e556ca00f1bbee89d56",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "7cdd3e478a45813b3d70b250cd8bbf8515f37ba59df56317f89277bc073ec52b",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 15.0,
+        "distance": 1.9,
+        "fov": 40.0
+      },
+      "draftIou": 0.7700291768307266,
+      "balancedIou": 0.7663184127288412,
+      "deltaIou": -0.003710764101885422,
+      "draft": {
+        "glbSha256": "d2d997e3f51cd88794f0774af3c6974895750a05526b28d3daad3e88ed255821",
+        "wallSeconds": 15.77,
+        "totalSeconds": 13.67,
+        "prepareSeconds": 2.32,
+        "loadSeconds": 7.09,
+        "inferenceSeconds": 3.74,
+        "surfaceSeconds": 0.51,
+        "peakProcessMemoryMb": 2537.1,
+        "availableMemoryGbAtStart": 2.96,
+        "faces": 14196,
+        "vertices": 7102,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 2,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "dc4f5446df43f82d9d9abf88f9bddd21cefa9ec33a44e44f1df6b4d959ab1a55",
+        "wallSeconds": 12.61,
+        "totalSeconds": 11.22,
+        "prepareSeconds": 1.31,
+        "loadSeconds": 6.02,
+        "inferenceSeconds": 2.7,
+        "surfaceSeconds": 1.17,
+        "peakProcessMemoryMb": 3453.0,
+        "availableMemoryGbAtStart": 5.08,
+        "faces": 25456,
+        "vertices": 12736,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 4,
+          "degenerateFaces": 2
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "shoes-carpet",
+      "category": "shoes",
+      "sourceSha256": "ae3e61a220cce3682c81c60721cfb9854a574ad0f99958de347b107c63f107f5",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "f62bdb5bfe99ce483894506d9e5d0cebd0cf39fcbb2f9a52882d92681c1b4acc",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.6,
+        "fov": 40.0
+      },
+      "draftIou": 0.9113291782699023,
+      "balancedIou": 0.9182851517050031,
+      "deltaIou": 0.006955973435100793,
+      "draft": {
+        "glbSha256": "eb12eba7534e265803548c768c7c6f93ea0f4f95c4f767ab76961566a791d5c7",
+        "wallSeconds": 10.65,
+        "totalSeconds": 9.58,
+        "prepareSeconds": 1.89,
+        "loadSeconds": 4.45,
+        "inferenceSeconds": 2.76,
+        "surfaceSeconds": 0.47,
+        "peakProcessMemoryMb": 3641.9,
+        "availableMemoryGbAtStart": 5.47,
+        "faces": 13106,
+        "vertices": 6559,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 4,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "6eb22cea1abd1b50198f804f99d8f04c8e4a94166cd6e92ec8d44d618e3c18ab",
+        "wallSeconds": 10.43,
+        "totalSeconds": 9.45,
+        "prepareSeconds": 1.49,
+        "loadSeconds": 4.13,
+        "inferenceSeconds": 2.93,
+        "surfaceSeconds": 0.89,
+        "peakProcessMemoryMb": 3734.7,
+        "availableMemoryGbAtStart": 5.59,
+        "faces": 23832,
+        "vertices": 11912,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 1,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "shoe-shop",
+      "category": "shoes",
+      "sourceSha256": "9a78ff15cb034391c96714696d022e6852d4859267ef35f194c241cbd175f9cb",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "50cffec48bec963d8bd9f713677c395c9ec612af8db709d9067bd2dada63ad00",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.6,
+        "fov": 40.0
+      },
+      "draftIou": 0.9067220728428257,
+      "balancedIou": 0.8975989045919116,
+      "deltaIou": -0.009123168250914082,
+      "draft": {
+        "glbSha256": "f907dfbb793d508bcb43f0092e641119b6118f25ea0270e4860740568d9c7ca5",
+        "wallSeconds": 9.63,
+        "totalSeconds": 8.59,
+        "prepareSeconds": 1.45,
+        "loadSeconds": 3.94,
+        "inferenceSeconds": 2.74,
+        "surfaceSeconds": 0.46,
+        "peakProcessMemoryMb": 3596.3,
+        "availableMemoryGbAtStart": 5.67,
+        "faces": 9396,
+        "vertices": 4700,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 1,
+          "degenerateFaces": 2
+        }
+      },
+      "balanced": {
+        "glbSha256": "a70335e8356d436fee44579729880e26bb7c00dc54988fab16ef712cb0a97e47",
+        "wallSeconds": 9.86,
+        "totalSeconds": 8.92,
+        "prepareSeconds": 1.29,
+        "loadSeconds": 4.25,
+        "inferenceSeconds": 2.4,
+        "surfaceSeconds": 0.97,
+        "peakProcessMemoryMb": 3680.0,
+        "availableMemoryGbAtStart": 5.81,
+        "faces": 16880,
+        "vertices": 8444,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 2,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "shoe-repaired",
+      "category": "shoes",
+      "sourceSha256": "e274b3993a3d266392bdbbc6f868cffcc463d165d51a45c8bb659e6d4a995eef",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "7cb4da7b5785c1c6a9fe406f609804310af4b416cd1d39af1b9ee3ad4ec409d1",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 30.0,
+        "distance": 1.6,
+        "fov": 40.0
+      },
+      "draftIou": 0.8525861742782549,
+      "balancedIou": 0.856135939345449,
+      "deltaIou": 0.003549765067194066,
+      "draft": {
+        "glbSha256": "f5fcfd325c33cb601d7ca6a1822058e125167da2f26b55373324fb675a60b944",
+        "wallSeconds": 9.52,
+        "totalSeconds": 8.46,
+        "prepareSeconds": 1.46,
+        "loadSeconds": 3.91,
+        "inferenceSeconds": 2.6,
+        "surfaceSeconds": 0.5,
+        "peakProcessMemoryMb": 3769.5,
+        "availableMemoryGbAtStart": 5.5,
+        "faces": 13844,
+        "vertices": 6932,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 6,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "3aa17573382550fed91ed65ecce2806c342fe81a634d7f83c8832a593f3d784e",
+        "wallSeconds": 9.41,
+        "totalSeconds": 8.43,
+        "prepareSeconds": 1.21,
+        "loadSeconds": 3.98,
+        "inferenceSeconds": 2.33,
+        "surfaceSeconds": 0.9,
+        "peakProcessMemoryMb": 4020.4,
+        "availableMemoryGbAtStart": 5.86,
+        "faces": 25248,
+        "vertices": 12632,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 4,
+          "degenerateFaces": 1
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "mug-floral",
+      "category": "mugs",
+      "sourceSha256": "9378fe4a6e06f334819e2e3aa53f1e4e78a06d419d8e6ad715c1d17cb27e2353",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "633ddc05def3350bd5eb075dd7f964c68bb3f0a140bd40b272fb3953e8739ea1",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.9,
+        "fov": 40.0
+      },
+      "draftIou": 0.8649434468656144,
+      "balancedIou": 0.8552602117519112,
+      "deltaIou": -0.00968323511370317,
+      "draft": {
+        "glbSha256": "e1132b27d00d1edffdc1d15f60741863f768d8b36e550fd0673786133be284c9",
+        "wallSeconds": 11.09,
+        "totalSeconds": 10.11,
+        "prepareSeconds": 1.27,
+        "loadSeconds": 5.64,
+        "inferenceSeconds": 2.68,
+        "surfaceSeconds": 0.51,
+        "peakProcessMemoryMb": 3631.1,
+        "availableMemoryGbAtStart": 5.62,
+        "faces": 22470,
+        "vertices": 11265,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 16,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "723f42987d2156585fe7e5c3605f30be0ffd0d762fcbcb285f883aa03284f964",
+        "wallSeconds": 10.71,
+        "totalSeconds": 9.59,
+        "prepareSeconds": 1.24,
+        "loadSeconds": 3.84,
+        "inferenceSeconds": 3.3,
+        "surfaceSeconds": 1.2,
+        "peakProcessMemoryMb": 3951.4,
+        "availableMemoryGbAtStart": 5.83,
+        "faces": 40820,
+        "vertices": 20428,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 11,
+          "degenerateFaces": 2
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "mug-plastic",
+      "category": "mugs",
+      "sourceSha256": "d5cb70a5da6ff0af60a2cf17135aeba46426386cde084290dd2fc7207039efa0",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "e83dae9b891dcca8b426093488a33405e6b2669e4a4ad7ceb0888f88828d0356",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.9,
+        "fov": 40.0
+      },
+      "draftIou": 0.8754202286043608,
+      "balancedIou": 0.8660422670509126,
+      "deltaIou": -0.009377961553448166,
+      "draft": {
+        "glbSha256": "073b40c4ab3c52902817f07d4ccaf9782b7b16f75a9217fc8e0878dda47a596c",
+        "wallSeconds": 9.63,
+        "totalSeconds": 8.66,
+        "prepareSeconds": 1.39,
+        "loadSeconds": 4.08,
+        "inferenceSeconds": 2.69,
+        "surfaceSeconds": 0.48,
+        "peakProcessMemoryMb": 3687.9,
+        "availableMemoryGbAtStart": 5.52,
+        "faces": 18916,
+        "vertices": 9462,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 2,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "b738edf6f580484339a1f28b027a34b2f408d44e5e65b1b6f0a079a58a0649aa",
+        "wallSeconds": 14.36,
+        "totalSeconds": 13.05,
+        "prepareSeconds": 1.22,
+        "loadSeconds": 5.73,
+        "inferenceSeconds": 4.23,
+        "surfaceSeconds": 1.85,
+        "peakProcessMemoryMb": 3054.4,
+        "availableMemoryGbAtStart": 5.28,
+        "faces": 33994,
+        "vertices": 17009,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 6,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "mug-portrait",
+      "category": "mugs",
+      "sourceSha256": "26c5c846a6d5cd389f8e49d5a6d4218c42562742c196bc1d2b6edd6c4f88b0d7",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "bafc41a38ff51ad6b8411d58eb87cfd8b47b1bb4bc3128d0e2a9bbfe848f35a9",
+      "estimatedPhotoCamera": {
+        "azimuth": 345.0,
+        "elevation": 0.0,
+        "distance": 1.9,
+        "fov": 40.0
+      },
+      "draftIou": 0.8932666963338239,
+      "balancedIou": 0.883853079108616,
+      "deltaIou": -0.009413617225207949,
+      "draft": {
+        "glbSha256": "06ab305484ae83b4f61ad59b34368932d9a9eb0c9a96b0a52a4f1148e29b4124",
+        "wallSeconds": 10.74,
+        "totalSeconds": 9.54,
+        "prepareSeconds": 1.39,
+        "loadSeconds": 4.81,
+        "inferenceSeconds": 2.83,
+        "surfaceSeconds": 0.49,
+        "peakProcessMemoryMb": 3538.0,
+        "availableMemoryGbAtStart": 5.52,
+        "faces": 20672,
+        "vertices": 10336,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 1,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "f4d2fd5aa29b72aefd400ec29e7f5afda2a96320f386865d411c77d30b6e4473",
+        "wallSeconds": 12.41,
+        "totalSeconds": 11.23,
+        "prepareSeconds": 1.73,
+        "loadSeconds": 5.16,
+        "inferenceSeconds": 3.07,
+        "surfaceSeconds": 1.24,
+        "peakProcessMemoryMb": 3400.9,
+        "availableMemoryGbAtStart": 5.54,
+        "faces": 37052,
+        "vertices": 18526,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 1,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "mug-silver",
+      "category": "reflective",
+      "sourceSha256": "92d099e26b4e5711792ff117a75501064fbcb68ea9e4be03b7c3bf105fc76a36",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "dba23ddc5462b28ee7791787ad768a5a152e2b76f8b8a4996bf218e003dfc0ee",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 15.0,
+        "distance": 1.6,
+        "fov": 40.0
+      },
+      "draftIou": 0.8586466165413534,
+      "balancedIou": 0.8570641297096615,
+      "deltaIou": -0.0015824868316919316,
+      "draft": {
+        "glbSha256": "4759bcb935c2e9d7f5dcc5149292d63e1e13c8c56a7d6b78aeae4ce4e959604e",
+        "wallSeconds": 10.1,
+        "totalSeconds": 8.91,
+        "prepareSeconds": 1.96,
+        "loadSeconds": 3.74,
+        "inferenceSeconds": 2.64,
+        "surfaceSeconds": 0.56,
+        "peakProcessMemoryMb": 3861.4,
+        "availableMemoryGbAtStart": 5.74,
+        "faces": 17098,
+        "vertices": 8547,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 1,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "4daf9b50591a1e88a1558c85bde511b6ae8d073c985954097b992ced257b6dba",
+        "wallSeconds": 14.03,
+        "totalSeconds": 12.69,
+        "prepareSeconds": 1.77,
+        "loadSeconds": 5.17,
+        "inferenceSeconds": 4.45,
+        "surfaceSeconds": 1.28,
+        "peakProcessMemoryMb": 3261.1,
+        "availableMemoryGbAtStart": 5.54,
+        "faces": 30680,
+        "vertices": 15340,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 1,
+          "degenerateFaces": 2
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "toy-jeep",
+      "category": "toys",
+      "sourceSha256": "5fb222bc06ca592b8b8f16e90ef61e905bdc78e3fb92b454c980d82975d6eabf",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "1b393c1ccd4cd13747b403dbd77ff60a057f042bd9ffc83d0db0f0e4cee2d15b",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.9,
+        "fov": 40.0
+      },
+      "draftIou": 0.895616194416802,
+      "balancedIou": 0.8882075471698113,
+      "deltaIou": -0.007408647246990641,
+      "draft": {
+        "glbSha256": "8847f0df6a0475a95da5006b2aa72ebd5857c388c11cea7d7b2ddcc6295a4ba6",
+        "wallSeconds": 10.19,
+        "totalSeconds": 9.17,
+        "prepareSeconds": 1.43,
+        "loadSeconds": 4.51,
+        "inferenceSeconds": 2.61,
+        "surfaceSeconds": 0.61,
+        "peakProcessMemoryMb": 3663.6,
+        "availableMemoryGbAtStart": 5.74,
+        "faces": 15544,
+        "vertices": 7776,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 2,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "0046417a0df1a1716239d5b8ff2d0f4645d296745d23c98277a1fa8411fe5731",
+        "wallSeconds": 11.7,
+        "totalSeconds": 10.49,
+        "prepareSeconds": 1.94,
+        "loadSeconds": 4.78,
+        "inferenceSeconds": 2.78,
+        "surfaceSeconds": 0.97,
+        "peakProcessMemoryMb": 3462.5,
+        "availableMemoryGbAtStart": 5.82,
+        "faces": 28110,
+        "vertices": 14063,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 4,
+          "degenerateFaces": 1
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "toy-tank",
+      "category": "toys",
+      "sourceSha256": "dfa5ecddfd372bcaa25576eaa4b38c1e0c165764f7e31906d1c8220e74fa8e2c",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "63b1a0703d3e415a90cdd5b608fa4040d98902389ae29a4c1eacf24ab7cb6cf4",
+      "estimatedPhotoCamera": {
+        "azimuth": 15.0,
+        "elevation": 15.0,
+        "distance": 1.9,
+        "fov": 40.0
+      },
+      "draftIou": 0.7511073121454659,
+      "balancedIou": 0.7522734399498275,
+      "deltaIou": 0.0011661278043616496,
+      "draft": {
+        "glbSha256": "f052096f7e91c54abf2ab258e4e8c62f6e7fbd4e1ab2150eaeda879cc4639793",
+        "wallSeconds": 9.73,
+        "totalSeconds": 8.61,
+        "prepareSeconds": 1.28,
+        "loadSeconds": 4.23,
+        "inferenceSeconds": 2.62,
+        "surfaceSeconds": 0.48,
+        "peakProcessMemoryMb": 4010.0,
+        "availableMemoryGbAtStart": 5.73,
+        "faces": 10522,
+        "vertices": 5263,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 3,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "f65a342391f2c0dcd6dfb7a68dc5deba3aa87586c20e447c5fbd390a752d8f62",
+        "wallSeconds": 11.79,
+        "totalSeconds": 10.45,
+        "prepareSeconds": 1.47,
+        "loadSeconds": 4.58,
+        "inferenceSeconds": 3.16,
+        "surfaceSeconds": 1.23,
+        "peakProcessMemoryMb": 4014.2,
+        "availableMemoryGbAtStart": 6.1,
+        "faces": 18764,
+        "vertices": 9390,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 5,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "toy-grass-head",
+      "category": "toys",
+      "sourceSha256": "97b1f605f0775dc0a51c69c1b142a872ce5d9498c7ae991076daceebfbdfa34d",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "3d58076e979f2f538734f93146deba2b387855bfa0e1348066685635eecf22cb",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.9,
+        "fov": 40.0
+      },
+      "draftIou": 0.856473771856786,
+      "balancedIou": 0.8558289660916947,
+      "deltaIou": -0.0006448057650912942,
+      "draft": {
+        "glbSha256": "ba1325ecc782a0e77463922078a69c93bf397643e18e4f8320dba08c19df0cd6",
+        "wallSeconds": 10.59,
+        "totalSeconds": 9.64,
+        "prepareSeconds": 1.52,
+        "loadSeconds": 4.51,
+        "inferenceSeconds": 2.72,
+        "surfaceSeconds": 0.89,
+        "peakProcessMemoryMb": 3264.9,
+        "availableMemoryGbAtStart": 5.78,
+        "faces": 23072,
+        "vertices": 11566,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 33,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "22585943d864dd19e798906db095d35ebabf977099a8aad85db98b5b18e78b2e",
+        "wallSeconds": 12.56,
+        "totalSeconds": 11.47,
+        "prepareSeconds": 1.63,
+        "loadSeconds": 4.66,
+        "inferenceSeconds": 4.12,
+        "surfaceSeconds": 1.04,
+        "peakProcessMemoryMb": 3863.6,
+        "availableMemoryGbAtStart": 6.04,
+        "faces": 41924,
+        "vertices": 20992,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 25,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "toy-wooden-horse",
+      "category": "toys",
+      "sourceSha256": "4d6b077568e09879136b534b1c5843d8b91b858b942de3c4146329510b8fffa5",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "c20fa1c469358a5d5c3d23139a6de8cac70d5e8c05a7ce46e841a0bad85e133b",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.6,
+        "fov": 40.0
+      },
+      "draftIou": 0.43016858917480033,
+      "balancedIou": 0.4228962236098721,
+      "deltaIou": -0.007272365564928218,
+      "draft": {
+        "glbSha256": "19873938d5f042363b83cc4e0553a119dafed94b58d09310aa4af0dada0a8836",
+        "wallSeconds": 9.8,
+        "totalSeconds": 8.53,
+        "prepareSeconds": 1.52,
+        "loadSeconds": 3.71,
+        "inferenceSeconds": 2.69,
+        "surfaceSeconds": 0.6,
+        "peakProcessMemoryMb": 3849.8,
+        "availableMemoryGbAtStart": 5.91,
+        "faces": 7228,
+        "vertices": 3610,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 3,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "112f544bbf4d4b9d094a84c3c303856dcca4e121013a60fad275f803afd214d1",
+        "wallSeconds": 11.74,
+        "totalSeconds": 10.57,
+        "prepareSeconds": 1.48,
+        "loadSeconds": 4.7,
+        "inferenceSeconds": 3.38,
+        "surfaceSeconds": 1.0,
+        "peakProcessMemoryMb": 3927.7,
+        "availableMemoryGbAtStart": 6.02,
+        "faces": 13060,
+        "vertices": 6534,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 4,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "plant-patio",
+      "category": "plants",
+      "sourceSha256": "d89b229514cae83b318d6765715130a3fd7bf39d9d6ae536627178115d14bfa1",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "50e142ba68af2641406d955c4ea4555140ac111fbb5b50b42c3c8138af22bdd8",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 15.0,
+        "distance": 1.6,
+        "fov": 40.0
+      },
+      "draftIou": 0.7224569688684521,
+      "balancedIou": 0.7205617349158019,
+      "deltaIou": -0.0018952339526502326,
+      "draft": {
+        "glbSha256": "dd3d1d881f8d920de190ef5ca85472755edfee961cf1b4e22ef0b3c899b86e2a",
+        "wallSeconds": 11.41,
+        "totalSeconds": 10.31,
+        "prepareSeconds": 1.49,
+        "loadSeconds": 5.39,
+        "inferenceSeconds": 2.69,
+        "surfaceSeconds": 0.73,
+        "peakProcessMemoryMb": 3593.9,
+        "availableMemoryGbAtStart": 5.53,
+        "faces": 17660,
+        "vertices": 8836,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 10,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "65d4af72e2ecc6aed9ba6dcc08d6d54c5ea61225cf497642fd072c16b892e3b6",
+        "wallSeconds": 12.45,
+        "totalSeconds": 11.17,
+        "prepareSeconds": 1.53,
+        "loadSeconds": 4.77,
+        "inferenceSeconds": 3.76,
+        "surfaceSeconds": 1.09,
+        "peakProcessMemoryMb": 3874.0,
+        "availableMemoryGbAtStart": 6.02,
+        "faces": 32196,
+        "vertices": 16102,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 14,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "plant-stevia",
+      "category": "plants",
+      "sourceSha256": "b89de07be045b7d9916a70a8854918d0926ce1a6a851fc785d2494af40006cca",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "45ec5ff75ce78d5fe128c7a3a2d0b7358134501b4169f39c224610803576f2e9",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.9,
+        "fov": 40.0
+      },
+      "draftIou": 0.8759302916840013,
+      "balancedIou": 0.8718482535276428,
+      "deltaIou": -0.004082038156358436,
+      "draft": {
+        "glbSha256": "9d25420212ec35ca36471b5dafe7814c7759663ff0b9062e0e3bee2fe49e4822",
+        "wallSeconds": 9.88,
+        "totalSeconds": 8.79,
+        "prepareSeconds": 1.49,
+        "loadSeconds": 4.25,
+        "inferenceSeconds": 2.55,
+        "surfaceSeconds": 0.5,
+        "peakProcessMemoryMb": 3688.4,
+        "availableMemoryGbAtStart": 5.52,
+        "faces": 23482,
+        "vertices": 11751,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 13,
+          "degenerateFaces": 1
+        }
+      },
+      "balanced": {
+        "glbSha256": "6f125e4d3d3c9fa77660be56bd99f8f78ce535c421c6189961a2e3ff3001399c",
+        "wallSeconds": 12.96,
+        "totalSeconds": 11.84,
+        "prepareSeconds": 1.51,
+        "loadSeconds": 4.72,
+        "inferenceSeconds": 3.82,
+        "surfaceSeconds": 1.78,
+        "peakProcessMemoryMb": 3962.5,
+        "availableMemoryGbAtStart": 6.12,
+        "faces": 42252,
+        "vertices": 21136,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 18,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "plant-palm",
+      "category": "plants",
+      "sourceSha256": "f118e30b1287f5079aa165b56117edb9b1cf49e8433349aa255441fec6bd66df",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "f43ec536b5f009a6bf23768e7e4196411a3d8be9ab05b42a8881305fe3e9d5da",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.6,
+        "fov": 40.0
+      },
+      "draftIou": 0.7648585872386938,
+      "balancedIou": 0.7629836893468914,
+      "deltaIou": -0.0018748978918023962,
+      "draft": {
+        "glbSha256": "8d04f182eeb9d1cbfcf6d719f61d88f0dddbe287d488fd98f126dbf00f3ee418",
+        "wallSeconds": 11.03,
+        "totalSeconds": 10.02,
+        "prepareSeconds": 1.74,
+        "loadSeconds": 4.45,
+        "inferenceSeconds": 3.27,
+        "surfaceSeconds": 0.55,
+        "peakProcessMemoryMb": 3663.5,
+        "availableMemoryGbAtStart": 5.45,
+        "faces": 8882,
+        "vertices": 4455,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 18,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "a4f2b4b893e36e22058da364737d6ccbc036268db47525954165c9e9d1d80b25",
+        "wallSeconds": 13.79,
+        "totalSeconds": 12.47,
+        "prepareSeconds": 1.66,
+        "loadSeconds": 6.13,
+        "inferenceSeconds": 3.53,
+        "surfaceSeconds": 1.13,
+        "peakProcessMemoryMb": 3735.6,
+        "availableMemoryGbAtStart": 5.51,
+        "faces": 15746,
+        "vertices": 7853,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 10,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "plant-gerbera",
+      "category": "plants",
+      "sourceSha256": "a95f0f65d1b72b4b634c50af0bacd24485f04fb3a30dcbfddd50940cec88660d",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "fd1107bbba65fbf40f17adda023e8c99ab61ad76c74f7f288b19d55458e6ebd3",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": -15.0,
+        "distance": 1.6,
+        "fov": 40.0
+      },
+      "draftIou": 0.8075135186414951,
+      "balancedIou": 0.8030194789731866,
+      "deltaIou": -0.004494039668308525,
+      "draft": {
+        "glbSha256": "23c36e1932aa4e70ecb1cdd2166687c98eb9bd5f9d07d6fcd9b166a3b731a4fd",
+        "wallSeconds": 10.65,
+        "totalSeconds": 9.66,
+        "prepareSeconds": 1.36,
+        "loadSeconds": 4.98,
+        "inferenceSeconds": 2.79,
+        "surfaceSeconds": 0.52,
+        "peakProcessMemoryMb": 3264.8,
+        "availableMemoryGbAtStart": 5.6,
+        "faces": 15274,
+        "vertices": 7643,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 8,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "e101c13be8f2d09a202f3012e7ce0a15a3be9b95b7b8375c8131250bb4c5b4ed",
+        "wallSeconds": 11.65,
+        "totalSeconds": 10.67,
+        "prepareSeconds": 1.51,
+        "loadSeconds": 4.63,
+        "inferenceSeconds": 3.45,
+        "surfaceSeconds": 1.08,
+        "peakProcessMemoryMb": 3707.1,
+        "availableMemoryGbAtStart": 5.86,
+        "faces": 28128,
+        "vertices": 14086,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 15,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "tool-mallet",
+      "category": "tools",
+      "sourceSha256": "ff2e1dd8faa78f5aacae90157b333b70000d53e26d471f479e74b0ac82909fdf",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "40150f998e3cfd02d1e753c6d1d2c38d2e67e7107a2146e82c5259094ccffb7e",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.6,
+        "fov": 40.0
+      },
+      "draftIou": 0.8847547974413646,
+      "balancedIou": 0.8819041478615947,
+      "deltaIou": -0.0028506495797699927,
+      "draft": {
+        "glbSha256": "4e8d6dde208e7e88a2e5638597670cc8b12f0b671555b43775701552e76bbcaa",
+        "wallSeconds": 10.2,
+        "totalSeconds": 9.17,
+        "prepareSeconds": 1.51,
+        "loadSeconds": 4.44,
+        "inferenceSeconds": 2.73,
+        "surfaceSeconds": 0.48,
+        "peakProcessMemoryMb": 3419.7,
+        "availableMemoryGbAtStart": 5.19,
+        "faces": 4488,
+        "vertices": 2246,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 1,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "8acc45da24d1a1856e4ffc469f55c9c795c763e6dbcff529a9e27c722e9fe1c7",
+        "wallSeconds": 13.02,
+        "totalSeconds": 11.93,
+        "prepareSeconds": 1.45,
+        "loadSeconds": 5.27,
+        "inferenceSeconds": 4.22,
+        "surfaceSeconds": 0.99,
+        "peakProcessMemoryMb": 3271.0,
+        "availableMemoryGbAtStart": 5.99,
+        "faces": 8044,
+        "vertices": 4024,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 1,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "tool-bolt-cutter",
+      "category": "tools",
+      "sourceSha256": "cfa2ab178908922aba65cce59f60cda1b99fc0426bd653bf161b7689c5f369e9",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "7e5745c77ce84f13d6bea3cce5f32b88687a86bfeef584b24a138fb7d793d534",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.9,
+        "fov": 40.0
+      },
+      "draftIou": 0.6904510218463706,
+      "balancedIou": 0.6738472494213993,
+      "deltaIou": -0.016603772424971353,
+      "draft": {
+        "glbSha256": "b5c260d48a6f35128e0deb6396e7b478f31161bdbb9c764477f9358c66bbb79b",
+        "wallSeconds": 10.1,
+        "totalSeconds": 8.98,
+        "prepareSeconds": 1.58,
+        "loadSeconds": 4.15,
+        "inferenceSeconds": 2.73,
+        "surfaceSeconds": 0.51,
+        "peakProcessMemoryMb": 3557.8,
+        "availableMemoryGbAtStart": 5.65,
+        "faces": 2752,
+        "vertices": 1378,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 1,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "e555d3ed4122348add0fb997bbacc7c8bf9510feb7a636b758730bb776277879",
+        "wallSeconds": 11.85,
+        "totalSeconds": 10.48,
+        "prepareSeconds": 1.56,
+        "loadSeconds": 4.33,
+        "inferenceSeconds": 3.48,
+        "surfaceSeconds": 1.1,
+        "peakProcessMemoryMb": 3716.6,
+        "availableMemoryGbAtStart": 5.68,
+        "faces": 5004,
+        "vertices": 2504,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 1,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "tool-cleco",
+      "category": "tools",
+      "sourceSha256": "227f5bef309dbcd95765ed7c8a5da340c84c8d11d70857799407a2169d718e2f",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "3ae85b9d2f2d762af57783f1b300179c7bda216e7c04244faeae426374e9a38f",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.9,
+        "fov": 40.0
+      },
+      "draftIou": 0.718677583809671,
+      "balancedIou": 0.7099486221391873,
+      "deltaIou": -0.008728961670483648,
+      "draft": {
+        "glbSha256": "61801b1dbfcb644a019d6cf27e62f3c90e5c5f492dc8a59d04056b5502459b67",
+        "wallSeconds": 10.89,
+        "totalSeconds": 9.67,
+        "prepareSeconds": 1.47,
+        "loadSeconds": 4.53,
+        "inferenceSeconds": 3.13,
+        "surfaceSeconds": 0.53,
+        "peakProcessMemoryMb": 3388.7,
+        "availableMemoryGbAtStart": 5.39,
+        "faces": 3020,
+        "vertices": 1512,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 1,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "c14adb0fc9cadf619144cc791d02ea8facfb282f5d3ed29e25ca2cb31ea9315c",
+        "wallSeconds": 18.77,
+        "totalSeconds": 17.61,
+        "prepareSeconds": 1.37,
+        "loadSeconds": 6.32,
+        "inferenceSeconds": 6.43,
+        "surfaceSeconds": 3.49,
+        "peakProcessMemoryMb": 3420.8,
+        "availableMemoryGbAtStart": 5.75,
+        "faces": 5600,
+        "vertices": 2802,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 1,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "tool-sockets",
+      "category": "tools",
+      "sourceSha256": "415bb2740e29158e5c4f233b829277cc65ad220256d3ac9c082a1e49f1c59501",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "c15b9d1be71fb385f2e27800838a355c524958ba5c0a4335fc7500f48a31b183",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.9,
+        "fov": 40.0
+      },
+      "draftIou": 0.8075528433713629,
+      "balancedIou": 0.8007836851010776,
+      "deltaIou": -0.006769158270285347,
+      "draft": {
+        "glbSha256": "141b256dc16e035a20b4085af923df47c3f8ceb4a7dbb135471380dbf32d694e",
+        "wallSeconds": 10.62,
+        "totalSeconds": 9.4,
+        "prepareSeconds": 1.51,
+        "loadSeconds": 3.9,
+        "inferenceSeconds": 3.4,
+        "surfaceSeconds": 0.57,
+        "peakProcessMemoryMb": 3881.5,
+        "availableMemoryGbAtStart": 5.78,
+        "faces": 6820,
+        "vertices": 3416,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 3,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "584de197aa75ca360492920513518662da92980a295dffe1d1dda1c86d75601d",
+        "wallSeconds": 16.98,
+        "totalSeconds": 15.67,
+        "prepareSeconds": 1.84,
+        "loadSeconds": 7.37,
+        "inferenceSeconds": 5.08,
+        "surfaceSeconds": 1.38,
+        "peakProcessMemoryMb": 3707.2,
+        "availableMemoryGbAtStart": 5.09,
+        "faces": 12300,
+        "vertices": 6156,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 3,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "chair-dark-wood",
+      "category": "furniture",
+      "sourceSha256": "b6defe1f2807c494f7cf85764e8a006c2bcbf5c9f14fc2535467ca8b07f449d3",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "87a6d70f6987d9a6a8df66f766f157e28401ae00f125b7a11299dc5f67162a7d",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.6,
+        "fov": 40.0
+      },
+      "draftIou": 0.8475980608197444,
+      "balancedIou": 0.8431530804412161,
+      "deltaIou": -0.004444980378528363,
+      "draft": {
+        "glbSha256": "0b5a90eaa5f868961205e4ee644e9bb630fdb3518843914a5324d45a26721fc0",
+        "wallSeconds": 11.05,
+        "totalSeconds": 10.03,
+        "prepareSeconds": 1.35,
+        "loadSeconds": 4.78,
+        "inferenceSeconds": 3.39,
+        "surfaceSeconds": 0.51,
+        "peakProcessMemoryMb": 3634.9,
+        "availableMemoryGbAtStart": 5.66,
+        "faces": 6788,
+        "vertices": 3384,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 1,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "63cee4cfae9bd6ebf44204d2ecbc7ce0ba150330f94ef3369a6f75738358170d",
+        "wallSeconds": 11.07,
+        "totalSeconds": 10.07,
+        "prepareSeconds": 1.58,
+        "loadSeconds": 4.91,
+        "inferenceSeconds": 2.65,
+        "surfaceSeconds": 0.93,
+        "peakProcessMemoryMb": 3408.5,
+        "availableMemoryGbAtStart": 5.59,
+        "faces": 12094,
+        "vertices": 6037,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 1,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "chair-pakri",
+      "category": "furniture",
+      "sourceSha256": "a7a3d93db067848ebb7ee3d57754f84069391244628374c5e285f0d692c48ab4",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "b8959c30afd1fb520d2d5591e78b76aef633d3b5d9169f6a8a0d5f8457872423",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.9,
+        "fov": 40.0
+      },
+      "draftIou": 0.763616417139907,
+      "balancedIou": 0.7467115920430247,
+      "deltaIou": -0.016904825096882292,
+      "draft": {
+        "glbSha256": "0761cfbe56b9cf8687217b9b99fdcc5d46cfdc373d6fce47e174689ab7060666",
+        "wallSeconds": 15.22,
+        "totalSeconds": 14.17,
+        "prepareSeconds": 1.38,
+        "loadSeconds": 5.76,
+        "inferenceSeconds": 6.34,
+        "surfaceSeconds": 0.69,
+        "peakProcessMemoryMb": 3345.5,
+        "availableMemoryGbAtStart": 5.78,
+        "faces": 10528,
+        "vertices": 5256,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 1,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "2588695eff6657ca6143802963449bde83e62031da827cea01cf973bbbd78d24",
+        "wallSeconds": 10.55,
+        "totalSeconds": 9.48,
+        "prepareSeconds": 1.6,
+        "loadSeconds": 4.17,
+        "inferenceSeconds": 2.63,
+        "surfaceSeconds": 1.07,
+        "peakProcessMemoryMb": 4022.6,
+        "availableMemoryGbAtStart": 5.7,
+        "faces": 18492,
+        "vertices": 9238,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 1,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "chair-upholstered",
+      "category": "furniture",
+      "sourceSha256": "5769ec0a62f64b95ddc62c5bb6a5f0e870bb98454f73bb997816b66f52bbfb3f",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "a275f4d206dd4fb8953ea47b4fb44bd7a1f3b1f40c3ffaecb36faa32c38f66f4",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.9,
+        "fov": 40.0
+      },
+      "draftIou": 0.9042156581588758,
+      "balancedIou": 0.8963265891806572,
+      "deltaIou": -0.007889068978218616,
+      "draft": {
+        "glbSha256": "52ac85795508338a666290648c5a29adf90179e5b864bf50071672add37098a7",
+        "wallSeconds": 26.37,
+        "totalSeconds": 24.09,
+        "prepareSeconds": 1.89,
+        "loadSeconds": 12.18,
+        "inferenceSeconds": 7.26,
+        "surfaceSeconds": 2.72,
+        "peakProcessMemoryMb": 2790.3,
+        "availableMemoryGbAtStart": 5.58,
+        "faces": 13664,
+        "vertices": 6836,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 2,
+          "degenerateFaces": 1
+        }
+      },
+      "balanced": {
+        "glbSha256": "d85a15d43608a99491beaf643177b82c255f01b82f340a0a27b14b59d38172fa",
+        "wallSeconds": 10.71,
+        "totalSeconds": 9.75,
+        "prepareSeconds": 1.36,
+        "loadSeconds": 4.89,
+        "inferenceSeconds": 2.54,
+        "surfaceSeconds": 0.96,
+        "peakProcessMemoryMb": 3874.8,
+        "availableMemoryGbAtStart": 5.78,
+        "faces": 24804,
+        "vertices": 12406,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 2,
+          "degenerateFaces": 2
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "chair-estonian",
+      "category": "furniture",
+      "sourceSha256": "4ac1afdf929ba60c564313964476b593ad7697f3c68d69a25ede6ed75e959689",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "313765accf278fad6b3709db828383f37197b2f0bc003aaffd153c766acb4f78",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.9,
+        "fov": 40.0
+      },
+      "draftIou": 0.8602378073357517,
+      "balancedIou": 0.8500303582270795,
+      "deltaIou": -0.010207449108672217,
+      "draft": {
+        "glbSha256": "0d6cdc9a785736207d185b265f55779b5ed5821a74c3a30eee05abec279fa505",
+        "wallSeconds": 22.8,
+        "totalSeconds": 20.76,
+        "prepareSeconds": 3.33,
+        "loadSeconds": 8.85,
+        "inferenceSeconds": 7.14,
+        "surfaceSeconds": 1.43,
+        "peakProcessMemoryMb": 3634.8,
+        "availableMemoryGbAtStart": 5.36,
+        "faces": 7912,
+        "vertices": 3962,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 3,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "6fc936713be6871150d3c0a067c154cb2d2ca12f6aba710b1605892346e1f747",
+        "wallSeconds": 12.18,
+        "totalSeconds": 11.06,
+        "prepareSeconds": 1.31,
+        "loadSeconds": 5.17,
+        "inferenceSeconds": 2.97,
+        "surfaceSeconds": 1.6,
+        "peakProcessMemoryMb": 3334.8,
+        "availableMemoryGbAtStart": 5.65,
+        "faces": 14168,
+        "vertices": 7088,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 2,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "food-blueberries",
+      "category": "food",
+      "sourceSha256": "47c3980d0d1ba64dafe6561012ba14b643403f24c2e38a368cab063a613263c2",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "73ded8beed9c885aeaa9f6b90f95091d8db25679bdd0f47407dd57c97389d18c",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": -15.0,
+        "distance": 1.9,
+        "fov": 40.0
+      },
+      "draftIou": 0.8576980374376579,
+      "balancedIou": 0.8623850218540022,
+      "deltaIou": 0.0046869844163442975,
+      "draft": {
+        "glbSha256": "ed9267d6d786e576175a628971fbbcf0382a2c21dbc4a6884a0f55716172182b",
+        "wallSeconds": 22.07,
+        "totalSeconds": 20.47,
+        "prepareSeconds": 3.21,
+        "loadSeconds": 8.79,
+        "inferenceSeconds": 6.95,
+        "surfaceSeconds": 1.5,
+        "peakProcessMemoryMb": 3539.5,
+        "availableMemoryGbAtStart": 5.32,
+        "faces": 32616,
+        "vertices": 16318,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 5,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "d9f1771c6e99f113a8b6e7c426d97f81ae8855f2284e13ee8136fa3040e7c4c8",
+        "wallSeconds": 13.19,
+        "totalSeconds": 12.08,
+        "prepareSeconds": 1.79,
+        "loadSeconds": 6.37,
+        "inferenceSeconds": 2.81,
+        "surfaceSeconds": 1.08,
+        "peakProcessMemoryMb": 3521.7,
+        "availableMemoryGbAtStart": 5.62,
+        "faces": 58560,
+        "vertices": 29290,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 5,
+          "degenerateFaces": 1
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "food-pear",
+      "category": "food",
+      "sourceSha256": "81d63581d93f59fda02fbb0bad5736e02959856193ef9e3ce7c7773549db7998",
+      "referenceMaskKind": "Existing source alpha",
+      "referenceMaskSha256": "2de68a61f1f44551a2dd798539395438c4a9871d0ed7def5abd0e70b02180596",
+      "estimatedPhotoCamera": {
+        "azimuth": 285.0,
+        "elevation": -15.0,
+        "distance": 1.6,
+        "fov": 40.0
+      },
+      "draftIou": 0.9457029086785687,
+      "balancedIou": 0.9406372186410229,
+      "deltaIou": -0.005065690037545756,
+      "draft": {
+        "glbSha256": "6ff4bab67277025261f55309383417b2e12eb4e5954729159ebbc2427424842b",
+        "wallSeconds": 16.53,
+        "totalSeconds": 15.13,
+        "prepareSeconds": 1.03,
+        "loadSeconds": 6.67,
+        "inferenceSeconds": 6.12,
+        "surfaceSeconds": 1.3,
+        "peakProcessMemoryMb": 3559.8,
+        "availableMemoryGbAtStart": 5.48,
+        "faces": 24942,
+        "vertices": 12605,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 67,
+          "degenerateFaces": 1
+        }
+      },
+      "balanced": {
+        "glbSha256": "41f442e934780cb652b6d427d3e5cece8fe5dadbd910d2fa7ce1372ae0afb2cc",
+        "wallSeconds": 12.08,
+        "totalSeconds": 10.99,
+        "prepareSeconds": 0.68,
+        "loadSeconds": 4.24,
+        "inferenceSeconds": 3.78,
+        "surfaceSeconds": 2.27,
+        "peakProcessMemoryMb": 3479.3,
+        "availableMemoryGbAtStart": 5.69,
+        "faces": 43886,
+        "vertices": 21989,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 23,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "food-puriri",
+      "category": "food",
+      "sourceSha256": "3650e5527946e6f23a16c92441a1cec548f93d21cf1ea9e24c7f96d42aae64a8",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "6d21e6b8e13e59d7c3f666fc71e779874c7cd44b2c1a938b048438f14fc55c20",
+      "estimatedPhotoCamera": {
+        "azimuth": 285.0,
+        "elevation": 0.0,
+        "distance": 1.6,
+        "fov": 40.0
+      },
+      "draftIou": 0.8448979591836735,
+      "balancedIou": 0.8425115207373272,
+      "deltaIou": -0.0023864384463463395,
+      "draft": {
+        "glbSha256": "a110286a76c511a5df24d1010f0ccd55b598115b7ded53b4dee6b5fea42741d0",
+        "wallSeconds": 19.82,
+        "totalSeconds": 18.51,
+        "prepareSeconds": 2.2,
+        "loadSeconds": 8.52,
+        "inferenceSeconds": 6.55,
+        "surfaceSeconds": 1.23,
+        "peakProcessMemoryMb": 3385.6,
+        "availableMemoryGbAtStart": 5.41,
+        "faces": 30950,
+        "vertices": 15649,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 137,
+          "degenerateFaces": 6
+        }
+      },
+      "balanced": {
+        "glbSha256": "5c0d47d3a041b446d7df4df5d52cd9183f8dded10ee43576f40708922cc617a5",
+        "wallSeconds": 13.2,
+        "totalSeconds": 12.11,
+        "prepareSeconds": 1.8,
+        "loadSeconds": 6.4,
+        "inferenceSeconds": 2.67,
+        "surfaceSeconds": 1.22,
+        "peakProcessMemoryMb": 3254.5,
+        "availableMemoryGbAtStart": 5.92,
+        "faces": 55432,
+        "vertices": 27814,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 113,
+          "degenerateFaces": 3
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "food-pineapple",
+      "category": "food",
+      "sourceSha256": "db5db4097df3bde997d696b4066173faea4900c04bccf1a0a8c107f8853ac9e4",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "0cbed55e5e116216611370259f6d1e2dff4ae3853f753e38b97f204826a1d294",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.9,
+        "fov": 40.0
+      },
+      "draftIou": 0.8857405221041584,
+      "balancedIou": 0.8815560730803293,
+      "deltaIou": -0.004184449023829084,
+      "draft": {
+        "glbSha256": "5f8174df1dda4da48e95da00e5a6d198590abdbe72eefdcfdc869495223ed812",
+        "wallSeconds": 21.54,
+        "totalSeconds": 19.75,
+        "prepareSeconds": 2.57,
+        "loadSeconds": 7.65,
+        "inferenceSeconds": 7.84,
+        "surfaceSeconds": 1.67,
+        "peakProcessMemoryMb": 3691.7,
+        "availableMemoryGbAtStart": 5.43,
+        "faces": 16506,
+        "vertices": 8249,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 2,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "02b26fba4c99ccd59f665edfd2668a95d5de26e21004e1c4f440336d761fad6a",
+        "wallSeconds": 13.27,
+        "totalSeconds": 11.88,
+        "prepareSeconds": 1.53,
+        "loadSeconds": 4.72,
+        "inferenceSeconds": 4.16,
+        "surfaceSeconds": 1.45,
+        "peakProcessMemoryMb": 3638.1,
+        "availableMemoryGbAtStart": 5.81,
+        "faces": 29966,
+        "vertices": 14985,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 4,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "pot-copper",
+      "category": "reflective",
+      "sourceSha256": "d563f9651a7d68b2f20d1805e2c5741da0838bfe71cf326bee0f568d52d04b1d",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "0b97efe6354b61d7f99556c4aa40867c4d3e3e1762fd99b3c12a3463759844a3",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.9,
+        "fov": 40.0
+      },
+      "draftIou": 0.8100858369098712,
+      "balancedIou": 0.8045824889366806,
+      "deltaIou": -0.005503347973190631,
+      "draft": {
+        "glbSha256": "d7280690e8359a9502b03dd53625f831daecc7fd48a7a4d4874952e085354d92",
+        "wallSeconds": 17.98,
+        "totalSeconds": 16.55,
+        "prepareSeconds": 2.11,
+        "loadSeconds": 8.18,
+        "inferenceSeconds": 5.65,
+        "surfaceSeconds": 0.6,
+        "peakProcessMemoryMb": 3238.3,
+        "availableMemoryGbAtStart": 5.31,
+        "faces": 25034,
+        "vertices": 12521,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 5,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "02f2816c896665dec15478282a82ff42e8ad505d192f21e400e2f4ad15fd79a5",
+        "wallSeconds": 14.28,
+        "totalSeconds": 13.16,
+        "prepareSeconds": 1.51,
+        "loadSeconds": 6.1,
+        "inferenceSeconds": 3.55,
+        "surfaceSeconds": 1.98,
+        "peakProcessMemoryMb": 3543.0,
+        "availableMemoryGbAtStart": 5.41,
+        "faces": 44784,
+        "vertices": 22392,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 2,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "bottle-calabash",
+      "category": "transparent",
+      "sourceSha256": "33913e2e0489824ba51e843482e353e703a96645146195329cffdbd89acc9749",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "6b37e4e7fdff9d648a0f44f8709e45453ac69b22e12d7b4924f3740c7173052e",
+      "estimatedPhotoCamera": {
+        "azimuth": 15.0,
+        "elevation": 0.0,
+        "distance": 1.9,
+        "fov": 40.0
+      },
+      "draftIou": 0.8858922229656698,
+      "balancedIou": 0.8768406961178046,
+      "deltaIou": -0.009051526847865254,
+      "draft": {
+        "glbSha256": "ba93a1ed6ea0127d742443f103f26297b60327b8f268d90e6278b6929392deb6",
+        "wallSeconds": 12.1,
+        "totalSeconds": 10.72,
+        "prepareSeconds": 1.61,
+        "loadSeconds": 4.89,
+        "inferenceSeconds": 3.52,
+        "surfaceSeconds": 0.7,
+        "peakProcessMemoryMb": 3943.4,
+        "availableMemoryGbAtStart": 5.74,
+        "faces": 15928,
+        "vertices": 7966,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 1,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "4205020b4e477fe47d29aa125e48da242fa00478a5fcc44b539fcae699b8a6d3",
+        "wallSeconds": 11.92,
+        "totalSeconds": 10.72,
+        "prepareSeconds": 1.53,
+        "loadSeconds": 5.21,
+        "inferenceSeconds": 2.9,
+        "surfaceSeconds": 1.07,
+        "peakProcessMemoryMb": 3374.1,
+        "availableMemoryGbAtStart": 5.57,
+        "faces": 28448,
+        "vertices": 14226,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 1,
+          "degenerateFaces": 1
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "bottle-table",
+      "category": "transparent",
+      "sourceSha256": "19b661192e332850952c0436f30273dd26f87a516d6b005aec0d2aa6cb5b3112",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "75fae176c1b9470641f81650b7bdf3c1402eb53b19d313d357e2a54775601da8",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": -15.0,
+        "distance": 1.6,
+        "fov": 40.0
+      },
+      "draftIou": 0.9403899152801878,
+      "balancedIou": 0.9335993452015552,
+      "deltaIou": -0.006790570078632596,
+      "draft": {
+        "glbSha256": "325031d63296cedd66e922ea4f794525a7d94127ca08916cb733eecdff30f941",
+        "wallSeconds": 15.64,
+        "totalSeconds": 14.3,
+        "prepareSeconds": 1.58,
+        "loadSeconds": 6.22,
+        "inferenceSeconds": 5.23,
+        "surfaceSeconds": 1.28,
+        "peakProcessMemoryMb": 3268.7,
+        "availableMemoryGbAtStart": 6.03,
+        "faces": 10140,
+        "vertices": 5072,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 3,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "43935a7fdf214c7034469fa3c09c47f2038e5e091f62837b9b01c0899a0357fd",
+        "wallSeconds": 14.43,
+        "totalSeconds": 13.42,
+        "prepareSeconds": 1.53,
+        "loadSeconds": 5.18,
+        "inferenceSeconds": 4.49,
+        "surfaceSeconds": 2.22,
+        "peakProcessMemoryMb": 3372.8,
+        "availableMemoryGbAtStart": 5.66,
+        "faces": 17982,
+        "vertices": 8995,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 2,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "bottle-yakult",
+      "category": "transparent",
+      "sourceSha256": "59cca9f2a3e2b360bdb082fa90893e6e78890706b0c218332fc1dc7d5c98c5a8",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "7f94759ebeaa60b220e8855b4dc0f928b47bf912b5cfa7c5ae462e0d37ec4a7f",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.9,
+        "fov": 40.0
+      },
+      "draftIou": 0.8959652614438213,
+      "balancedIou": 0.8818527229962004,
+      "deltaIou": -0.014112538447620837,
+      "draft": {
+        "glbSha256": "7892e6dd8f46c4f8e5c24eb3388fe50ff446c4e7aca1a6f5faaf6eb90705071f",
+        "wallSeconds": 10.98,
+        "totalSeconds": 9.78,
+        "prepareSeconds": 1.49,
+        "loadSeconds": 4.89,
+        "inferenceSeconds": 2.9,
+        "surfaceSeconds": 0.49,
+        "peakProcessMemoryMb": 3539.0,
+        "availableMemoryGbAtStart": 5.44,
+        "faces": 14804,
+        "vertices": 7404,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 1,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "25e4f1bc97a1ef52a427b5e5da0a675d4e6d8f564034f057aed905b4f59cf791",
+        "wallSeconds": 14.01,
+        "totalSeconds": 12.68,
+        "prepareSeconds": 1.57,
+        "loadSeconds": 5.7,
+        "inferenceSeconds": 3.84,
+        "surfaceSeconds": 1.57,
+        "peakProcessMemoryMb": 3540.8,
+        "availableMemoryGbAtStart": 5.35,
+        "faces": 26360,
+        "vertices": 13182,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 1,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "clutter-tools",
+      "category": "clutter",
+      "sourceSha256": "ff60745636d84dc9d477855557d37dbf6df54fb36453312e4257471365375064",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "88eb03e6fa080c4c5b22003c7187ae172894ebb5dd6c5e6371485228af32721c",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.9,
+        "fov": 40.0
+      },
+      "draftIou": 0.822075939706163,
+      "balancedIou": 0.8263273281860642,
+      "deltaIou": 0.0042513884799012525,
+      "draft": {
+        "glbSha256": "23c4ca77288bb9c055b4ec9c628986f01ebed6cbc1738dc3a29af101352d5ff3",
+        "wallSeconds": 11.35,
+        "totalSeconds": 10.05,
+        "prepareSeconds": 1.73,
+        "loadSeconds": 4.53,
+        "inferenceSeconds": 3.11,
+        "surfaceSeconds": 0.67,
+        "peakProcessMemoryMb": 3513.4,
+        "availableMemoryGbAtStart": 5.69,
+        "faces": 5396,
+        "vertices": 2702,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 2,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "3a4d870e561013d736ecb6f0d451c65f48be19eda8347564fe37e03c4451efaf",
+        "wallSeconds": 14.2,
+        "totalSeconds": 13.01,
+        "prepareSeconds": 1.47,
+        "loadSeconds": 5.56,
+        "inferenceSeconds": 4.88,
+        "surfaceSeconds": 1.1,
+        "peakProcessMemoryMb": 3413.6,
+        "availableMemoryGbAtStart": 5.66,
+        "faces": 9664,
+        "vertices": 4838,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 3,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    },
+    {
+      "id": "clutter-workbench",
+      "category": "clutter",
+      "sourceSha256": "f71674ae9865c3877f143260cb7369b13bc3801d228036b4759fb5c3aa40d8f0",
+      "referenceMaskKind": "Automatic U2Net",
+      "referenceMaskSha256": "efbd0e08b29dd398a221f0cf4d5891d42cacf8537264c2d396cb550920579ea7",
+      "estimatedPhotoCamera": {
+        "azimuth": 0.0,
+        "elevation": 0.0,
+        "distance": 1.6,
+        "fov": 40.0
+      },
+      "draftIou": 0.6906930152080867,
+      "balancedIou": 0.6877619828685985,
+      "deltaIou": -0.0029310323394882154,
+      "draft": {
+        "glbSha256": "937b5adb57db2082b2fbf79b5a1f638256d0ad94f8af844e6897cae901126ef3",
+        "wallSeconds": 11.45,
+        "totalSeconds": 10.06,
+        "prepareSeconds": 1.83,
+        "loadSeconds": 4.9,
+        "inferenceSeconds": 2.69,
+        "surfaceSeconds": 0.63,
+        "peakProcessMemoryMb": 3507.9,
+        "availableMemoryGbAtStart": 5.57,
+        "faces": 11508,
+        "vertices": 5772,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 16,
+          "degenerateFaces": 0
+        }
+      },
+      "balanced": {
+        "glbSha256": "2366b1fcdf0cccbacd2324506570ac4c628f8b030c25ffa58274ced1581ee9e7",
+        "wallSeconds": 11.23,
+        "totalSeconds": 9.93,
+        "prepareSeconds": 1.51,
+        "loadSeconds": 4.48,
+        "inferenceSeconds": 2.88,
+        "surfaceSeconds": 1.06,
+        "peakProcessMemoryMb": 3706.0,
+        "availableMemoryGbAtStart": 5.4,
+        "faces": 21100,
+        "vertices": 10574,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 15,
+          "degenerateFaces": 0
+        }
+      },
+      "samePreparedImage": true,
+      "sameForegroundMask": true,
+      "maxSceneCodeDifference": 0.0
+    }
+  ],
+  "inputParity": {
+    "identicalPreparedImages": 34,
+    "identicalForegroundMasks": 34,
+    "identicalSceneCodes": 34,
+    "maxSceneCodeDifference": 0.0
+  }
+}

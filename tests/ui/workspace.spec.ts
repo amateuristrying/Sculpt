@@ -232,10 +232,15 @@ test('benchmark meshes load in every view and export unchanged', async ({ page }
   const folder = process.env.SCULPT_BENCHMARK_OUTPUT
   test.skip(!folder || !existsSync(path.join(folder, 'report.json')), 'Set SCULPT_BENCHMARK_OUTPUT to a completed local benchmark')
   const results = JSON.parse(readFileSync(path.join(folder!, 'report.json'), 'utf8')).results
+  const successful = results.filter((item: any) => item.validResult)
+  expect(successful.length).toBeGreaterThan(0)
+  // The real-photo set is much larger than the original six showcase fixtures.
+  // Keep a bounded per-asset allowance for five screenshots and byte-exact export.
+  test.setTimeout(Math.max(120_000, successful.length * 20_000))
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message))
   await nativeBridge(page, true); await page.goto('/')
   await page.getByRole('button', { name: 'Open Sculpt' }).click()
-  for (const result of results.filter((item: any) => item.validResult)) {
+  for (const result of successful) {
     const request = JSON.parse(readFileSync(path.join(folder!, result.id, 'request.json'), 'utf8'))
     const bytes = readFileSync(path.join(folder!, result.id, 'mesh.glb'))
     await page.evaluate(({ glb, metrics }) => { Object.assign((window as any).__sculptTest, { glb, metrics }) }, { glb: [...bytes], metrics: result.metrics })
