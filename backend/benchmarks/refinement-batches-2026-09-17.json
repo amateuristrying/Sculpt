@@ -1,0 +1,252 @@
+{
+  "date": "2026-09-17",
+  "hardware": "Apple M4 MacBook Air, 16 GB unified memory",
+  "engine": "TripoSR",
+  "defaultChange": "Cached Metal refinement: 4096 -> 16384 query points per batch; generation and CPU defaults remain 4096.",
+  "method": "Sequential isolated workers, rotated batch order, same saved scene and settings within each comparison.",
+  "cases": [
+    {
+      "id": "user-banana",
+      "inputDistributed": false,
+      "resolution": 256,
+      "repeats": 3,
+      "device": "mps",
+      "modelRevision": "5b521936b01fbe1890f6f9baed0254ab6351c04a",
+      "runs": [
+        {
+          "round": 1,
+          "chunkSize": 4096,
+          "identicalGlb": true,
+          "sameTopology": true,
+          "maxVertexDifference": 0.0,
+          "geometryEquivalent": true,
+          "surfaceSeconds": 18.43,
+          "loadSeconds": 1.52,
+          "totalSeconds": 20.0,
+          "peakProcessMemoryMb": 777.5,
+          "faces": 50040,
+          "vertices": 25022
+        },
+        {
+          "round": 1,
+          "chunkSize": 8192,
+          "identicalGlb": true,
+          "sameTopology": true,
+          "maxVertexDifference": 0.0,
+          "geometryEquivalent": true,
+          "surfaceSeconds": 11.48,
+          "loadSeconds": 0.78,
+          "totalSeconds": 12.29,
+          "peakProcessMemoryMb": 940.7,
+          "faces": 50040,
+          "vertices": 25022
+        },
+        {
+          "round": 1,
+          "chunkSize": 16384,
+          "identicalGlb": true,
+          "sameTopology": true,
+          "maxVertexDifference": 0.0,
+          "geometryEquivalent": true,
+          "surfaceSeconds": 8.08,
+          "loadSeconds": 0.62,
+          "totalSeconds": 8.72,
+          "peakProcessMemoryMb": 923.0,
+          "faces": 50040,
+          "vertices": 25022
+        },
+        {
+          "round": 2,
+          "chunkSize": 8192,
+          "identicalGlb": true,
+          "sameTopology": true,
+          "maxVertexDifference": 0.0,
+          "geometryEquivalent": true,
+          "surfaceSeconds": 12.05,
+          "loadSeconds": 0.62,
+          "totalSeconds": 12.7,
+          "peakProcessMemoryMb": 939.3,
+          "faces": 50040,
+          "vertices": 25022
+        },
+        {
+          "round": 2,
+          "chunkSize": 16384,
+          "identicalGlb": true,
+          "sameTopology": true,
+          "maxVertexDifference": 0.0,
+          "geometryEquivalent": true,
+          "surfaceSeconds": 8.78,
+          "loadSeconds": 0.61,
+          "totalSeconds": 9.42,
+          "peakProcessMemoryMb": 922.1,
+          "faces": 50040,
+          "vertices": 25022
+        },
+        {
+          "round": 2,
+          "chunkSize": 4096,
+          "identicalGlb": true,
+          "sameTopology": true,
+          "maxVertexDifference": 0.0,
+          "geometryEquivalent": true,
+          "surfaceSeconds": 18.21,
+          "loadSeconds": 0.61,
+          "totalSeconds": 18.86,
+          "peakProcessMemoryMb": 868.7,
+          "faces": 50040,
+          "vertices": 25022
+        },
+        {
+          "round": 3,
+          "chunkSize": 16384,
+          "identicalGlb": true,
+          "sameTopology": true,
+          "maxVertexDifference": 0.0,
+          "geometryEquivalent": true,
+          "surfaceSeconds": 8.91,
+          "loadSeconds": 0.86,
+          "totalSeconds": 9.79,
+          "peakProcessMemoryMb": 923.1,
+          "faces": 50040,
+          "vertices": 25022
+        },
+        {
+          "round": 3,
+          "chunkSize": 4096,
+          "identicalGlb": true,
+          "sameTopology": true,
+          "maxVertexDifference": 0.0,
+          "geometryEquivalent": true,
+          "surfaceSeconds": 17.96,
+          "loadSeconds": 0.61,
+          "totalSeconds": 18.6,
+          "peakProcessMemoryMb": 876.9,
+          "faces": 50040,
+          "vertices": 25022
+        },
+        {
+          "round": 3,
+          "chunkSize": 8192,
+          "identicalGlb": true,
+          "sameTopology": true,
+          "maxVertexDifference": 0.0,
+          "geometryEquivalent": true,
+          "surfaceSeconds": 12.51,
+          "loadSeconds": 0.87,
+          "totalSeconds": 13.41,
+          "peakProcessMemoryMb": 941.3,
+          "faces": 50040,
+          "vertices": 25022
+        }
+      ],
+      "note": "RSS is process memory, not total GPU memory. Geometry parity is not a likeness score.",
+      "summary": [
+        {
+          "chunkSize": 4096,
+          "medianSurfaceSeconds": 18.21,
+          "maxProcessMemoryMb": 876.9
+        },
+        {
+          "chunkSize": 8192,
+          "medianSurfaceSeconds": 12.05,
+          "maxProcessMemoryMb": 941.3
+        },
+        {
+          "chunkSize": 16384,
+          "medianSurfaceSeconds": 8.78,
+          "maxProcessMemoryMb": 923.1
+        }
+      ]
+    },
+    {
+      "id": "upstream-chair",
+      "resolution": 256,
+      "settings": {
+        "resolution": 256,
+        "densityThreshold": 20.0,
+        "removeSmallComponents": true,
+        "smoothingIterations": 3
+      },
+      "repeats": 2,
+      "device": "mps",
+      "modelRevision": "5b521936b01fbe1890f6f9baed0254ab6351c04a",
+      "runs": [
+        {
+          "round": 1,
+          "chunkSize": 4096,
+          "identicalGlb": true,
+          "sameTopology": true,
+          "maxVertexDifference": 0.0,
+          "geometryEquivalent": true,
+          "surfaceSeconds": 17.95,
+          "loadSeconds": 0.63,
+          "totalSeconds": 18.61,
+          "peakProcessMemoryMb": 876.6,
+          "faces": 85044,
+          "vertices": 42522
+        },
+        {
+          "round": 1,
+          "chunkSize": 16384,
+          "identicalGlb": true,
+          "sameTopology": true,
+          "maxVertexDifference": 0.0,
+          "geometryEquivalent": true,
+          "surfaceSeconds": 10.23,
+          "loadSeconds": 0.76,
+          "totalSeconds": 11.02,
+          "peakProcessMemoryMb": 979.1,
+          "faces": 85044,
+          "vertices": 42522
+        },
+        {
+          "round": 2,
+          "chunkSize": 16384,
+          "identicalGlb": true,
+          "sameTopology": true,
+          "maxVertexDifference": 0.0,
+          "geometryEquivalent": true,
+          "surfaceSeconds": 8.65,
+          "loadSeconds": 0.61,
+          "totalSeconds": 9.29,
+          "peakProcessMemoryMb": 980.2,
+          "faces": 85044,
+          "vertices": 42522
+        },
+        {
+          "round": 2,
+          "chunkSize": 4096,
+          "identicalGlb": true,
+          "sameTopology": true,
+          "maxVertexDifference": 0.0,
+          "geometryEquivalent": true,
+          "surfaceSeconds": 16.22,
+          "loadSeconds": 0.65,
+          "totalSeconds": 16.94,
+          "peakProcessMemoryMb": 866.7,
+          "faces": 85044,
+          "vertices": 42522
+        }
+      ],
+      "note": "RSS is process memory, not total GPU memory. Geometry parity is not a likeness score.",
+      "summary": [
+        {
+          "chunkSize": 4096,
+          "medianSurfaceSeconds": 17.085,
+          "maxProcessMemoryMb": 876.6
+        },
+        {
+          "chunkSize": 16384,
+          "medianSurfaceSeconds": 9.440000000000001,
+          "maxProcessMemoryMb": 980.2
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "Two objects on one Mac; not a reconstruction quality benchmark.",
+    "Process RSS excludes some GPU/driver memory; reported values are not total peak GPU memory.",
+    "256 grids contain eight times the samples of 128 grids; refinement remains slower at higher resolution."
+  ]
+}

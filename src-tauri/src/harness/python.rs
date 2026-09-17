@@ -339,7 +339,9 @@ mod tests {
             std::env::var("SCULPT_TEST_IMAGE").expect("Set SCULPT_TEST_IMAGE to a JPEG fixture");
         let root = runtime_root();
         let id = uuid::Uuid::new_v4().to_string();
-        let output = root.join("test-output").join(&id);
+        let library_root = root.join("test-output").join(&id);
+        let mut library = super::super::library::Library::open(library_root.clone()).unwrap();
+        let output = library.job_directory(&id).unwrap();
         let bytes = std::fs::read(image).unwrap();
         let record = super::super::assets::decode_source(
             "arbitrary-name.jpg".into(),
@@ -347,9 +349,10 @@ mod tests {
                 "data:image/jpeg;base64,{}",
                 base64::engine::general_purpose::STANDARD.encode(bytes)
             ),
-            &output.join("sources"),
+            &library.source_directory().unwrap(),
         )
         .unwrap();
+        library.register_source(record.clone()).unwrap();
         let events = Arc::new(Mutex::new(Vec::new()));
         let captured = events.clone();
         let context = JobContext {
@@ -365,13 +368,14 @@ mod tests {
             .join("backend/worker.py");
         let request = GenerationRequest {
             engine_id: "triposr".into(),
-            source_id: Some(record.asset.id),
+            source_id: Some(record.asset.id.clone()),
             image_name: "arbitrary-name.jpg".into(),
             geometry: GeometryQuality::Draft,
             background: BackgroundMode::Auto,
             parent_asset_id: None,
             refinement: None,
         };
+        library.begin_job(&id, request.clone()).unwrap();
         let asset = run_worker(
             &root,
             &worker,
@@ -395,7 +399,56 @@ mod tests {
         assert!(events
             .windows(2)
             .all(|pair| pair[0].progress <= pair[1].progress));
-        println!("Real reconstruction: {}", asset.metrics.unwrap());
+        println!("Real reconstruction: {}", asset.metrics.as_ref().unwrap());
+        library.finish_job(&id, Ok(asset), false).unwrap();
+        drop(library);
+        let mut library = super::super::library::Library::open(library_root).unwrap();
+        assert_eq!(library.trial_success_job(), Some(id.as_str()));
+        let original_bytes = read_valid_glb(&library.asset_path(&id).unwrap()).unwrap();
+
+        let refined_id = uuid::Uuid::new_v4().to_string();
+        let cache = super::super::verified_scene_cache(&library, &id).unwrap();
+        let refined_output = library.job_directory(&refined_id).unwrap();
+        let mut refined_request = request.clone();
+        refined_request.parent_asset_id = Some(id.clone());
+        refined_request.refinement = Some(RefinementSettings {
+            resolution: 96,
+            density_threshold: 25.0,
+            remove_small_components: false,
+            smoothing_iterations: 0,
+        });
+        library
+            .begin_job(&refined_id, refined_request.clone())
+            .unwrap();
+        let refined = run_worker(
+            &root,
+            &worker,
+            &record.path,
+            &record.asset.sha256,
+            &refined_output,
+            refined_request,
+            JobContext {
+                id: refined_id.clone(),
+                cancelled: Arc::new(AtomicBool::new(false)),
+                progress: Arc::new(|_| {}),
+            },
+            Some(&cache),
+            "mps",
+        )
+        .unwrap();
+        assert_eq!(refined.metrics.as_ref().unwrap()["inferenceSeconds"], 0);
+        println!("Cached refinement: {}", refined.metrics.as_ref().unwrap());
+        library.finish_job(&refined_id, Ok(refined), false).unwrap();
+        assert_eq!(library.trial_success_job(), Some(id.as_str()));
+        assert_eq!(
+            read_valid_glb(&library.asset_path(&refined_id).unwrap()).unwrap(),
+            original_bytes
+        );
+        assert_eq!(
+            read_valid_glb(&library.asset_path(&id).unwrap()).unwrap(),
+            original_bytes
+        );
+        println!("Restart and refinement preserved original bytes and trial accounting.");
 
         let cancelled = Arc::new(AtomicBool::new(false));
         let flag = cancelled.clone();

@@ -12,6 +12,8 @@ neither generation nor verification calls a Sculpt GPU server.
 - Release builds allow one successful real reconstruction before activation.
   An asset must be durably saved before the store consumes that trial. Failed
   jobs, cancellations, and procedural demos do not consume it.
+- Refinements of a verified saved asset do not consume a generation and remain
+  available after the trial. Their parent/source identity is enforced natively.
 - A valid signed perpetual license permits unlimited local reconstruction.
   Existing project inspection and export should remain available after a trial.
 - The native backend decides access when admitting a job. The frontend displays

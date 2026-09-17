@@ -11,10 +11,13 @@ from .config import MODEL_REVISION, UPSTREAM_REVISION, SPEC
 RESOLUTIONS = {profile['id']: profile['resolution'] for profile in SPEC['qualities']}
 
 
-def extraction_chunk_size(value=None):
+def extraction_chunk_size(value=None, operation='generate', device='cpu'):
     """Bounded developer benchmark override; native UI never supplies this field."""
     if value is None:
-        return 4096
+        # Cached refinement loads only the decoder. M4 measurements show ~2×
+        # faster 256 extraction here with identical GLBs and <1 GB process RSS.
+        # Keep full-model generation and unmeasured CPU behavior conservative.
+        return 16384 if operation == 'refine' and device == 'mps' else 4096
     if type(value) is not int or value not in {4096, 8192, 16384}:
         raise ValueError('Query chunk size must be 4096, 8192, or 16384.')
     return value
@@ -38,7 +41,6 @@ def generate(request: dict, root: Path, emit) -> dict:
     if quality not in RESOLUTIONS:
         raise ValueError('Unknown geometry quality.')
     settings = refinement_settings(request.get('refinement'), RESOLUTIONS[quality])
-    chunk_size = extraction_chunk_size(request.get('queryChunkSize'))
     output = Path(request['outputPath'])
     cached_scene, cache_metadata = None, None
     if operation == 'refine':
@@ -62,6 +64,7 @@ def generate(request: dict, root: Path, emit) -> dict:
         device = "cpu"
     if device == "mps" and not torch.backends.mps.is_available():
         raise ValueError("The PyTorch Metal backend is unavailable on this machine.")
+    chunk_size = extraction_chunk_size(request.get('queryChunkSize'), operation, device)
     torch.set_num_threads(min(4, os.cpu_count() or 1))
     if device == "mps":
         torch.mps.set_per_process_memory_fraction(0.65)

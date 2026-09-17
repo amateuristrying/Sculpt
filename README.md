@@ -62,6 +62,8 @@ Generation runs offline after setup. Both Rust and Python validate the runtime m
 
 The 16 GB profile recommends Balanced geometry. High uses a denser extraction grid and is best on 24 GB or larger Macs; it does not use a more capable AI model. Working-memory estimates are conservative guidance rather than measured total GPU memory. Jobs also check remaining memory headroom before loading weights.
 
+After generation, **Refine geometry** reuses the saved scene to change extraction and cleanup settings. It loads only the surface decoder and keeps each version separately. [Refinement behavior and measured batch optimization](docs/refinement.md) document the controls, limits, and reproducible M4 results. Generation presets remain 96/128/192; Refine can reach 256.
+
 ## Verification and benchmarks
 
 See [benchmark procedure and findings](backend/benchmarks/README.md). Unit suites cover the frontend, Python worker, Rust harness, and license issuer. Playwright uses an explicit IPC test double and a self-contained GLB fixture for trial/refinement/reopening/export; an optional test also exercises real generated benchmark meshes. Native process execution and Metal inference are verified separately with opt-in Rust integration tests.
