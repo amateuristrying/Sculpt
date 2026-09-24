@@ -18,8 +18,16 @@ def machine_info():
     data = {'os': platform.system(), 'osVersion': platform.release(), 'architecture': platform.machine()}
     if platform.system() == 'Darwin':
         for key, name in [('machdep.cpu.brand_string', 'chip'), ('hw.memsize', 'ramBytes')]:
-            result = subprocess.run(['sysctl', '-n', key], capture_output=True, text=True, check=True)
-            data[name] = int(result.stdout) if name == 'ramBytes' else result.stdout.strip()
+            result = subprocess.run(['sysctl', '-n', key], capture_output=True, text=True)
+            if result.returncode == 0:
+                data[name] = int(result.stdout) if name == 'ramBytes' else result.stdout.strip()
+            else:
+                data[name] = None
+                data.setdefault('probeErrors', {})[key] = result.stderr.strip()[:500]
+        if data.get('ramBytes') is None:
+            import psutil
+            data['ramBytes'] = psutil.virtual_memory().total
+            data['ramSource'] = 'psutil'
     return data
 
 

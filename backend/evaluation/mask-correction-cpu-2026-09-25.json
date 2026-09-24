@@ -1,0 +1,356 @@
+{
+  "schemaVersion": 1,
+  "measurementDate": "2026-09-25",
+  "codeCheckpoint": "280d2d26edc1a439eeb2f9d6b3b7357251dc45dd",
+  "codeDirty": true,
+  "selection": {
+    "schemaVersion": 1,
+    "caseId": "toy-wooden-horse",
+    "sourceSha256": "4d6b077568e09879136b534b1c5843d8b91b858b942de3c4146329510b8fffa5",
+    "coordinateSize": [
+      942,
+      1024
+    ],
+    "purpose": "Select the upper wooden horse and exclude its shelf and the lower toy. Assistant-reviewed test selection, not independent ground truth.",
+    "keepPolygon": [
+      [
+        248,
+        352
+      ],
+      [
+        262,
+        310
+      ],
+      [
+        295,
+        280
+      ],
+      [
+        325,
+        265
+      ],
+      [
+        360,
+        265
+      ],
+      [
+        410,
+        273
+      ],
+      [
+        466,
+        286
+      ],
+      [
+        551,
+        285
+      ],
+      [
+        600,
+        272
+      ],
+      [
+        627,
+        251
+      ],
+      [
+        646,
+        225
+      ],
+      [
+        657,
+        199
+      ],
+      [
+        674,
+        175
+      ],
+      [
+        696,
+        149
+      ],
+      [
+        720,
+        123
+      ],
+      [
+        733,
+        104
+      ],
+      [
+        765,
+        88
+      ],
+      [
+        780,
+        89
+      ],
+      [
+        777,
+        115
+      ],
+      [
+        818,
+        125
+      ],
+      [
+        834,
+        138
+      ],
+      [
+        830,
+        161
+      ],
+      [
+        825,
+        188
+      ],
+      [
+        801,
+        196
+      ],
+      [
+        779,
+        190
+      ],
+      [
+        753,
+        218
+      ],
+      [
+        752,
+        278
+      ],
+      [
+        758,
+        321
+      ],
+      [
+        748,
+        361
+      ],
+      [
+        723,
+        387
+      ],
+      [
+        686,
+        396
+      ],
+      [
+        619,
+        398
+      ],
+      [
+        545,
+        390
+      ],
+      [
+        463,
+        388
+      ],
+      [
+        395,
+        382
+      ],
+      [
+        324,
+        376
+      ],
+      [
+        274,
+        370
+      ],
+      [
+        253,
+        366
+      ]
+    ]
+  },
+  "method": "Multiply the source-coordinate U2Net alpha by the filled keepPolygon (Pillow ImageDraw.polygon, 0/255) before TripoSR crop/resize. Reconstruct before and after with the same model, Draft 96 and CPU four threads; do not rerun segmentation.",
+  "baselineMaskSha256": "27818b0f6ab9ef7dd975486a97803b2b4529f573452d961cca0439aa31f07c23",
+  "correctedMaskSha256": "903703e62743e906a80c70237f160c309dbc9c9698ce6be0a4f337b414a5ca18",
+  "hardware": {
+    "os": "Darwin",
+    "osVersion": "25.5.0",
+    "architecture": "arm64",
+    "chip": null,
+    "probeErrors": {
+      "machdep.cpu.brand_string": "sysctl: sysctl fmt -1 1024 1: Operation not permitted",
+      "hw.memsize": "sysctl: sysctl fmt -1 1024 1: Operation not permitted"
+    },
+    "ramBytes": 17179869184,
+    "ramSource": "psutil"
+  },
+  "runtimeSpec": {
+    "version": 2,
+    "engine": "TripoSR",
+    "sourceRevision": "107cefdc244c39106fa830359024f6a2f1c78871",
+    "sourceArchiveSha256": "bcb414550dcfcb9f5ea6a7b9c12f2bbff889f5b4a564a493178393360d9034ec",
+    "modelRevision": "5b521936b01fbe1890f6f9baed0254ab6351c04a",
+    "dinoRevision": "f205d5d8e640a89a2b8ef0369670dfc37cc07fc2",
+    "artifacts": {
+      "models/triposr/config.yaml": "74ca708ce086bf68e97709ea6b3d91f14717921c04691e84043f0eb8fcc68e62",
+      "models/triposr/model.ckpt": "429e2c6b22a0923967459de24d67f05962b235f79cde6b032aa7ed2ffcd970ee",
+      "models/background/u2net.onnx": "8d10d2f3bb75ae3b6d527c77944fc5e7dcd94b29809d47a739a7a728a912b491"
+    },
+    "qualities": [
+      {
+        "id": "draft",
+        "resolution": 96,
+        "estimatedMemoryGb": 3.5,
+        "minimumAvailableGb": 2.5,
+        "recommendedRamGb": 16
+      },
+      {
+        "id": "balanced",
+        "resolution": 128,
+        "estimatedMemoryGb": 4.5,
+        "minimumAvailableGb": 3.0,
+        "recommendedRamGb": 16
+      },
+      {
+        "id": "high",
+        "resolution": 192,
+        "estimatedMemoryGb": 6.0,
+        "minimumAvailableGb": 4.5,
+        "recommendedRamGb": 24
+      }
+    ]
+  },
+  "runs": {
+    "before": {
+      "metrics": {
+        "engine": "triposr",
+        "device": "cpu",
+        "quality": "draft",
+        "operation": "generate",
+        "refinement": {
+          "resolution": 96,
+          "densityThreshold": 25.0,
+          "removeSmallComponents": false,
+          "smoothingIterations": 0
+        },
+        "queryChunkSize": 4096,
+        "cleanup": {
+          "componentsRemoved": 0,
+          "facesRemoved": 0,
+          "smoothingIterations": 0,
+          "before": {
+            "faces": 15792,
+            "vertices": 7898
+          },
+          "after": {
+            "faces": 15792,
+            "vertices": 7898
+          }
+        },
+        "canRefine": true,
+        "sceneCacheSha256": "26d6a97a8b283e9fa76a13f5fa535bd875497f29efc28dac5c090924ded1a141",
+        "sourceSha256": "4d6b077568e09879136b534b1c5843d8b91b858b942de3c4146329510b8fffa5",
+        "maskSha256": "27818b0f6ab9ef7dd975486a97803b2b4529f573452d961cca0439aa31f07c23",
+        "modelRevision": "5b521936b01fbe1890f6f9baed0254ab6351c04a",
+        "sourceRevision": "107cefdc244c39106fa830359024f6a2f1c78871",
+        "torchVersion": "2.8.0",
+        "faces": 15792,
+        "vertices": 7898,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 2,
+          "degenerateFaces": 0
+        },
+        "availableMemoryGbAtStart": 7.21,
+        "background": "auto",
+        "materials": 1,
+        "textureResolution": "Vertex colors",
+        "format": "GLB",
+        "prepareSeconds": 0.1,
+        "loadSeconds": 3.96,
+        "inferenceSeconds": 3.73,
+        "surfaceSeconds": 0.49,
+        "totalSeconds": 8.29,
+        "peakProcessMemoryMb": 3619.7,
+        "fileBytes": 412228
+      },
+      "observation": {
+        "device": "cpu",
+        "exitCode": 0,
+        "wallSeconds": 9.397,
+        "minimumAvailableGbObserved": 5.4,
+        "stopped": null
+      },
+      "meshSha256": "2924d5170781be979ee4c6e2f3cad314248bff9ba4d2ffd1fae42799880282d7"
+    },
+    "after": {
+      "metrics": {
+        "engine": "triposr",
+        "device": "cpu",
+        "quality": "draft",
+        "operation": "generate",
+        "refinement": {
+          "resolution": 96,
+          "densityThreshold": 25.0,
+          "removeSmallComponents": false,
+          "smoothingIterations": 0
+        },
+        "queryChunkSize": 4096,
+        "cleanup": {
+          "componentsRemoved": 0,
+          "facesRemoved": 0,
+          "smoothingIterations": 0,
+          "before": {
+            "faces": 7452,
+            "vertices": 3728
+          },
+          "after": {
+            "faces": 7452,
+            "vertices": 3728
+          }
+        },
+        "canRefine": true,
+        "sceneCacheSha256": "a8c9dbe16fe79c7b36a318d812ffd29a52fd251a2e8ded135c61cca4e7f2b6d4",
+        "sourceSha256": "4d6b077568e09879136b534b1c5843d8b91b858b942de3c4146329510b8fffa5",
+        "maskSha256": "903703e62743e906a80c70237f160c309dbc9c9698ce6be0a4f337b414a5ca18",
+        "modelRevision": "5b521936b01fbe1890f6f9baed0254ab6351c04a",
+        "sourceRevision": "107cefdc244c39106fa830359024f6a2f1c78871",
+        "torchVersion": "2.8.0",
+        "faces": 7452,
+        "vertices": 3728,
+        "meshQuality": {
+          "watertight": true,
+          "windingConsistent": true,
+          "components": 1,
+          "degenerateFaces": 0
+        },
+        "availableMemoryGbAtStart": 6.51,
+        "background": "auto",
+        "materials": 1,
+        "textureResolution": "Vertex colors",
+        "format": "GLB",
+        "prepareSeconds": 0.06,
+        "loadSeconds": 1.92,
+        "inferenceSeconds": 3.57,
+        "surfaceSeconds": 0.43,
+        "totalSeconds": 5.98,
+        "peakProcessMemoryMb": 3628.8,
+        "fileBytes": 195384
+      },
+      "observation": {
+        "device": "cpu",
+        "exitCode": 0,
+        "wallSeconds": 6.939,
+        "minimumAvailableGbObserved": 5.233,
+        "stopped": null
+      },
+      "meshSha256": "bc0c1f47976c38853ab0b668e74fff60c07003bddb5917fe17e0f683b7647a12"
+    }
+  },
+  "visualReview": "The original reconstruction includes the shelf and lower wheeled toy. The corrected reconstruction isolates the upper wooden horse; surface lumpiness and guessed back-side detail remain.",
+  "limitations": [
+    "One deliberately selected case from the 34-photo evaluation set, not a dataset-wide quality improvement.",
+    "Selection changes the input crop and scale. The old full-scene silhouette is not a fair target for scoring this isolated object.",
+    "Both runs used the CPU worker in this sandbox. No Metal run or additional supported-hardware claim is implied.",
+    "Timing is a single sequential observation and includes different filesystem/model cache conditions."
+  ]
+}

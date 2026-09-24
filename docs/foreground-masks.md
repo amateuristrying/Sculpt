@@ -69,21 +69,124 @@ Use fresh output directories. The comparison preserves failed cases. The frozen
 reference masks are automatic U2Net predictions, not independently annotated
 object outlines; their silhouette IoU cannot establish better segmentation.
 
+## Reconstruction comparison
+
+The [recorded per-case measurements](../backend/evaluation/mask-review-m4-2026-09-23.json)
+retain all 34 attempted cases, including the five memory rejections. For the 29
+successful pairs at the same Draft resolution, frozen-reference silhouette IoU
+changed from **0.8203 to 0.8222** (delta **+0.0019**). This small mean conceals mixed
+results: `tool-mallet` changed by −0.2149 and `bottle-table` by −0.1352, while
+`toy-wooden-horse` changed by +0.1968 and `plant-patio` by +0.1236.
+
+Visual review of front/reverse renders shows the main remaining problems in both
+versions: the mallet's hand becomes geometry, clutter joins the toy, and hidden
+surfaces remain rough. The changed bottle scale/outline also illustrates the
+sensitivity of IoU to a fixed estimated camera. **The measurements do not establish
+an overall quality improvement.** The compositing correction is kept explicit;
+manual foreground selection and stronger reconstruction still need evaluation.
+
+Observed median worker times across each run's successful cases were 9.90 s before
+and 17.78 s after. Maximum process RSS was 4,010.0 MB and 3,538.7 MB respectively.
+The run conditions and successful subsets differ; neither number is a controlled
+performance comparison. Source-mask preparation is a separate operation and must
+be included when measuring the user's full first-generation workflow.
+
+## U2Net / BiRefNet CPU comparison — 25 September 2026
+
+Both models completed all 34 photos (33 segmentations and one existing-alpha
+passthrough) in fresh CPU workers, four threads per worker. The
+[per-case record](../backend/evaluation/mask-models-cpu-2026-09-25.json) includes
+source/mask hashes, model checksums, observations and failures.
+
+| Observation | U2Net | BiRefNet general |
+| --- | ---: | ---: |
+| Successful cases | 34 / 34 | 34 / 34 |
+| Median worker time, including loading | 1.197 s | 19.350 s |
+| Median process wall time | 1.317 s | 19.841 s |
+| Maximum process RSS | 872.2 MB | 5,883.9 MB |
+| Lowest sampled available memory | 4.579 GB | 2.232 GB |
+
+The repeated U2Net masks match the earlier selections at every thresholded pixel.
+BiRefNet/U2Net mean mask agreement IoU is **0.8502**. That is agreement, **not
+accuracy**. Visual inspection finds useful BiRefNet improvements: it retains the
+mallet head, bolt-cutter jaws and toy-jeep arm that U2Net partially discards, and
+removes more background between palm leaves. It still retains a hand, the toy
+horse's shelf and second toy, and a second bottle where the intended subject is
+ambiguous. Neither model selects a user's intended object reliably in clutter.
+
+**Keep U2Net as the default.** BiRefNet's roughly 16× median worker time and higher
+memory cost need an independently scored quality benefit before a default switch.
+These sequential runs used the existing M4 development machine, but this execution
+environment denied native chip probes; the reports preserve unknown fields and
+the probe errors. RAM is reported through psutil. This is a CPU mask evaluation,
+not a new GPU or platform validation. Shared desktop load and thermal state were
+not controlled. Peak RSS is not total unified-memory pressure.
+
+## Corrected selection: actual reconstruction
+
+The wooden-horse case contains two toys and a shelf. Keeping only the upper horse
+before reconstruction removes the shelf and lower toy from the generated asset.
+This was tested with two real CPU TripoSR jobs, using the same model and Draft 96
+settings. The [recorded selection polygon and measurements](../backend/evaluation/mask-correction-cpu-2026-09-25.json)
+retain the source identity and both immutable mask identities.
+
+| Observation | Automatic mask | Corrected mask |
+| --- | ---: | ---: |
+| Faces | 15,792 | 7,452 |
+| Connected components | 2 | 1 |
+| Watertight | Yes | Yes |
+| Worker time | 8.29 s | 5.98 s |
+| Maximum process RSS | 3,619.7 MB | 3,628.8 MB |
+
+Four-angle inspection confirms the intended object is isolated; rough surface
+detail and guessed hidden geometry remain. This establishes that saved mask
+corrections affect real reconstruction. Fewer faces or components alone do not
+establish quality, and one case is not a whole-set improvement. Changed selection
+also changes the model's crop/scale, so the old full-scene silhouette is not an
+appropriate scoring target. Timing is a single pair with different cache conditions.
+
 ## Remaining evaluation work
 
 The roadmap's mask task is **not complete**. It still needs a complete GPU run
-with sufficient memory headroom, reconstruction comparisons using deliberately
-corrected masks, and a fair BiRefNet/U2Net comparison with independently reviewed
-reference masks. Do not change the default mask model based on agreement with
-U2Net's own predictions.
+with sufficient memory headroom, more corrected-mask reconstruction cases, and
+independently reviewed reference masks for a fair segmentation accuracy score.
+Do not change the default based on agreement with U2Net's own predictions.
 
-BiRefNet is not installed by Sculpt or offered in the UI. An optional evaluation
-model download was attempted but has not completed or been SHA-256 verified.
+## Optional model provenance and reproduction
+
+BiRefNet is not installed by Sculpt or offered in the UI. The optional evaluation
+model is downloaded outside the installed runtime and pinned to SHA-256
+`58f621f00f5d756097615970a88a791584600dcf7c45b18a0a6267535a1ebd3c`.
 The official [BiRefNet code license](https://github.com/ZhengPeng7/BiRefNet/blob/main/LICENSE)
 and [official weight model card](https://huggingface.co/ZhengPeng7/BiRefNet) declare
 MIT. The existing locked rembg 2.0.69 adapter uses ONNX Runtime and no additional
 helper model for `birefnet-general`; no new dependency or restricted helper was
 added. The rembg release asset is `BiRefNet-general-epoch_244.onnx`, ID 188289669,
 972,666,916 bytes, with upstream MD5 `7a35a0141cbbc80de11d9c9a28f52697`.
-Complete the artifact hash/provenance check and the real memory/quality evaluation
-before considering it for distribution.
+The artifact's size and upstream MD5 were verified before pinning its SHA-256.
+`backend/sculpt_eval/mask_models.py` uses the existing locked rembg adapter and
+ONNX Runtime on CPU, with its download method replaced by the verified local
+path. No remote Python code, extra helper model, or package was installed.
+Complete the independent quality evaluation before considering distribution.
+
+Optional, evaluation-only comparison (download the reviewed artifact explicitly;
+the evaluator never fetches weights):
+
+```sh
+.sculpt-runtime/venv/bin/python backend/evaluate_masks.py \
+  --model birefnet-general \
+  --weights backend/outputs/evaluation-models/birefnet-general.onnx \
+  --reference-masks backend/outputs/YOUR_U2NET_MASK_RUN \
+  --output backend/outputs/YOUR_BIREFNET_MASK_RUN
+.sculpt-runtime/venv/bin/python backend/compare_masks.py \
+  --left backend/outputs/YOUR_U2NET_MASK_RUN \
+  --right backend/outputs/YOUR_BIREFNET_MASK_RUN \
+  --output backend/outputs/YOUR_MASK_COMPARISON
+```
+
+`--case CASE_ID` limits a smoke test. Each case gets a fresh CPU process, a
+five-minute timeout, and a sampled 1 GB available-memory floor. Failures remain in
+the report. Native chip probes that are denied by the environment are recorded as
+unknown, with the probe error; they never establish new hardware validation.
+The HTML report is self-contained and labels automatic-mask agreement separately
+from accuracy. Independent reviewed reference masks are still needed for that.

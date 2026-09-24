@@ -190,3 +190,45 @@ def test_committed_photo_set_has_required_coverage_and_no_upstream_sources():
     assert {case['category'] for case in data['cases']} >= {'shoes', 'mugs', 'toys', 'plants', 'tools', 'furniture', 'food', 'reflective', 'transparent', 'clutter'}
     assert all(case['license'] == 'CC0-1.0' and 'TripoSR' not in case['downloadUrl'] for case in data['cases'])
     assert all(case['licenseEvidence']['licenseShortName'] == 'CC0' for case in data['cases'])
+
+
+def test_mask_report_preserves_failures_and_does_not_call_agreement_accuracy(tmp_path):
+    from compare_masks import compare as compare_masks
+    folders = [tmp_path / 'left-mask', tmp_path / 'right-mask']
+    for i, folder in enumerate(folders):
+        case = folder / 'sample'; case.mkdir(parents=True)
+        Image.new('RGB', (32, 32), 'red').save(case / 'preview.png')
+        alpha = np.zeros((32, 32), dtype=np.uint8); alpha[4:28, (4 if i == 0 else 8):28] = 255
+        Image.fromarray(alpha).save(case / 'mask.png')
+        row = {'id': 'sample', 'sourceSha256': 'source', 'success': True,
+               'maskSha256': sha256(case / 'mask.png'), 'totalSeconds': 2 + i, 'peakProcessMemoryMb': 100}
+        (folder / 'report.json').write_text(json.dumps({'datasetSha256': 'dataset', 'model': str(i), 'results': [row,
+            {'id': 'failed', 'sourceSha256': 'failed-source', 'success': False, 'error': '<failure>'}]}))
+    output = tmp_path / 'mask-report'
+    report = compare_masks(*folders, output)
+    assert report['pairedCases'] == 1
+    assert report['independentGroundTruth'] is False
+    assert report['results'][0]['maskAgreementIou'] == pytest.approx(20 / 24)
+    assert report['results'][1]['maskAgreementIou'] is None
+    assert '&lt;failure&gt;' in (output / 'index.html').read_text()
+    (folders[0] / 'sample' / 'mask.png').write_bytes(b'changed')
+    with pytest.raises(ValueError, match='changed'):
+        compare_masks(*folders, tmp_path / 'bad-mask-report')
+
+
+def test_optional_birefnet_rejects_incomplete_download_before_loading(tmp_path):
+    from sculpt_eval.mask_models import verify_birefnet
+    model = tmp_path / 'partial.onnx'; model.write_bytes(b'partial download')
+    with pytest.raises(ValueError, match='incomplete'):
+        verify_birefnet(model)
+
+
+def test_hardware_probe_failure_stays_unknown_in_evaluation(monkeypatch):
+    from sculpt_eval import runner
+    from types import SimpleNamespace
+    monkeypatch.setattr(runner.platform, 'system', lambda: 'Darwin')
+    monkeypatch.setattr(runner.subprocess, 'run', lambda *args, **kwargs: SimpleNamespace(returncode=1, stderr='unavailable', stdout=''))
+    info = runner.machine_info()
+    assert info['chip'] is None
+    assert info['ramBytes'] > 0
+    assert 'machdep.cpu.brand_string' in info['probeErrors']

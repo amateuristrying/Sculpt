@@ -1,0 +1,1817 @@
+{
+  "schemaVersion": 1,
+  "checkpoint": "280d2d26edc1a439eeb2f9d6b3b7357251dc45dd",
+  "measurementDate": "2026-09-23",
+  "hardware": {
+    "os": "Darwin",
+    "osVersion": "25.5.0",
+    "architecture": "arm64",
+    "chip": "Apple M4",
+    "ramBytes": 17179869184
+  },
+  "datasetSha256": "4c715370a3587525d810fa979fa1d4f7363ce411bd041a1891f75fc906e17580",
+  "comparisonMethod": "frozen-baseline-camera-u2net-alpha32-v1",
+  "referenceSha256": "ee7db8211fdfd95fb3a6b873af1f7f364b3ac6d86caf51ef1732751454da8dcb",
+  "limitations": [
+    "Five jobs were rejected by the unchanged memory guard. All failures are retained.",
+    "Uncontrolled shared-desktop timing; these runs do not establish a speed improvement.",
+    "Frozen automatic U2Net references and estimated cameras; not independently annotated segmentation or complete 3D quality.",
+    "Mask geometry and model weights are unchanged; straight-alpha input compositing differs."
+  ],
+  "maskPreparation": {
+    "summary": {
+      "successes": 34,
+      "medianWorkerSeconds": 2.073,
+      "medianWallSeconds": 2.3635,
+      "maxProcessMemoryMb": 784.4
+    },
+    "results": [
+      {
+        "id": "shoe-leather",
+        "sourceSha256": "0900bdb76171bb7ed7162af7233e75bc7266fed588866e556ca00f1bbee89d56",
+        "success": true,
+        "wallSeconds": 4.086,
+        "width": 1024,
+        "height": 768,
+        "totalSeconds": 3.723,
+        "peakProcessMemoryMb": 750.6,
+        "inputMaxPixelDelta": 60,
+        "inputByteIdentical": false,
+        "maskSha256": "7a3a0737d68179382e9ef6f4b97c5acca49c34ba0142e966fd2787a4d0a1bc45"
+      },
+      {
+        "id": "shoes-carpet",
+        "sourceSha256": "ae3e61a220cce3682c81c60721cfb9854a574ad0f99958de347b107c63f107f5",
+        "success": true,
+        "wallSeconds": 3.137,
+        "width": 768,
+        "height": 1024,
+        "totalSeconds": 2.808,
+        "peakProcessMemoryMb": 639.4,
+        "inputMaxPixelDelta": 59,
+        "inputByteIdentical": false,
+        "maskSha256": "8ef5a8102e054b83034123a89f9dba6b26e0d9195e66b5afd14ad3421b455fe0"
+      },
+      {
+        "id": "shoe-shop",
+        "sourceSha256": "9a78ff15cb034391c96714696d022e6852d4859267ef35f194c241cbd175f9cb",
+        "success": true,
+        "wallSeconds": 3.223,
+        "width": 1024,
+        "height": 771,
+        "totalSeconds": 2.869,
+        "peakProcessMemoryMb": 729.5,
+        "inputMaxPixelDelta": 62,
+        "inputByteIdentical": false,
+        "maskSha256": "4e3cedcc016e3523328f57604cd04a5b7598fa64407a7a3ceda8dadf8d9d9f9c"
+      },
+      {
+        "id": "shoe-repaired",
+        "sourceSha256": "e274b3993a3d266392bdbbc6f868cffcc463d165d51a45c8bb659e6d4a995eef",
+        "success": true,
+        "wallSeconds": 2.493,
+        "width": 500,
+        "height": 375,
+        "totalSeconds": 2.213,
+        "peakProcessMemoryMb": 697.9,
+        "inputMaxPixelDelta": 64,
+        "inputByteIdentical": false,
+        "maskSha256": "e12013acd9b120e9ea59861a9f8431708a17564e2b22fa18a8ec606abad5543e"
+      },
+      {
+        "id": "mug-floral",
+        "sourceSha256": "9378fe4a6e06f334819e2e3aa53f1e4e78a06d419d8e6ad715c1d17cb27e2353",
+        "success": true,
+        "wallSeconds": 3.622,
+        "width": 768,
+        "height": 1024,
+        "totalSeconds": 3.307,
+        "peakProcessMemoryMb": 702.8,
+        "inputMaxPixelDelta": 52,
+        "inputByteIdentical": false,
+        "maskSha256": "f259844ec6a601c8705fa6715aed357d88323f002f45fe421985b5f865bcad45"
+      },
+      {
+        "id": "mug-plastic",
+        "sourceSha256": "d5cb70a5da6ff0af60a2cf17135aeba46426386cde084290dd2fc7207039efa0",
+        "success": true,
+        "wallSeconds": 3.261,
+        "width": 500,
+        "height": 667,
+        "totalSeconds": 2.941,
+        "peakProcessMemoryMb": 694.9,
+        "inputMaxPixelDelta": 60,
+        "inputByteIdentical": false,
+        "maskSha256": "882b8f3df007c4e71813a3d62fff4f6eefc9f41c7fe3e8bf1a212c00be370c5d"
+      },
+      {
+        "id": "mug-portrait",
+        "sourceSha256": "26c5c846a6d5cd389f8e49d5a6d4218c42562742c196bc1d2b6edd6c4f88b0d7",
+        "success": true,
+        "wallSeconds": 3.272,
+        "width": 779,
+        "height": 1024,
+        "totalSeconds": 2.893,
+        "peakProcessMemoryMb": 663.1,
+        "inputMaxPixelDelta": 35,
+        "inputByteIdentical": false,
+        "maskSha256": "51a6c088fd7122892c6dd77ceef44c4ece5cb7cf98d8bf741e11b232e94bf385"
+      },
+      {
+        "id": "mug-silver",
+        "sourceSha256": "92d099e26b4e5711792ff117a75501064fbcb68ea9e4be03b7c3bf105fc76a36",
+        "success": true,
+        "wallSeconds": 4.211,
+        "width": 1024,
+        "height": 1024,
+        "totalSeconds": 3.666,
+        "peakProcessMemoryMb": 646.9,
+        "inputMaxPixelDelta": 58,
+        "inputByteIdentical": false,
+        "maskSha256": "835dc9601f0ebdd57f65468429c3c7a11b4c53a14782576b6485cf8b23980127"
+      },
+      {
+        "id": "toy-jeep",
+        "sourceSha256": "5fb222bc06ca592b8b8f16e90ef61e905bdc78e3fb92b454c980d82975d6eabf",
+        "success": true,
+        "wallSeconds": 3.135,
+        "width": 1024,
+        "height": 768,
+        "totalSeconds": 2.812,
+        "peakProcessMemoryMb": 721.8,
+        "inputMaxPixelDelta": 60,
+        "inputByteIdentical": false,
+        "maskSha256": "f9c541901f8ff43124cbebdf33333b890ca12a5758dc99a1807c2862eb2f01e1"
+      },
+      {
+        "id": "toy-tank",
+        "sourceSha256": "dfa5ecddfd372bcaa25576eaa4b38c1e0c165764f7e31906d1c8220e74fa8e2c",
+        "success": true,
+        "wallSeconds": 2.767,
+        "width": 1024,
+        "height": 768,
+        "totalSeconds": 2.399,
+        "peakProcessMemoryMb": 663.0,
+        "inputMaxPixelDelta": 51,
+        "inputByteIdentical": false,
+        "maskSha256": "b6a2893ec13bcf2b8465da7f5bcf649bf34b79e468fe9249b2144fba05bb2d0d"
+      },
+      {
+        "id": "toy-grass-head",
+        "sourceSha256": "97b1f605f0775dc0a51c69c1b142a872ce5d9498c7ae991076daceebfbdfa34d",
+        "success": true,
+        "wallSeconds": 2.835,
+        "width": 768,
+        "height": 1024,
+        "totalSeconds": 2.526,
+        "peakProcessMemoryMb": 719.4,
+        "inputMaxPixelDelta": 66,
+        "inputByteIdentical": false,
+        "maskSha256": "ba04e6f4f19061f771fd880f87d9ddf1f78e9c33d140d7117792870280318bc2"
+      },
+      {
+        "id": "toy-wooden-horse",
+        "sourceSha256": "4d6b077568e09879136b534b1c5843d8b91b858b942de3c4146329510b8fffa5",
+        "success": true,
+        "wallSeconds": 3.117,
+        "width": 942,
+        "height": 1024,
+        "totalSeconds": 2.731,
+        "peakProcessMemoryMb": 669.8,
+        "inputMaxPixelDelta": 64,
+        "inputByteIdentical": false,
+        "maskSha256": "d074d88bbcbc5252b643d9f415be5621c5407544f165a0ece14ff1490ee0fd7d"
+      },
+      {
+        "id": "plant-patio",
+        "sourceSha256": "d89b229514cae83b318d6765715130a3fd7bf39d9d6ae536627178115d14bfa1",
+        "success": true,
+        "wallSeconds": 2.531,
+        "width": 1024,
+        "height": 575,
+        "totalSeconds": 2.27,
+        "peakProcessMemoryMb": 721.2,
+        "inputMaxPixelDelta": 69,
+        "inputByteIdentical": false,
+        "maskSha256": "be4393e4813672ab181465d149ab36e298e423b84df731de503725687c2f78c5"
+      },
+      {
+        "id": "plant-stevia",
+        "sourceSha256": "b89de07be045b7d9916a70a8854918d0926ce1a6a851fc785d2494af40006cca",
+        "success": true,
+        "wallSeconds": 2.347,
+        "width": 778,
+        "height": 1024,
+        "totalSeconds": 2.085,
+        "peakProcessMemoryMb": 783.6,
+        "inputMaxPixelDelta": 62,
+        "inputByteIdentical": false,
+        "maskSha256": "a945cabae0fdaa77256b0ab4d24938ef2fe51458b6b84d6cf1d748ece03652e9"
+      },
+      {
+        "id": "plant-palm",
+        "sourceSha256": "f118e30b1287f5079aa165b56117edb9b1cf49e8433349aa255441fec6bd66df",
+        "success": true,
+        "wallSeconds": 2.378,
+        "width": 1024,
+        "height": 768,
+        "totalSeconds": 2.148,
+        "peakProcessMemoryMb": 700.7,
+        "inputMaxPixelDelta": 72,
+        "inputByteIdentical": false,
+        "maskSha256": "48f17306205f7d74f22d3b8e1cf475a2c715cc71618ed7d3af67e6fc6901ca43"
+      },
+      {
+        "id": "plant-gerbera",
+        "sourceSha256": "a95f0f65d1b72b4b634c50af0bacd24485f04fb3a30dcbfddd50940cec88660d",
+        "success": true,
+        "wallSeconds": 2.19,
+        "width": 500,
+        "height": 750,
+        "totalSeconds": 1.949,
+        "peakProcessMemoryMb": 687.6,
+        "inputMaxPixelDelta": 67,
+        "inputByteIdentical": false,
+        "maskSha256": "0b1377bdb10525d8bcc9e06c09cf53d514681ef326f2c2eb3aedd43d9e813d99"
+      },
+      {
+        "id": "tool-mallet",
+        "sourceSha256": "ff2e1dd8faa78f5aacae90157b333b70000d53e26d471f479e74b0ac82909fdf",
+        "success": true,
+        "wallSeconds": 2.202,
+        "width": 765,
+        "height": 1024,
+        "totalSeconds": 1.993,
+        "peakProcessMemoryMb": 733.8,
+        "inputMaxPixelDelta": 52,
+        "inputByteIdentical": false,
+        "maskSha256": "b82e835588f0da790b7169050ca6b47b940883875a166097d58850a9757c7045"
+      },
+      {
+        "id": "tool-bolt-cutter",
+        "sourceSha256": "cfa2ab178908922aba65cce59f60cda1b99fc0426bd653bf161b7689c5f369e9",
+        "success": true,
+        "wallSeconds": 2.174,
+        "width": 797,
+        "height": 1024,
+        "totalSeconds": 1.929,
+        "peakProcessMemoryMb": 737.8,
+        "inputMaxPixelDelta": 50,
+        "inputByteIdentical": false,
+        "maskSha256": "d050ca250c32c9639e80c3fd04e3c9f696c3fe44a2f47119f9f213678a2c4477"
+      },
+      {
+        "id": "tool-cleco",
+        "sourceSha256": "227f5bef309dbcd95765ed7c8a5da340c84c8d11d70857799407a2169d718e2f",
+        "success": true,
+        "wallSeconds": 2.255,
+        "width": 1024,
+        "height": 741,
+        "totalSeconds": 2.04,
+        "peakProcessMemoryMb": 664.5,
+        "inputMaxPixelDelta": 66,
+        "inputByteIdentical": false,
+        "maskSha256": "37d2c3cfaa912acf084a92a65f59b23a06f241f418603c2945b2bd418f0ac1ef"
+      },
+      {
+        "id": "tool-sockets",
+        "sourceSha256": "415bb2740e29158e5c4f233b829277cc65ad220256d3ac9c082a1e49f1c59501",
+        "success": true,
+        "wallSeconds": 2.086,
+        "width": 1024,
+        "height": 768,
+        "totalSeconds": 1.88,
+        "peakProcessMemoryMb": 746.9,
+        "inputMaxPixelDelta": 66,
+        "inputByteIdentical": false,
+        "maskSha256": "47d308ae9dbabd6064b492a20d36659899aae08b0de12ac05a5c61fb1d24d85c"
+      },
+      {
+        "id": "chair-dark-wood",
+        "sourceSha256": "b6defe1f2807c494f7cf85764e8a006c2bcbf5c9f14fc2535467ca8b07f449d3",
+        "success": true,
+        "wallSeconds": 2.03,
+        "width": 779,
+        "height": 1024,
+        "totalSeconds": 1.818,
+        "peakProcessMemoryMb": 784.4,
+        "inputMaxPixelDelta": 62,
+        "inputByteIdentical": false,
+        "maskSha256": "1327929e93848410ebda80d0ee0f3fe68e767e734a675605fac12c4b657e4251"
+      },
+      {
+        "id": "chair-pakri",
+        "sourceSha256": "a7a3d93db067848ebb7ee3d57754f84069391244628374c5e285f0d692c48ab4",
+        "success": true,
+        "wallSeconds": 2.024,
+        "width": 541,
+        "height": 1024,
+        "totalSeconds": 1.817,
+        "peakProcessMemoryMb": 734.5,
+        "inputMaxPixelDelta": 66,
+        "inputByteIdentical": false,
+        "maskSha256": "97147dcba414180e16cd0fee82b93ccf12606db53577944fe195341d51cf3f7d"
+      },
+      {
+        "id": "chair-upholstered",
+        "sourceSha256": "5769ec0a62f64b95ddc62c5bb6a5f0e870bb98454f73bb997816b66f52bbfb3f",
+        "success": true,
+        "wallSeconds": 2.131,
+        "width": 473,
+        "height": 1024,
+        "totalSeconds": 1.889,
+        "peakProcessMemoryMb": 750.7,
+        "inputMaxPixelDelta": 59,
+        "inputByteIdentical": false,
+        "maskSha256": "fc889b6fe503aaa34e3d6951e2721279fdb4b3c9738be23c65375369b3fd31b5"
+      },
+      {
+        "id": "chair-estonian",
+        "sourceSha256": "4ac1afdf929ba60c564313964476b593ad7697f3c68d69a25ede6ed75e959689",
+        "success": true,
+        "wallSeconds": 2.611,
+        "width": 594,
+        "height": 1024,
+        "totalSeconds": 2.362,
+        "peakProcessMemoryMb": 693.9,
+        "inputMaxPixelDelta": 63,
+        "inputByteIdentical": false,
+        "maskSha256": "e4b0df4b63f9523a5bb7ec56ceb14c08c54b06fad03cd70cca51d5aae8e1264c"
+      },
+      {
+        "id": "food-blueberries",
+        "sourceSha256": "47c3980d0d1ba64dafe6561012ba14b643403f24c2e38a368cab063a613263c2",
+        "success": true,
+        "wallSeconds": 3.043,
+        "width": 1024,
+        "height": 883,
+        "totalSeconds": 2.818,
+        "peakProcessMemoryMb": 659.5,
+        "inputMaxPixelDelta": 62,
+        "inputByteIdentical": false,
+        "maskSha256": "43a6dabfb13f80ed3f6fe684d00764ccb7421eae5fe01fbf00f3f3e841a79efd"
+      },
+      {
+        "id": "food-pear",
+        "sourceSha256": "81d63581d93f59fda02fbb0bad5736e02959856193ef9e3ce7c7773549db7998",
+        "success": true,
+        "wallSeconds": 0.986,
+        "width": 1018,
+        "height": 1024,
+        "totalSeconds": 0.816,
+        "peakProcessMemoryMb": 223.1,
+        "inputMaxPixelDelta": 0,
+        "inputByteIdentical": true,
+        "maskSha256": "22f33252083893701550fcf598b052c64266c33d78c79d2cd64b55fa5eb4421a"
+      },
+      {
+        "id": "food-puriri",
+        "sourceSha256": "3650e5527946e6f23a16c92441a1cec548f93d21cf1ea9e24c7f96d42aae64a8",
+        "success": true,
+        "wallSeconds": 2.072,
+        "width": 768,
+        "height": 1024,
+        "totalSeconds": 1.879,
+        "peakProcessMemoryMb": 725.6,
+        "inputMaxPixelDelta": 66,
+        "inputByteIdentical": false,
+        "maskSha256": "d306a5a5f3b71da59e99e832478db6c0410137685e82d5554f729e53fb2b3011"
+      },
+      {
+        "id": "food-pineapple",
+        "sourceSha256": "db5db4097df3bde997d696b4066173faea4900c04bccf1a0a8c107f8853ac9e4",
+        "success": true,
+        "wallSeconds": 2.108,
+        "width": 917,
+        "height": 1024,
+        "totalSeconds": 1.884,
+        "peakProcessMemoryMb": 770.8,
+        "inputMaxPixelDelta": 61,
+        "inputByteIdentical": false,
+        "maskSha256": "22a9f91896d5a4709bbbbcf84696158caae126b4dbaaaf3873d67b0e7486dc67"
+      },
+      {
+        "id": "pot-copper",
+        "sourceSha256": "d563f9651a7d68b2f20d1805e2c5741da0838bfe71cf326bee0f568d52d04b1d",
+        "success": true,
+        "wallSeconds": 2.081,
+        "width": 1024,
+        "height": 768,
+        "totalSeconds": 1.853,
+        "peakProcessMemoryMb": 731.5,
+        "inputMaxPixelDelta": 63,
+        "inputByteIdentical": false,
+        "maskSha256": "43826a800b9cabcab0fdd22702e883d75737dd8dd342add3a351584e5aeef235"
+      },
+      {
+        "id": "bottle-calabash",
+        "sourceSha256": "33913e2e0489824ba51e843482e353e703a96645146195329cffdbd89acc9749",
+        "success": true,
+        "wallSeconds": 2.133,
+        "width": 890,
+        "height": 1024,
+        "totalSeconds": 1.916,
+        "peakProcessMemoryMb": 707.2,
+        "inputMaxPixelDelta": 35,
+        "inputByteIdentical": false,
+        "maskSha256": "2e24b09ce9abe125ac5c81b363f6eea6d8de9de50c2ddec62113ca5bfcfefcd8"
+      },
+      {
+        "id": "bottle-table",
+        "sourceSha256": "19b661192e332850952c0436f30273dd26f87a516d6b005aec0d2aa6cb5b3112",
+        "success": true,
+        "wallSeconds": 2.349,
+        "width": 683,
+        "height": 1024,
+        "totalSeconds": 2.05,
+        "peakProcessMemoryMb": 715.6,
+        "inputMaxPixelDelta": 66,
+        "inputByteIdentical": false,
+        "maskSha256": "6c4242131e3ad64cc4f628642484aad42b167845471a9479cba18e6a53565f20"
+      },
+      {
+        "id": "bottle-yakult",
+        "sourceSha256": "59cca9f2a3e2b360bdb082fa90893e6e78890706b0c218332fc1dc7d5c98c5a8",
+        "success": true,
+        "wallSeconds": 2.405,
+        "width": 500,
+        "height": 968,
+        "totalSeconds": 2.035,
+        "peakProcessMemoryMb": 686.5,
+        "inputMaxPixelDelta": 46,
+        "inputByteIdentical": false,
+        "maskSha256": "ecac7fb53d3a1733ded748bf6e6edfa06ea64e6d57e63c41360c57edebe397f5"
+      },
+      {
+        "id": "clutter-tools",
+        "sourceSha256": "ff60745636d84dc9d477855557d37dbf6df54fb36453312e4257471365375064",
+        "success": true,
+        "wallSeconds": 2.286,
+        "width": 1024,
+        "height": 768,
+        "totalSeconds": 2.061,
+        "peakProcessMemoryMb": 716.3,
+        "inputMaxPixelDelta": 61,
+        "inputByteIdentical": false,
+        "maskSha256": "81e0d6e9106f10483f16d7fe8d5b3c2bd553e5cee6bf7cab812076128294f05f"
+      },
+      {
+        "id": "clutter-workbench",
+        "sourceSha256": "f71674ae9865c3877f143260cb7369b13bc3801d228036b4759fb5c3aa40d8f0",
+        "success": true,
+        "wallSeconds": 2.081,
+        "width": 1024,
+        "height": 768,
+        "totalSeconds": 1.876,
+        "peakProcessMemoryMb": 772.0,
+        "inputMaxPixelDelta": 66,
+        "inputByteIdentical": false,
+        "maskSha256": "136762c7b2e809222a6dddd033436c58b1ffaf614133ef5e1a1aaec65aff476d"
+      }
+    ]
+  },
+  "reconstruction": {
+    "summary": {
+      "cases": 34,
+      "scoredPairs": 29,
+      "left": {
+        "successfulRenders": 34,
+        "scoredCases": 34,
+        "meanIou": 0.8262739598068901,
+        "pairedMeanIou": 0.8202656753223083,
+        "meanIouFailuresAsZero": 0.8262739598068901,
+        "medianSeconds": 9.899999999999999,
+        "medianFaces": 14020.0,
+        "maxProcessRssMb": 4010.0
+      },
+      "right": {
+        "successfulRenders": 29,
+        "scoredCases": 29,
+        "meanIou": 0.8222091989663816,
+        "pairedMeanIou": 0.8222091989663816,
+        "meanIouFailuresAsZero": 0.7012960814713254,
+        "medianSeconds": 17.78,
+        "medianFaces": 15792,
+        "maxProcessRssMb": 3538.7
+      },
+      "meanPairedDeltaIou": 0.0019435236440732973
+    },
+    "categories": {
+      "clutter": {
+        "cases": 2,
+        "scoredPairs": 2,
+        "left": {
+          "successfulRenders": 2,
+          "scoredCases": 2,
+          "meanIou": 0.7563844774571249,
+          "pairedMeanIou": 0.7563844774571249,
+          "meanIouFailuresAsZero": 0.7563844774571249,
+          "medianSeconds": 10.055,
+          "medianFaces": 8452.0,
+          "maxProcessRssMb": 3513.4
+        },
+        "right": {
+          "successfulRenders": 2,
+          "scoredCases": 2,
+          "meanIou": 0.7950048259323164,
+          "pairedMeanIou": 0.7950048259323164,
+          "meanIouFailuresAsZero": 0.7950048259323164,
+          "medianSeconds": 11.585,
+          "medianFaces": 11476.0,
+          "maxProcessRssMb": 3534.0
+        },
+        "meanPairedDeltaIou": 0.03862034847519158
+      },
+      "food": {
+        "cases": 4,
+        "scoredPairs": 4,
+        "left": {
+          "successfulRenders": 4,
+          "scoredCases": 4,
+          "meanIou": 0.8835098568510147,
+          "pairedMeanIou": 0.8835098568510147,
+          "meanIouFailuresAsZero": 0.8835098568510146,
+          "medianSeconds": 19.130000000000003,
+          "medianFaces": 27946.0,
+          "maxProcessRssMb": 3691.7
+        },
+        "right": {
+          "successfulRenders": 4,
+          "scoredCases": 4,
+          "meanIou": 0.8839220408787531,
+          "pairedMeanIou": 0.8839220408787531,
+          "meanIouFailuresAsZero": 0.8839220408787531,
+          "medianSeconds": 18.545,
+          "medianFaces": 28465.0,
+          "maxProcessRssMb": 3339.9
+        },
+        "meanPairedDeltaIou": 0.00041218402773848806
+      },
+      "furniture": {
+        "cases": 4,
+        "scoredPairs": 4,
+        "left": {
+          "successfulRenders": 4,
+          "scoredCases": 4,
+          "meanIou": 0.8439169858635698,
+          "pairedMeanIou": 0.8439169858635698,
+          "meanIouFailuresAsZero": 0.8439169858635698,
+          "medianSeconds": 17.465,
+          "medianFaces": 9220.0,
+          "maxProcessRssMb": 3634.9
+        },
+        "right": {
+          "successfulRenders": 4,
+          "scoredCases": 4,
+          "meanIou": 0.8405287797585393,
+          "pairedMeanIou": 0.8405287797585393,
+          "meanIouFailuresAsZero": 0.8405287797585395,
+          "medianSeconds": 19.025,
+          "medianFaces": 9046.0,
+          "maxProcessRssMb": 3260.7
+        },
+        "meanPairedDeltaIou": -0.0033882061050304335
+      },
+      "mugs": {
+        "cases": 3,
+        "scoredPairs": 2,
+        "left": {
+          "successfulRenders": 3,
+          "scoredCases": 3,
+          "meanIou": 0.8778767906012663,
+          "pairedMeanIou": 0.8843434624690923,
+          "meanIouFailuresAsZero": 0.8778767906012663,
+          "medianSeconds": 9.54,
+          "medianFaces": 20672,
+          "maxProcessRssMb": 3687.9
+        },
+        "right": {
+          "successfulRenders": 2,
+          "scoredCases": 2,
+          "meanIou": 0.8732189342437431,
+          "pairedMeanIou": 0.8732189342437431,
+          "meanIouFailuresAsZero": 0.5821459561624954,
+          "medianSeconds": 19.815,
+          "medianFaces": 21831.0,
+          "maxProcessRssMb": 2409.2
+        },
+        "meanPairedDeltaIou": -0.011124528225349206
+      },
+      "plants": {
+        "cases": 4,
+        "scoredPairs": 4,
+        "left": {
+          "successfulRenders": 4,
+          "scoredCases": 4,
+          "meanIou": 0.7926898416081606,
+          "pairedMeanIou": 0.7926898416081606,
+          "meanIouFailuresAsZero": 0.7926898416081606,
+          "medianSeconds": 9.84,
+          "medianFaces": 16467.0,
+          "maxProcessRssMb": 3688.4
+        },
+        "right": {
+          "successfulRenders": 4,
+          "scoredCases": 4,
+          "meanIou": 0.8452569499243132,
+          "pairedMeanIou": 0.8452569499243132,
+          "meanIouFailuresAsZero": 0.8452569499243131,
+          "medianSeconds": 17.875,
+          "medianFaces": 18174.0,
+          "maxProcessRssMb": 2715.3
+        },
+        "meanPairedDeltaIou": 0.052567108316152605
+      },
+      "reflective": {
+        "cases": 2,
+        "scoredPairs": 2,
+        "left": {
+          "successfulRenders": 2,
+          "scoredCases": 2,
+          "meanIou": 0.8343662267256123,
+          "pairedMeanIou": 0.8343662267256123,
+          "meanIouFailuresAsZero": 0.8343662267256123,
+          "medianSeconds": 12.73,
+          "medianFaces": 21066.0,
+          "maxProcessRssMb": 3861.4
+        },
+        "right": {
+          "successfulRenders": 2,
+          "scoredCases": 2,
+          "meanIou": 0.8247602919151362,
+          "pairedMeanIou": 0.8247602919151362,
+          "meanIouFailuresAsZero": 0.8247602919151362,
+          "medianSeconds": 14.405000000000001,
+          "medianFaces": 20116.0,
+          "maxProcessRssMb": 3538.7
+        },
+        "meanPairedDeltaIou": -0.009605934810476113
+      },
+      "shoes": {
+        "cases": 4,
+        "scoredPairs": 0,
+        "left": {
+          "successfulRenders": 4,
+          "scoredCases": 4,
+          "meanIou": 0.8601666505554274,
+          "pairedMeanIou": null,
+          "meanIouFailuresAsZero": 0.8601666505554274,
+          "medianSeconds": 9.085,
+          "medianFaces": 13475.0,
+          "maxProcessRssMb": 3769.5
+        },
+        "right": {
+          "successfulRenders": 0,
+          "scoredCases": 0,
+          "meanIou": null,
+          "pairedMeanIou": null,
+          "meanIouFailuresAsZero": 0.0,
+          "medianSeconds": null,
+          "medianFaces": null,
+          "maxProcessRssMb": null
+        },
+        "meanPairedDeltaIou": null
+      },
+      "tools": {
+        "cases": 4,
+        "scoredPairs": 4,
+        "left": {
+          "successfulRenders": 4,
+          "scoredCases": 4,
+          "meanIou": 0.7753590616171923,
+          "pairedMeanIou": 0.7753590616171923,
+          "meanIouFailuresAsZero": 0.7753590616171923,
+          "medianSeconds": 9.285,
+          "medianFaces": 3754.0,
+          "maxProcessRssMb": 3881.5
+        },
+        "right": {
+          "successfulRenders": 4,
+          "scoredCases": 4,
+          "meanIou": 0.7182121898855334,
+          "pairedMeanIou": 0.7182121898855334,
+          "meanIouFailuresAsZero": 0.7182121898855334,
+          "medianSeconds": 17.245,
+          "medianFaces": 3530.0,
+          "maxProcessRssMb": 3443.9
+        },
+        "meanPairedDeltaIou": -0.05714687173165897
+      },
+      "toys": {
+        "cases": 4,
+        "scoredPairs": 4,
+        "left": {
+          "successfulRenders": 4,
+          "scoredCases": 4,
+          "meanIou": 0.7333414668984636,
+          "pairedMeanIou": 0.7333414668984636,
+          "meanIouFailuresAsZero": 0.7333414668984635,
+          "medianSeconds": 8.89,
+          "medianFaces": 13033.0,
+          "maxProcessRssMb": 4010.0
+        },
+        "right": {
+          "successfulRenders": 4,
+          "scoredCases": 4,
+          "meanIou": 0.7818300849480799,
+          "pairedMeanIou": 0.7818300849480799,
+          "meanIouFailuresAsZero": 0.7818300849480799,
+          "medianSeconds": 19.02,
+          "medianFaces": 16260.0,
+          "maxProcessRssMb": 3389.8
+        },
+        "meanPairedDeltaIou": 0.048488618049616336
+      },
+      "transparent": {
+        "cases": 3,
+        "scoredPairs": 3,
+        "left": {
+          "successfulRenders": 3,
+          "scoredCases": 3,
+          "meanIou": 0.9074157998965596,
+          "pairedMeanIou": 0.9074157998965596,
+          "meanIouFailuresAsZero": 0.9074157998965596,
+          "medianSeconds": 10.72,
+          "medianFaces": 14804,
+          "maxProcessRssMb": 3943.4
+        },
+        "right": {
+          "successfulRenders": 3,
+          "scoredCases": 3,
+          "meanIou": 0.8596994947539333,
+          "pairedMeanIou": 0.8596994947539333,
+          "meanIouFailuresAsZero": 0.8596994947539333,
+          "medianSeconds": 9.76,
+          "medianFaces": 14820,
+          "maxProcessRssMb": 3515.3
+        },
+        "meanPairedDeltaIou": -0.047716305142626335
+      }
+    },
+    "results": [
+      {
+        "id": "shoe-leather",
+        "category": "shoes",
+        "sourceSha256": "0900bdb76171bb7ed7162af7233e75bc7266fed588866e556ca00f1bbee89d56",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 15.0,
+          "distance": 1.9,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.7700291768307266,
+          "wallSeconds": 15.77,
+          "totalSeconds": 13.67,
+          "peakProcessMemoryMb": 2537.1,
+          "availableMemoryGbAtStart": 2.96,
+          "faces": 14196,
+          "vertices": 7102
+        },
+        "right": {
+          "status": "failed",
+          "iou": null,
+          "error": "ValueError: Only 2.5 GB of memory is currently available; Draft needs at least 2.5 GB of headroom. Close other apps or choose Draft, then retry."
+        },
+        "deltaIou": null
+      },
+      {
+        "id": "shoes-carpet",
+        "category": "shoes",
+        "sourceSha256": "ae3e61a220cce3682c81c60721cfb9854a574ad0f99958de347b107c63f107f5",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.6,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.9113291782699023,
+          "wallSeconds": 10.65,
+          "totalSeconds": 9.58,
+          "peakProcessMemoryMb": 3641.9,
+          "availableMemoryGbAtStart": 5.47,
+          "faces": 13106,
+          "vertices": 6559
+        },
+        "right": {
+          "status": "failed",
+          "iou": null,
+          "error": "ValueError: Only 2.4 GB of memory is currently available; Draft needs at least 2.5 GB of headroom. Close other apps or choose Draft, then retry."
+        },
+        "deltaIou": null
+      },
+      {
+        "id": "shoe-shop",
+        "category": "shoes",
+        "sourceSha256": "9a78ff15cb034391c96714696d022e6852d4859267ef35f194c241cbd175f9cb",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.6,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.9067220728428257,
+          "wallSeconds": 9.63,
+          "totalSeconds": 8.59,
+          "peakProcessMemoryMb": 3596.3,
+          "availableMemoryGbAtStart": 5.67,
+          "faces": 9396,
+          "vertices": 4700
+        },
+        "right": {
+          "status": "failed",
+          "iou": null,
+          "error": "ValueError: Only 2.5 GB of memory is currently available; Draft needs at least 2.5 GB of headroom. Close other apps or choose Draft, then retry."
+        },
+        "deltaIou": null
+      },
+      {
+        "id": "shoe-repaired",
+        "category": "shoes",
+        "sourceSha256": "e274b3993a3d266392bdbbc6f868cffcc463d165d51a45c8bb659e6d4a995eef",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 30.0,
+          "distance": 1.6,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.8525861742782549,
+          "wallSeconds": 9.52,
+          "totalSeconds": 8.46,
+          "peakProcessMemoryMb": 3769.5,
+          "availableMemoryGbAtStart": 5.5,
+          "faces": 13844,
+          "vertices": 6932
+        },
+        "right": {
+          "status": "failed",
+          "iou": null,
+          "error": "ValueError: Only 2.4 GB of memory is currently available; Draft needs at least 2.5 GB of headroom. Close other apps or choose Draft, then retry."
+        },
+        "deltaIou": null
+      },
+      {
+        "id": "mug-floral",
+        "category": "mugs",
+        "sourceSha256": "9378fe4a6e06f334819e2e3aa53f1e4e78a06d419d8e6ad715c1d17cb27e2353",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.9,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.8649434468656144,
+          "wallSeconds": 11.09,
+          "totalSeconds": 10.11,
+          "peakProcessMemoryMb": 3631.1,
+          "availableMemoryGbAtStart": 5.62,
+          "faces": 22470,
+          "vertices": 11265
+        },
+        "right": {
+          "status": "failed",
+          "iou": null,
+          "error": "ValueError: Only 2.4 GB of memory is currently available; Draft needs at least 2.5 GB of headroom. Close other apps or choose Draft, then retry."
+        },
+        "deltaIou": null
+      },
+      {
+        "id": "mug-plastic",
+        "category": "mugs",
+        "sourceSha256": "d5cb70a5da6ff0af60a2cf17135aeba46426386cde084290dd2fc7207039efa0",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.9,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.8754202286043608,
+          "wallSeconds": 9.63,
+          "totalSeconds": 8.66,
+          "peakProcessMemoryMb": 3687.9,
+          "availableMemoryGbAtStart": 5.52,
+          "faces": 18916,
+          "vertices": 9462
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.8635432667690732,
+          "wallSeconds": 23.92,
+          "totalSeconds": 20.53,
+          "peakProcessMemoryMb": 1846.9,
+          "availableMemoryGbAtStart": 2.75,
+          "faces": 23028,
+          "vertices": 11524
+        },
+        "deltaIou": -0.011876961835287525
+      },
+      {
+        "id": "mug-portrait",
+        "category": "mugs",
+        "sourceSha256": "26c5c846a6d5cd389f8e49d5a6d4218c42562742c196bc1d2b6edd6c4f88b0d7",
+        "camera": {
+          "azimuth": 345.0,
+          "elevation": 0.0,
+          "distance": 1.9,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.8932666963338239,
+          "wallSeconds": 10.74,
+          "totalSeconds": 9.54,
+          "peakProcessMemoryMb": 3538.0,
+          "availableMemoryGbAtStart": 5.52,
+          "faces": 20672,
+          "vertices": 10336
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.882894601718413,
+          "wallSeconds": 21.32,
+          "totalSeconds": 19.1,
+          "peakProcessMemoryMb": 2409.2,
+          "availableMemoryGbAtStart": 4.88,
+          "faces": 20634,
+          "vertices": 10319
+        },
+        "deltaIou": -0.010372094615410887
+      },
+      {
+        "id": "mug-silver",
+        "category": "reflective",
+        "sourceSha256": "92d099e26b4e5711792ff117a75501064fbcb68ea9e4be03b7c3bf105fc76a36",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 15.0,
+          "distance": 1.6,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.8586466165413534,
+          "wallSeconds": 10.1,
+          "totalSeconds": 8.91,
+          "peakProcessMemoryMb": 3861.4,
+          "availableMemoryGbAtStart": 5.74,
+          "faces": 17098,
+          "vertices": 8547
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.8441187501803179,
+          "wallSeconds": 19.88,
+          "totalSeconds": 17.76,
+          "peakProcessMemoryMb": 2828.7,
+          "availableMemoryGbAtStart": 5.33,
+          "faces": 16976,
+          "vertices": 8490
+        },
+        "deltaIou": -0.014527866361035535
+      },
+      {
+        "id": "toy-jeep",
+        "category": "toys",
+        "sourceSha256": "5fb222bc06ca592b8b8f16e90ef61e905bdc78e3fb92b454c980d82975d6eabf",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.9,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.895616194416802,
+          "wallSeconds": 10.19,
+          "totalSeconds": 9.17,
+          "peakProcessMemoryMb": 3663.6,
+          "availableMemoryGbAtStart": 5.74,
+          "faces": 15544,
+          "vertices": 7776
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.8869446772841576,
+          "wallSeconds": 19.32,
+          "totalSeconds": 17.08,
+          "peakProcessMemoryMb": 3347.0,
+          "availableMemoryGbAtStart": 5.58,
+          "faces": 16728,
+          "vertices": 8366
+        },
+        "deltaIou": -0.008671517132644357
+      },
+      {
+        "id": "toy-tank",
+        "category": "toys",
+        "sourceSha256": "dfa5ecddfd372bcaa25576eaa4b38c1e0c165764f7e31906d1c8220e74fa8e2c",
+        "camera": {
+          "azimuth": 15.0,
+          "elevation": 15.0,
+          "distance": 1.9,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.7511073121454659,
+          "wallSeconds": 9.73,
+          "totalSeconds": 8.61,
+          "peakProcessMemoryMb": 4010.0,
+          "availableMemoryGbAtStart": 5.73,
+          "faces": 10522,
+          "vertices": 5263
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.7411566535654127,
+          "wallSeconds": 21.84,
+          "totalSeconds": 19.58,
+          "peakProcessMemoryMb": 3389.8,
+          "availableMemoryGbAtStart": 5.96,
+          "faces": 9396,
+          "vertices": 4702
+        },
+        "deltaIou": -0.009950658580053173
+      },
+      {
+        "id": "toy-grass-head",
+        "category": "toys",
+        "sourceSha256": "97b1f605f0775dc0a51c69c1b142a872ce5d9498c7ae991076daceebfbdfa34d",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.9,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.856473771856786,
+          "wallSeconds": 10.59,
+          "totalSeconds": 9.64,
+          "peakProcessMemoryMb": 3264.9,
+          "availableMemoryGbAtStart": 5.78,
+          "faces": 23072,
+          "vertices": 11566
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.8722999169205207,
+          "wallSeconds": 21.59,
+          "totalSeconds": 19.4,
+          "peakProcessMemoryMb": 1922.1,
+          "availableMemoryGbAtStart": 5.28,
+          "faces": 24758,
+          "vertices": 12405
+        },
+        "deltaIou": 0.015826145063734698
+      },
+      {
+        "id": "toy-wooden-horse",
+        "category": "toys",
+        "sourceSha256": "4d6b077568e09879136b534b1c5843d8b91b858b942de3c4146329510b8fffa5",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.6,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.43016858917480033,
+          "wallSeconds": 9.8,
+          "totalSeconds": 8.53,
+          "peakProcessMemoryMb": 3849.8,
+          "availableMemoryGbAtStart": 5.91,
+          "faces": 7228,
+          "vertices": 3610
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.6269190920222285,
+          "wallSeconds": 20.75,
+          "totalSeconds": 18.64,
+          "peakProcessMemoryMb": 2424.0,
+          "availableMemoryGbAtStart": 5.21,
+          "faces": 15792,
+          "vertices": 7898
+        },
+        "deltaIou": 0.19675050284742818
+      },
+      {
+        "id": "plant-patio",
+        "category": "plants",
+        "sourceSha256": "d89b229514cae83b318d6765715130a3fd7bf39d9d6ae536627178115d14bfa1",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 15.0,
+          "distance": 1.6,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.7224569688684521,
+          "wallSeconds": 11.41,
+          "totalSeconds": 10.31,
+          "peakProcessMemoryMb": 3593.9,
+          "availableMemoryGbAtStart": 5.53,
+          "faces": 17660,
+          "vertices": 8836
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.8461019237259534,
+          "wallSeconds": 20.14,
+          "totalSeconds": 17.97,
+          "peakProcessMemoryMb": 2539.3,
+          "availableMemoryGbAtStart": 4.85,
+          "faces": 21298,
+          "vertices": 10671
+        },
+        "deltaIou": 0.12364495485750127
+      },
+      {
+        "id": "plant-stevia",
+        "category": "plants",
+        "sourceSha256": "b89de07be045b7d9916a70a8854918d0926ce1a6a851fc785d2494af40006cca",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.9,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.8759302916840013,
+          "wallSeconds": 9.88,
+          "totalSeconds": 8.79,
+          "peakProcessMemoryMb": 3688.4,
+          "availableMemoryGbAtStart": 5.52,
+          "faces": 23482,
+          "vertices": 11751
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.8739247063176394,
+          "wallSeconds": 19.12,
+          "totalSeconds": 17.21,
+          "peakProcessMemoryMb": 2485.4,
+          "availableMemoryGbAtStart": 5.48,
+          "faces": 23020,
+          "vertices": 11516
+        },
+        "deltaIou": -0.0020055853663618617
+      },
+      {
+        "id": "plant-palm",
+        "category": "plants",
+        "sourceSha256": "f118e30b1287f5079aa165b56117edb9b1cf49e8433349aa255441fec6bd66df",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.6,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.7648585872386938,
+          "wallSeconds": 11.03,
+          "totalSeconds": 10.02,
+          "peakProcessMemoryMb": 3663.5,
+          "availableMemoryGbAtStart": 5.45,
+          "faces": 8882,
+          "vertices": 4455
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.8502313554708765,
+          "wallSeconds": 21.12,
+          "totalSeconds": 17.78,
+          "peakProcessMemoryMb": 2715.3,
+          "availableMemoryGbAtStart": 5.22,
+          "faces": 11774,
+          "vertices": 5895
+        },
+        "deltaIou": 0.08537276823218265
+      },
+      {
+        "id": "plant-gerbera",
+        "category": "plants",
+        "sourceSha256": "a95f0f65d1b72b4b634c50af0bacd24485f04fb3a30dcbfddd50940cec88660d",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": -15.0,
+          "distance": 1.6,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.8075135186414951,
+          "wallSeconds": 10.65,
+          "totalSeconds": 9.66,
+          "peakProcessMemoryMb": 3264.8,
+          "availableMemoryGbAtStart": 5.6,
+          "faces": 15274,
+          "vertices": 7643
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.8107698141827835,
+          "wallSeconds": 24.95,
+          "totalSeconds": 21.64,
+          "peakProcessMemoryMb": 2146.5,
+          "availableMemoryGbAtStart": 4.73,
+          "faces": 15050,
+          "vertices": 7533
+        },
+        "deltaIou": 0.0032562955412883676
+      },
+      {
+        "id": "tool-mallet",
+        "category": "tools",
+        "sourceSha256": "ff2e1dd8faa78f5aacae90157b333b70000d53e26d471f479e74b0ac82909fdf",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.6,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.8847547974413646,
+          "wallSeconds": 10.2,
+          "totalSeconds": 9.17,
+          "peakProcessMemoryMb": 3419.7,
+          "availableMemoryGbAtStart": 5.19,
+          "faces": 4488,
+          "vertices": 2246
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.669833729216152,
+          "wallSeconds": 20.77,
+          "totalSeconds": 18.33,
+          "peakProcessMemoryMb": 2409.3,
+          "availableMemoryGbAtStart": 5.16,
+          "faces": 3772,
+          "vertices": 1888
+        },
+        "deltaIou": -0.21492106822521262
+      },
+      {
+        "id": "tool-bolt-cutter",
+        "category": "tools",
+        "sourceSha256": "cfa2ab178908922aba65cce59f60cda1b99fc0426bd653bf161b7689c5f369e9",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.9,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.6904510218463706,
+          "wallSeconds": 10.1,
+          "totalSeconds": 8.98,
+          "peakProcessMemoryMb": 3557.8,
+          "availableMemoryGbAtStart": 5.65,
+          "faces": 2752,
+          "vertices": 1378
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.6890786197082889,
+          "wallSeconds": 18.88,
+          "totalSeconds": 16.78,
+          "peakProcessMemoryMb": 3016.6,
+          "availableMemoryGbAtStart": 5.61,
+          "faces": 2636,
+          "vertices": 1320
+        },
+        "deltaIou": -0.001372402138081763
+      },
+      {
+        "id": "tool-cleco",
+        "category": "tools",
+        "sourceSha256": "227f5bef309dbcd95765ed7c8a5da340c84c8d11d70857799407a2169d718e2f",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.9,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.718677583809671,
+          "wallSeconds": 10.89,
+          "totalSeconds": 9.67,
+          "peakProcessMemoryMb": 3388.7,
+          "availableMemoryGbAtStart": 5.39,
+          "faces": 3020,
+          "vertices": 1512
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.7004011107682814,
+          "wallSeconds": 17.58,
+          "totalSeconds": 15.48,
+          "peakProcessMemoryMb": 3443.9,
+          "availableMemoryGbAtStart": 5.27,
+          "faces": 3288,
+          "vertices": 1646
+        },
+        "deltaIou": -0.018276473041389574
+      },
+      {
+        "id": "tool-sockets",
+        "category": "tools",
+        "sourceSha256": "415bb2740e29158e5c4f233b829277cc65ad220256d3ac9c082a1e49f1c59501",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.9,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.8075528433713629,
+          "wallSeconds": 10.62,
+          "totalSeconds": 9.4,
+          "peakProcessMemoryMb": 3881.5,
+          "availableMemoryGbAtStart": 5.78,
+          "faces": 6820,
+          "vertices": 3416
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.813535299849411,
+          "wallSeconds": 20.28,
+          "totalSeconds": 17.71,
+          "peakProcessMemoryMb": 3006.2,
+          "availableMemoryGbAtStart": 5.27,
+          "faces": 6896,
+          "vertices": 3454
+        },
+        "deltaIou": 0.0059824564780480705
+      },
+      {
+        "id": "chair-dark-wood",
+        "category": "furniture",
+        "sourceSha256": "b6defe1f2807c494f7cf85764e8a006c2bcbf5c9f14fc2535467ca8b07f449d3",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.6,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.8475980608197444,
+          "wallSeconds": 11.05,
+          "totalSeconds": 10.03,
+          "peakProcessMemoryMb": 3634.9,
+          "availableMemoryGbAtStart": 5.66,
+          "faces": 6788,
+          "vertices": 3384
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.8318536931818182,
+          "wallSeconds": 23.22,
+          "totalSeconds": 19.39,
+          "peakProcessMemoryMb": 3260.7,
+          "availableMemoryGbAtStart": 5.7,
+          "faces": 6552,
+          "vertices": 3276
+        },
+        "deltaIou": -0.015744367637926193
+      },
+      {
+        "id": "chair-pakri",
+        "category": "furniture",
+        "sourceSha256": "a7a3d93db067848ebb7ee3d57754f84069391244628374c5e285f0d692c48ab4",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.9,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.763616417139907,
+          "wallSeconds": 15.22,
+          "totalSeconds": 14.17,
+          "peakProcessMemoryMb": 3345.5,
+          "availableMemoryGbAtStart": 5.78,
+          "faces": 10528,
+          "vertices": 5256
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.7713303941908713,
+          "wallSeconds": 34.8,
+          "totalSeconds": 26.29,
+          "peakProcessMemoryMb": 1854.9,
+          "availableMemoryGbAtStart": 3.75,
+          "faces": 10192,
+          "vertices": 5094
+        },
+        "deltaIou": 0.007713977050964327
+      },
+      {
+        "id": "chair-upholstered",
+        "category": "furniture",
+        "sourceSha256": "5769ec0a62f64b95ddc62c5bb6a5f0e870bb98454f73bb997816b66f52bbfb3f",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.9,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.9042156581588758,
+          "wallSeconds": 26.37,
+          "totalSeconds": 24.09,
+          "peakProcessMemoryMb": 2790.3,
+          "availableMemoryGbAtStart": 5.58,
+          "faces": 13664,
+          "vertices": 6836
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.9012115563839702,
+          "wallSeconds": 21.05,
+          "totalSeconds": 18.66,
+          "peakProcessMemoryMb": 2710.8,
+          "availableMemoryGbAtStart": 5.26,
+          "faces": 13996,
+          "vertices": 7006
+        },
+        "deltaIou": -0.003004101774905621
+      },
+      {
+        "id": "chair-estonian",
+        "category": "furniture",
+        "sourceSha256": "4ac1afdf929ba60c564313964476b593ad7697f3c68d69a25ede6ed75e959689",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.9,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.8602378073357517,
+          "wallSeconds": 22.8,
+          "totalSeconds": 20.76,
+          "peakProcessMemoryMb": 3634.8,
+          "availableMemoryGbAtStart": 5.36,
+          "faces": 7912,
+          "vertices": 3962
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.8577194752774975,
+          "wallSeconds": 19.61,
+          "totalSeconds": 17.79,
+          "peakProcessMemoryMb": 2557.2,
+          "availableMemoryGbAtStart": 5.35,
+          "faces": 7900,
+          "vertices": 3954
+        },
+        "deltaIou": -0.0025183320582542468
+      },
+      {
+        "id": "food-blueberries",
+        "category": "food",
+        "sourceSha256": "47c3980d0d1ba64dafe6561012ba14b643403f24c2e38a368cab063a613263c2",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": -15.0,
+          "distance": 1.9,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.8576980374376579,
+          "wallSeconds": 22.07,
+          "totalSeconds": 20.47,
+          "peakProcessMemoryMb": 3539.5,
+          "availableMemoryGbAtStart": 5.32,
+          "faces": 32616,
+          "vertices": 16318
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.8531018964963034,
+          "wallSeconds": 17.92,
+          "totalSeconds": 16.15,
+          "peakProcessMemoryMb": 3339.9,
+          "availableMemoryGbAtStart": 5.3,
+          "faces": 32912,
+          "vertices": 16464
+        },
+        "deltaIou": -0.004596140941354521
+      },
+      {
+        "id": "food-pear",
+        "category": "food",
+        "sourceSha256": "81d63581d93f59fda02fbb0bad5736e02959856193ef9e3ce7c7773549db7998",
+        "camera": {
+          "azimuth": 285.0,
+          "elevation": -15.0,
+          "distance": 1.6,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.9457029086785687,
+          "wallSeconds": 16.53,
+          "totalSeconds": 15.13,
+          "peakProcessMemoryMb": 3559.8,
+          "availableMemoryGbAtStart": 5.48,
+          "faces": 24942,
+          "vertices": 12605
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.9457029086785687,
+          "wallSeconds": 23.07,
+          "totalSeconds": 20.94,
+          "peakProcessMemoryMb": 2242.8,
+          "availableMemoryGbAtStart": 5.3,
+          "faces": 24942,
+          "vertices": 12605
+        },
+        "deltaIou": 0.0
+      },
+      {
+        "id": "food-puriri",
+        "category": "food",
+        "sourceSha256": "3650e5527946e6f23a16c92441a1cec548f93d21cf1ea9e24c7f96d42aae64a8",
+        "camera": {
+          "azimuth": 285.0,
+          "elevation": 0.0,
+          "distance": 1.6,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.8448979591836735,
+          "wallSeconds": 19.82,
+          "totalSeconds": 18.51,
+          "peakProcessMemoryMb": 3385.6,
+          "availableMemoryGbAtStart": 5.41,
+          "faces": 30950,
+          "vertices": 15649
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.8575379562674657,
+          "wallSeconds": 25.61,
+          "totalSeconds": 23.38,
+          "peakProcessMemoryMb": 2123.2,
+          "availableMemoryGbAtStart": 5.38,
+          "faces": 31988,
+          "vertices": 16058
+        },
+        "deltaIou": 0.012639997083792154
+      },
+      {
+        "id": "food-pineapple",
+        "category": "food",
+        "sourceSha256": "db5db4097df3bde997d696b4066173faea4900c04bccf1a0a8c107f8853ac9e4",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.9,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.8857405221041584,
+          "wallSeconds": 21.54,
+          "totalSeconds": 19.75,
+          "peakProcessMemoryMb": 3691.7,
+          "availableMemoryGbAtStart": 5.43,
+          "faces": 16506,
+          "vertices": 8249
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.8793454020726748,
+          "wallSeconds": 16.34,
+          "totalSeconds": 13.92,
+          "peakProcessMemoryMb": 2723.6,
+          "availableMemoryGbAtStart": 4.52,
+          "faces": 20156,
+          "vertices": 10094
+        },
+        "deltaIou": -0.006395120031483681
+      },
+      {
+        "id": "pot-copper",
+        "category": "reflective",
+        "sourceSha256": "d563f9651a7d68b2f20d1805e2c5741da0838bfe71cf326bee0f568d52d04b1d",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.9,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.8100858369098712,
+          "wallSeconds": 17.98,
+          "totalSeconds": 16.55,
+          "peakProcessMemoryMb": 3238.3,
+          "availableMemoryGbAtStart": 5.31,
+          "faces": 25034,
+          "vertices": 12521
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.8054018336499545,
+          "wallSeconds": 12.98,
+          "totalSeconds": 11.05,
+          "peakProcessMemoryMb": 3538.7,
+          "availableMemoryGbAtStart": 5.47,
+          "faces": 23256,
+          "vertices": 11628
+        },
+        "deltaIou": -0.004684003259916691
+      },
+      {
+        "id": "bottle-calabash",
+        "category": "transparent",
+        "sourceSha256": "33913e2e0489824ba51e843482e353e703a96645146195329cffdbd89acc9749",
+        "camera": {
+          "azimuth": 15.0,
+          "elevation": 0.0,
+          "distance": 1.9,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.8858922229656698,
+          "wallSeconds": 12.1,
+          "totalSeconds": 10.72,
+          "peakProcessMemoryMb": 3943.4,
+          "availableMemoryGbAtStart": 5.74,
+          "faces": 15928,
+          "vertices": 7966
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.8776930213380064,
+          "wallSeconds": 11.55,
+          "totalSeconds": 9.76,
+          "peakProcessMemoryMb": 3257.6,
+          "availableMemoryGbAtStart": 5.4,
+          "faces": 15944,
+          "vertices": 7974
+        },
+        "deltaIou": -0.00819920162766341
+      },
+      {
+        "id": "bottle-table",
+        "category": "transparent",
+        "sourceSha256": "19b661192e332850952c0436f30273dd26f87a516d6b005aec0d2aa6cb5b3112",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": -15.0,
+          "distance": 1.6,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.9403899152801878,
+          "wallSeconds": 15.64,
+          "totalSeconds": 14.3,
+          "peakProcessMemoryMb": 3268.7,
+          "availableMemoryGbAtStart": 6.03,
+          "faces": 10140,
+          "vertices": 5072
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.8052046488125316,
+          "wallSeconds": 12.26,
+          "totalSeconds": 10.63,
+          "peakProcessMemoryMb": 3515.3,
+          "availableMemoryGbAtStart": 5.42,
+          "faces": 11636,
+          "vertices": 5820
+        },
+        "deltaIou": -0.13518526646765616
+      },
+      {
+        "id": "bottle-yakult",
+        "category": "transparent",
+        "sourceSha256": "59cca9f2a3e2b360bdb082fa90893e6e78890706b0c218332fc1dc7d5c98c5a8",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.9,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.8959652614438213,
+          "wallSeconds": 10.98,
+          "totalSeconds": 9.78,
+          "peakProcessMemoryMb": 3539.0,
+          "availableMemoryGbAtStart": 5.44,
+          "faces": 14804,
+          "vertices": 7404
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.8962008141112618,
+          "wallSeconds": 10.52,
+          "totalSeconds": 8.92,
+          "peakProcessMemoryMb": 3247.2,
+          "availableMemoryGbAtStart": 5.72,
+          "faces": 14820,
+          "vertices": 7412
+        },
+        "deltaIou": 0.00023555266744057501
+      },
+      {
+        "id": "clutter-tools",
+        "category": "clutter",
+        "sourceSha256": "ff60745636d84dc9d477855557d37dbf6df54fb36453312e4257471365375064",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.9,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.822075939706163,
+          "wallSeconds": 11.35,
+          "totalSeconds": 10.05,
+          "peakProcessMemoryMb": 3513.4,
+          "availableMemoryGbAtStart": 5.69,
+          "faces": 5396,
+          "vertices": 2702
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.8446010283755475,
+          "wallSeconds": 13.59,
+          "totalSeconds": 11.46,
+          "peakProcessMemoryMb": 3093.3,
+          "availableMemoryGbAtStart": 5.61,
+          "faces": 5792,
+          "vertices": 2902
+        },
+        "deltaIou": 0.02252508866938452
+      },
+      {
+        "id": "clutter-workbench",
+        "category": "clutter",
+        "sourceSha256": "f71674ae9865c3877f143260cb7369b13bc3801d228036b4759fb5c3aa40d8f0",
+        "camera": {
+          "azimuth": 0.0,
+          "elevation": 0.0,
+          "distance": 1.6,
+          "fov": 40.0
+        },
+        "left": {
+          "status": "ok",
+          "iou": 0.6906930152080867,
+          "wallSeconds": 11.45,
+          "totalSeconds": 10.06,
+          "peakProcessMemoryMb": 3507.9,
+          "availableMemoryGbAtStart": 5.57,
+          "faces": 11508,
+          "vertices": 5772
+        },
+        "right": {
+          "status": "ok",
+          "iou": 0.7454086234890853,
+          "wallSeconds": 13.23,
+          "totalSeconds": 11.71,
+          "peakProcessMemoryMb": 3534.0,
+          "availableMemoryGbAtStart": 5.6,
+          "faces": 17160,
+          "vertices": 8616
+        },
+        "deltaIou": 0.05471560828099864
+      }
+    ]
+  }
+}

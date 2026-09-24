@@ -71,6 +71,8 @@ See [benchmark procedure and findings](backend/benchmarks/README.md). Unit suite
 
 The [real-photo evaluation](backend/evaluation/README.md) uses 34 independently sourced CC0 photographs, with source URLs, license evidence, and exact hashes. `npm run backend:eval -- compare` produces an offline side-by-side HTML report with four views per mesh, timing/memory measurements, and silhouette IoU against a frozen automatic foreground mask. The camera is estimated once from the baseline; this is a regression diagnostic, not a human-ground-truth or complete 3D quality score. Photos and generated artifacts are kept out of Git.
 
+The [mask evaluation](docs/foreground-masks.md) compares U2Net and an optional, separately downloaded MIT BiRefNet model on all 34 photos. U2Net remains the default: observed median CPU worker times were 1.20 s versus 19.35 s, with mixed selections and no independent accuracy ground truth yet. A real corrected-mask reconstruction isolates the wooden-horse test subject; it does not establish a general reconstruction-quality improvement.
+
 CI uses one cached macOS runner, without weights or GPU inference. Public repositories run on push/PR. Private repositories require manually starting the workflow to avoid automatic macOS minute consumption; that manual run still uses the repository's Actions allowance.
 
 ```sh
