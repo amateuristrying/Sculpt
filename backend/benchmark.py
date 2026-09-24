@@ -35,12 +35,14 @@ def validate_glb(file):
     return {'faces': sum(len(m.faces) for m in meshes), 'vertices': sum(len(m.vertices) for m in meshes)}
 
 
-def run_case(case, manifest_dir, output, quality):
+def run_case(case, manifest_dir, output, quality, masks=None):
     source = (manifest_dir / case['source']).resolve()
     folder = output / case['id']
     folder.mkdir(parents=True, exist_ok=True)
     request = folder / 'request.json'
-    request.write_text(json.dumps({'sourcePath': str(source), 'outputPath': str(folder / 'mesh.glb'),
+    mask = (masks / case['id'] / 'mask.png').resolve() if masks else None
+    mask_request = {'maskPath': str(mask), 'maskSha256': hashlib.sha256(mask.read_bytes()).hexdigest()} if mask else {}
+    request.write_text(json.dumps({**mask_request, 'sourcePath': str(source), 'outputPath': str(folder / 'mesh.glb'),
                                    'quality': quality, 'device': 'mps', 'background': case.get('background', 'auto')}))
     started = time.monotonic()
     result = subprocess.run([str(runtime_root() / 'venv/bin/python'), str(Path(__file__).parent / 'worker.py'), '--request', str(request)],

@@ -72,3 +72,12 @@ def test_scene_cache_rejects_oversize_and_symlink(tmp_path):
     link.symlink_to(source)
     with pytest.raises(ValueError, match='size limit'):
         read_scene_cache(link, SOURCE_SHA)
+
+
+def test_mask_provenance_survives_cached_refinement(tmp_path):
+    import numpy as np
+    from sculpt_backend.scene_cache import write_scene_cache, read_scene_cache, SCENE_SHAPE
+    path = tmp_path / 'scene.npz'
+    write_scene_cache(path, np.zeros(SCENE_SHAPE, dtype=np.float32), 'a' * 64, 'auto', 'b' * 64)
+    _, metadata = read_scene_cache(path, 'a' * 64)
+    assert metadata['maskSha256'] == 'b' * 64

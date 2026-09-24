@@ -292,3 +292,24 @@ describe('saved assets and refinement boundary', () => {
     expect(unlisten).toHaveBeenCalledOnce()
   })
 })
+
+describe('foreground preparation is independent of trial generation', () => {
+  it('returns mask coordinates and identity without treating them as a generated asset', async () => {
+    const { prepareMask, saveMask, readMask } = await import('../harness')
+    vi.mocked(isTauri).mockReturnValue(true)
+    const unlisten = vi.fn(); vi.mocked(listen).mockResolvedValue(unlisten)
+    const mask = { sourceId: 'source-id', sha256: 'mask-hash', width: 100, height: 80, imageDataUrl: 'source', maskDataUrl: 'mask' }
+    vi.mocked(invoke).mockResolvedValue(mask)
+    expect(await prepareMask('source-id', 'auto', () => {})).toEqual(mask)
+    expect(invoke).toHaveBeenCalledWith('prepare_mask', expect.objectContaining({ sourceId: 'source-id', background: 'auto' }))
+    expect(unlisten).toHaveBeenCalledOnce()
+    expect(await saveMask('source-id', 'data:image/png;base64,test')).toEqual(mask)
+    expect(await readMask('source-id', 'mask-hash')).toEqual(mask)
+    expect(vi.mocked(invoke).mock.calls.some(([command]) => command === 'generate_asset')).toBe(false)
+  })
+  it('does not pretend masks can be generated from the browser', async () => {
+    const { prepareMask } = await import('../harness')
+    await expect(prepareMask('source', 'auto', () => {})).rejects.toThrow(/desktop/)
+    expect(invoke).not.toHaveBeenCalled()
+  })
+})

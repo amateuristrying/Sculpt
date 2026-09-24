@@ -77,10 +77,17 @@ def generate(request: dict, root: Path, emit) -> dict:
         check_refinement_memory(settings['resolution'], available_gb)
     else:
         check_memory(memory_quality, available_gb)
+    mask_sha = cache_metadata.get('maskSha256') if cache_metadata else request.get('maskSha256')
+    mask_path = None
+    if operation == 'generate' and mask_sha is not None:
+        validate_source_hash(mask_sha)
+        mask_path = Path(request['maskPath'])
+        if mask_path.stat().st_size > 5 * 1024 * 1024 or hashlib.sha256(mask_path.read_bytes()).hexdigest() != mask_sha:
+            raise ValueError('The foreground mask changed after approval. Review it again.')
     background = cache_metadata['background'] if cache_metadata else request.get('background', 'auto')
     if operation == 'generate':
         emit('analyzing', 3, 'Preparing your source image' if background == 'keep' else 'Finding the foreground object')
-        image = prepare_image(source, output.parent / 'input.png', background)
+        image = prepare_image(source, output.parent / 'input.png', background, mask_path)
     else:
         emit('analyzing', 3, 'Restoring the saved scene; image reconstruction will be reused')
     prepare_seconds = time.monotonic() - started
@@ -122,7 +129,7 @@ def generate(request: dict, root: Path, emit) -> dict:
             torch.mps.synchronize()
         inferred_at = time.monotonic()
         cache_output = output.parent / CACHE_FILENAME
-        write_scene_cache(cache_output, scene_codes.detach().cpu().numpy().astype(np.float32), source_sha, background)
+        write_scene_cache(cache_output, scene_codes.detach().cpu().numpy().astype(np.float32), source_sha, background, mask_sha)
         emit("surface", 55, "Extracting the mesh and vertex colors")
         mesh = model.extract_mesh(scene_codes, True, resolution=settings['resolution'], threshold=settings['densityThreshold'])[0]
         before_cleanup = {'faces': len(mesh.faces), 'vertices': len(mesh.vertices)}
@@ -154,7 +161,7 @@ def generate(request: dict, root: Path, emit) -> dict:
         'cleanup': {**cleanup_metrics, 'before': before_cleanup,
                     'after': {'faces': len(mesh.faces), 'vertices': len(mesh.vertices)}},
         'canRefine': True, 'sceneCacheSha256': hashlib.sha256(cache_output.read_bytes()).hexdigest(),
-        'sourceSha256': source_sha,
+        'sourceSha256': source_sha, 'maskSha256': mask_sha,
         "modelRevision": MODEL_REVISION, "sourceRevision": UPSTREAM_REVISION,
         "torchVersion": torch.__version__, "faces": len(mesh.faces), "vertices": len(mesh.vertices),
         "meshQuality": mesh_quality, "availableMemoryGbAtStart": round(available_gb, 2),

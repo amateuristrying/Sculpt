@@ -5,6 +5,7 @@ pub mod engines;
 pub mod hardware;
 pub mod library;
 pub mod licensing;
+pub mod masks;
 pub mod paths;
 pub mod process;
 pub mod python;
@@ -257,6 +258,18 @@ async fn run_asset(
                 output_dir: output_dir.clone(),
                 scene_cache,
                 device: selection.device.as_str().into(),
+                mask: if let Some(hash) = request.mask_sha256.clone() {
+                    let source_id = source.asset.id.clone();
+                    Some(
+                        harness
+                            .library_work(move |library| {
+                                masks::mask_path(library, &source_id, &hash)
+                            })
+                            .await?,
+                    )
+                } else {
+                    None
+                },
             })
         }
         engines::RuntimeAdapter::Demo => Box::new(MockRuntime),

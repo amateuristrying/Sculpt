@@ -60,6 +60,9 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             harness::detect_hardware,
+            harness::masks::prepare_mask,
+            harness::masks::save_mask,
+            harness::masks::read_mask,
             harness::get_engines,
             harness::generate_asset,
             harness::refine_asset,

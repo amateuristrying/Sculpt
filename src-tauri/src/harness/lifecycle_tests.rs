@@ -51,6 +51,7 @@ impl Fixture {
                 engine_id: "triposr".into(),
                 image_name: source.name,
                 source_id: Some(source.id),
+                mask_sha256: None,
                 geometry: GeometryQuality::Draft,
                 background: BackgroundMode::Auto,
                 parent_asset_id: None,

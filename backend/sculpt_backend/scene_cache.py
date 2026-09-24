@@ -28,7 +28,7 @@ def _validate_scene(scene):
         raise ValueError('The scene cache contains invalid coordinates.')
 
 
-def write_scene_cache(path: Path, scene, source_sha256: str, background: str):
+def write_scene_cache(path: Path, scene, source_sha256: str, background: str, mask_sha256: str | None = None):
     _validate_scene(scene)
     validate_source_hash(source_sha256)
     if background not in {'auto', 'keep'}:
@@ -36,6 +36,8 @@ def write_scene_cache(path: Path, scene, source_sha256: str, background: str):
     metadata = dict(version=1, engine='triposr', modelRevision=MODEL_REVISION,
                     sourceRevision=UPSTREAM_REVISION, sourceSha256=source_sha256,
                     background=background)
+    if mask_sha256 is not None:
+        metadata['maskSha256'] = validate_source_hash(mask_sha256)
     encoded = np.frombuffer(json.dumps(metadata, sort_keys=True).encode('utf-8'), dtype=np.uint8)
     with io.BytesIO() as buffer:
         # No pickle, compression bomb, tensor device, or executable class state.
@@ -82,6 +84,8 @@ def read_scene_cache(path: Path, source_sha256: str):
                 or metadata.get('sourceSha256') != source_sha256
                 or metadata.get('background') not in {'auto', 'keep'}):
             raise ValueError('The saved scene does not match this image or installed engine. Generate a new asset.')
+        if metadata.get('maskSha256') is not None:
+            validate_source_hash(metadata['maskSha256'])
         return scene, metadata
     except (OSError, ValueError, KeyError, EOFError, zipfile.BadZipFile) as error:
         raise ValueError(f'Cannot read the saved scene: {error}') from error

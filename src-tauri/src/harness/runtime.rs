@@ -17,6 +17,9 @@ pub struct GenerationRequest {
     /// Registered by native image import; the UI never supplies a worker path.
     #[serde(default)]
     pub source_id: Option<String>,
+    /// Immutable mask in the normalized source coordinate system.
+    #[serde(default)]
+    pub mask_sha256: Option<String>,
     pub geometry: GeometryQuality,
     #[serde(default)]
     pub background: BackgroundMode,
@@ -234,6 +237,7 @@ mod tests {
             engine_id: "demo".into(),
             image_name: "source.png".into(),
             source_id: None,
+            mask_sha256: None,
             geometry: GeometryQuality::Balanced,
             background: BackgroundMode::Auto,
             parent_asset_id: None,

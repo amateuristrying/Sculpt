@@ -63,6 +63,7 @@ async function nativeBridge(page: Page, installed: boolean, trial = false) {
     const status = { installed, state: installed ? 'ready' : 'missing', engine: 'TripoSR', runtimePath: '/test/runtime', message: 'Local reconstruction on your Mac.', mpsAvailable: true, downloadCacheBytes: 1024 ** 3, recommendedQuality: 'balanced', qualities: [{ id: 'balanced', estimatedMemoryGb: 4.5, recommendedRamGb: 16, resolution: 128 }] }
     const emit = (name: string, payload: any) => callbacks.get(events.get(name)!)?.({ event: name, payload })
     const saved = JSON.parse(localStorage.getItem('sculpt-test-library') || '{"jobs":[],"sources":{},"trialUsed":false}')
+    saved.masks ||= {}
     const assets = new Map<string, number[]>()
     // Browser quota is not the native library's disk capacity. Keep real large
     // benchmark sources in this test process; only tiny fixtures need reloads.
@@ -108,6 +109,21 @@ async function nativeBridge(page: Page, installed: boolean, trial = false) {
           case 'read_source': {
             const source = saved.sources[args.sourceId]; if (!source) throw new Error('Source unavailable'); return source
           }
+          case 'prepare_mask': {
+            const source = saved.sources[args.sourceId]
+            const image = new Image(); image.src = source.dataUrl; await image.decode()
+            const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height
+            const ctx = canvas.getContext('2d')!; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height)
+            return { sourceId: args.sourceId, sha256: 'automatic-mask', width: image.width, height: image.height,
+              imageDataUrl: source.dataUrl, maskDataUrl: canvas.toDataURL() }
+          }
+          case 'save_mask': {
+            const image = new Image(); image.src = args.dataUrl; await image.decode()
+            const mask = { sourceId: args.sourceId, sha256: 'approved-mask', width: image.width, height: image.height,
+              imageDataUrl: saved.sources[args.sourceId].dataUrl, maskDataUrl: args.dataUrl }
+            saved.masks[args.sourceId] = mask; persist(); return mask
+          }
+          case 'read_mask': return saved.masks[args.sourceId]
           case 'generate_asset': {
             if (!access().canGenerate) throw new Error('Trial already used')
             return complete(args.jobId, args.request, false)
@@ -161,6 +177,7 @@ test('trial asset can be refined, reopened after reload, and exported without an
   await nativeBridge(page, true, true); await page.goto('/')
   await page.getByRole('button', { name: 'Open Sculpt', exact: true }).click()
   await page.locator('input[type=file]').setInputFiles(await imageFixture(page))
+  await approveMask(page)
   await page.getByRole('button', { name: 'Generate 3D', exact: true }).click()
   await expect(page.locator('.viewport-title-tag')).toHaveText('RECONSTRUCTED')
   await expect(page.getByRole('button', { name: 'Generate again', exact: true })).toBeDisabled()
@@ -209,6 +226,7 @@ test('failed and cancelled refinements preserve the saved asset and can be retri
   await nativeBridge(page, true, true); await page.goto('/')
   await page.getByRole('button', { name: 'Open Sculpt', exact: true }).click()
   await page.locator('input[type=file]').setInputFiles(await imageFixture(page))
+  await approveMask(page)
   await page.getByRole('button', { name: 'Generate 3D', exact: true }).click()
   await expect(page.locator('.viewport-title-tag')).toHaveText('RECONSTRUCTED')
   const original = await page.evaluate(() => (window as any).__sculptTest.saved.jobs[0].id)
@@ -246,7 +264,8 @@ test('benchmark meshes load in every view and export unchanged', async ({ page }
     await page.evaluate(({ glb, metrics }) => { Object.assign((window as any).__sculptTest, { glb, metrics }) }, { glb: [...bytes], metrics: result.metrics })
     await page.locator('input[type=file]').setInputFiles(request.sourcePath)
     await expect(page.getByRole('button', { name: 'Generate 3D', exact: true })).toBeEnabled()
-    await page.getByRole('button', { name: 'Generate 3D', exact: true }).click()
+    await approveMask(page)
+  await page.getByRole('button', { name: 'Generate 3D', exact: true }).click()
     await expect(page.locator('.viewport-title-tag')).toHaveText('RECONSTRUCTED')
     await expect(page.locator('.asset-metadata')).toContainText(result.metrics.faces.toLocaleString('en-US'))
     const pixels = new Set<string>()
@@ -271,4 +290,44 @@ test('benchmark meshes load in every view and export unchanged', async ({ page }
     await page.getByRole('button', { name: 'Reset camera (F)' }).click()
   }
   expect(errors).toEqual([])
+})
+
+async function approveMask(page: Page) {
+  await page.locator('.generate-button').click()
+  await page.getByRole('button', { name: 'Use this mask', exact: true }).click()
+}
+
+test('foreground brush corrections are saved with generation and restored from the library', async ({ page }) => {
+  await nativeBridge(page, true, true); await page.goto('/')
+  await page.getByRole('button', { name: 'Open Sculpt', exact: true }).click()
+  await page.locator('input[type=file]').setInputFiles(await imageFixture(page, 'mask-edit.png'))
+  await page.locator('.generate-button').click()
+  const dialog = page.getByRole('dialog', { name: 'Keep only your object.' })
+  await expect(dialog.getByRole('button', { name: 'Use this mask' })).toBeEnabled()
+  const canvas = dialog.locator('canvas')
+  const before = await canvas.evaluate((c: HTMLCanvasElement) => c.toDataURL())
+  const rect = (await canvas.boundingBox())!
+  await canvas.click({ position: { x: rect.width / 4, y: rect.height / 2 } })
+  expect(await canvas.evaluate((c: HTMLCanvasElement) => c.toDataURL())).not.toBe(before)
+  await dialog.getByRole('button', { name: 'Undo', exact: true }).click()
+  expect(await canvas.evaluate((c: HTMLCanvasElement) => c.toDataURL())).toBe(before)
+  await canvas.click({ position: { x: rect.width / 4, y: rect.height / 2 } })
+  await dialog.getByRole('button', { name: 'Add', exact: true }).click()
+  await dialog.getByLabel('Brush size').fill('6')
+  await canvas.click({ position: { x: rect.width / 4, y: rect.height / 2 } })
+  await dialog.getByRole('button', { name: 'Cutout', exact: true }).click()
+  await page.screenshot({ path: 'test-results/mask-editor.png', fullPage: true })
+  await dialog.getByRole('button', { name: 'Use this mask' }).click()
+  expect(await page.evaluate(() => (window as any).__sculptTest.saved.trialUsed)).toBe(false)
+  expect(await page.evaluate(() => (window as any).__sculptTest.saved.jobs)).toHaveLength(0)
+  await page.getByRole('button', { name: 'Generate 3D', exact: true }).click()
+  await expect(page.locator('.viewport-title-tag')).toHaveText('RECONSTRUCTED')
+  expect(await page.evaluate(() => (window as any).__sculptTest.saved.jobs[0].request.maskSha256)).toBe('approved-mask')
+  await page.reload(); await page.getByRole('button', { name: 'Open Sculpt', exact: true }).click()
+  await page.getByRole('button', { name: /Local library/ }).click()
+  await page.getByRole('button', { name: 'Open mask-edit.png', exact: true }).click()
+  await expect(page.getByRole('button', { name: /Edit foreground mask/ })).toBeVisible()
+  await page.getByRole('button', { name: /Edit foreground mask/ }).click()
+  await expect(page.getByRole('dialog', { name: 'Keep only your object.' })).toBeVisible()
+  expect(await page.evaluate(() => (window as any).__sculptTest.calls.filter((c: any) => c.command === 'prepare_mask'))).toHaveLength(0)
 })

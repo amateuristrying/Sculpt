@@ -151,6 +151,12 @@ impl Library {
         ensure_directory(&self.root, "sources")
     }
 
+    pub fn mask_directory(&self, source_id: &str) -> Result<PathBuf, String> {
+        self.source(source_id)?;
+        let masks = ensure_directory(&self.root, "masks")?;
+        ensure_directory(&masks, source_id)
+    }
+
     pub fn job_directory(&self, id: &str) -> Result<PathBuf, String> {
         validate_id(id)?;
         let jobs = ensure_directory(&self.root, "jobs")?;
@@ -240,6 +246,16 @@ impl Library {
             self.source(source_id)?;
         } else if request.engine_id != "demo" {
             return Err("Import an image before generating".into());
+        }
+        if let Some(hash) = &request.mask_sha256 {
+            super::masks::mask_path(
+                self,
+                request
+                    .source_id
+                    .as_deref()
+                    .ok_or("A mask requires a source image")?,
+                hash,
+            )?;
         }
         validate_parent(&self.snapshot, id, &request)?;
         if let Some(parent) = &request.parent_asset_id {
@@ -615,6 +631,12 @@ fn validate_request(request: &GenerationRequest) -> Result<(), String> {
     if let Some(id) = &request.source_id {
         validate_id(id)?;
     }
+    if let Some(hash) = &request.mask_sha256 {
+        super::masks::validate_hash(hash)?;
+        if request.source_id.is_none() {
+            return Err("A mask requires a source image".into());
+        }
+    }
     if request.refinement.is_some() != request.parent_asset_id.is_some() {
         return Err("Refinement settings require a completed parent asset".into());
     }
@@ -641,6 +663,7 @@ fn validate_parent(
         || !parent.asset.as_ref().is_some_and(|asset| !asset.simulated)
         || parent.request.engine_id != request.engine_id
         || parent.request.source_id != request.source_id
+        || parent.request.mask_sha256 != request.mask_sha256
     {
         return Err(
             "Refinement requires a completed reconstruction with the same engine and source image"
@@ -842,6 +865,7 @@ mod tests {
             engine_id: if source.is_some() { "triposr" } else { "demo" }.into(),
             image_name: "banana.png".into(),
             source_id: source.map(|source| source.id.clone()),
+            mask_sha256: None,
             geometry: GeometryQuality::Draft,
             background: BackgroundMode::Auto,
             refinement: None,

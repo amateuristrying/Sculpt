@@ -30,6 +30,7 @@ Native bundles appear under `src-tauri/target/release/bundle/`. Local builds use
 - Native PNG, JPG, and WEBP import into a Rust-owned source registry with size/type/dimension checks and SHA-256 identity.
 - Local TripoSR reconstruction on Apple Silicon/Metal through an isolated Python worker, with cancellable progress, GLB validation, vertex colors, and real asset loading in the viewport.
 - In-app runtime installation, cancellation, repair, checksum verification, and disposable package-cache clearing.
+- Foreground preview and add/erase brush correction before reconstruction, with immutable source-bound masks and restoration from the library. Mask preparation does not consume a trial generation. See [mask workflow and current evaluation limits](docs/foreground-masks.md).
 - Memory estimates and headroom checks before loading the model, plus automatic background removal or explicit background preservation.
 - Orbit, pan, zoom, camera reset, grid, lighting, material color, and material/wireframe/points/technical views.
 - Draft, balanced, and high geometry detail, an asset processing stack, and live geometry metadata.
@@ -49,7 +50,7 @@ Runtime storage:
 - Development (`npm run desktop`): `.sculpt-runtime/` inside the checkout.
 - Packaged app: `~/Library/Application Support/com.sculpt.desktop/runtime/`.
 - `SCULPT_RUNTIME_DIR` can explicitly override the runtime location for development/testing.
-- Sources and jobs live in `~/Library/Application Support/com.sculpt.desktop/library-development/` for development or `library/` for packaged builds. Each contains a versioned `library.json`, sources, and job folders. Development and release trial records are separate.
+- Sources and jobs live in `~/Library/Application Support/com.sculpt.desktop/library-development/` for development or `library/` for packaged builds. Each contains a versioned `library.json`, sources, masks, and job folders. Development and release trial records are separate.
 - Older outputs created before the persistent library remain on disk but are not automatically indexed. Assets without a scene cache need a new generation before Refine is available.
 
 The developer CLI remains available when Python 3 and uv are already installed:
@@ -109,4 +110,4 @@ PythonRuntime → TripoSR (PyTorch / Metal); MockRuntime → explicit demo
 - `src-tauri/src/harness/assets.rs` validates image inputs and keeps worker paths out of the UI. `src/geometry/importedAsset.ts` parses and fits returned GLBs without changing their export bytes.
 - `src/geometry/sculpture.ts` owns the explicit demo geometry, metadata, and demo GLB export.
 
-Next priorities are foreground-mask preview and correction, measured quality presets, additional export formats, texture baking, and library improvements, using the real-photo evaluation to measure output changes. Cached refinement is functional, but 256-resolution extraction remains substantially slower than 128 and smoothing can remove small details. Reconstruction quality still has substantial limits: noisy surfaces, uneven thin structures, and unreliable occluded/cluttered inputs. Competitive quality and cost parity with commercial generators have not been established. Application assets and studio lighting are local; no Sculpt GPU server or per-generation cloud request is used.
+Next priorities are completing the mask quality evaluation (including BiRefNet), measured quality presets, additional export formats, texture baking, and library improvements, using the real-photo evaluation to measure output changes. Cached refinement is functional, but 256-resolution extraction remains substantially slower than 128 and smoothing can remove small details. Reconstruction quality still has substantial limits: noisy surfaces, uneven thin structures, and unreliable occluded/cluttered inputs. Competitive quality and cost parity with commercial generators have not been established. Application assets and studio lighting are local; no Sculpt GPU server or per-generation cloud request is used.

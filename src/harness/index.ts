@@ -1,6 +1,6 @@
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import type { RefinementSettings, AccessStatus, GenerationJob, StoredSource, BackendStatus, SetupProgress, SourceAsset, EngineProfile, GeneratedAsset, GenerationProgress, GenerationRequest, HardwareProfile, SculptHarness } from './types'
+import type { MaskPreview, RefinementSettings, AccessStatus, GenerationJob, StoredSource, BackendStatus, SetupProgress, SourceAsset, EngineProfile, GeneratedAsset, GenerationProgress, GenerationRequest, HardwareProfile, SculptHarness } from './types'
 
 export type * from './types'
 
@@ -181,15 +181,15 @@ async function generatePreview(request: GenerationRequest, onProgress: (value: G
 
 export async function generate(request: GenerationRequest, onProgress: (value: GenerationProgress) => void, signal?: AbortSignal): Promise<GeneratedAsset> {
   if (!isTauri()) return generatePreview(request, onProgress, signal)
-  return runNativeOperation('generate_asset', { request }, onProgress, signal)
+  return nativeAsset(await runNativeOperation<GeneratedAsset>('generate_asset', { request }, onProgress, signal))
 }
 
 export async function refine(parentAssetId: string, settings: RefinementSettings, onProgress: (value: GenerationProgress) => void, signal?: AbortSignal): Promise<GeneratedAsset> {
   if (!isTauri()) throw new Error('Refinement requires the Sculpt desktop app')
-  return runNativeOperation('refine_asset', { parentAssetId, settings }, onProgress, signal)
+  return nativeAsset(await runNativeOperation<GeneratedAsset>('refine_asset', { parentAssetId, settings }, onProgress, signal))
 }
 
-async function runNativeOperation(command: string, args: Record<string, unknown>, onProgress: (value: GenerationProgress) => void, signal?: AbortSignal): Promise<GeneratedAsset> {
+async function runNativeOperation<T>(command: string, args: Record<string, unknown>, onProgress: (value: GenerationProgress) => void, signal?: AbortSignal): Promise<T> {
   if (signal?.aborted) throw abortError()
   const jobId = crypto.randomUUID()
   let hasStarted = false
@@ -211,9 +211,9 @@ async function runNativeOperation(command: string, args: Record<string, unknown>
   try {
     // Abort may have happened while the asynchronous event listener was registered.
     if (signal?.aborted) throw abortError()
-    const asset = await invoke<GeneratedAsset>(command, { ...args, jobId })
+    const asset = await invoke<T>(command, { ...args, jobId })
     if (signal?.aborted) throw abortError()
-    return nativeAsset(asset)
+    return asset
   } catch (error) {
     if (signal?.aborted) throw abortError()
     throw error instanceof Error ? error : new Error(String(error))
@@ -240,4 +240,19 @@ export async function saveGlb(bytes: ArrayBuffer, defaultName: string): Promise<
   return anchor.download
 }
 
-export const sculptHarness: SculptHarness = { detectHardware, getEngines, backendStatus, installRuntime, clearDownloadCache, importSource, readGeneratedAsset, readSource, listGenerationJobs, getAccessStatus, activateLicense, generate, refine, saveGeneratedGlb, saveGlb }
+export async function prepareMask(sourceId: string, background: 'auto' | 'keep', onProgress: (value: GenerationProgress) => void, signal?: AbortSignal): Promise<MaskPreview> {
+  if (!isTauri()) throw new Error('Foreground masking requires the Sculpt desktop app')
+  return runNativeOperation<MaskPreview>('prepare_mask', { sourceId, background }, onProgress, signal)
+}
+
+export async function saveMask(sourceId: string, dataUrl: string): Promise<MaskPreview> {
+  if (!isTauri()) throw new Error('Foreground masking requires the Sculpt desktop app')
+  return invoke<MaskPreview>('save_mask', { sourceId, dataUrl })
+}
+
+export async function readMask(sourceId: string, sha256: string): Promise<MaskPreview> {
+  if (!isTauri()) throw new Error('Foreground masking requires the Sculpt desktop app')
+  return invoke<MaskPreview>('read_mask', { sourceId, sha256 })
+}
+
+export const sculptHarness: SculptHarness = { prepareMask, saveMask, readMask, detectHardware, getEngines, backendStatus, installRuntime, clearDownloadCache, importSource, readGeneratedAsset, readSource, listGenerationJobs, getAccessStatus, activateLicense, generate, refine, saveGeneratedGlb, saveGlb }

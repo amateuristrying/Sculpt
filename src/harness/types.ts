@@ -49,6 +49,11 @@ export interface ModelArtifact {
   compatibleRuntimes: RuntimeKind[]
 }
 
+export interface MaskPreview {
+  sourceId: string; sha256: string; width: number; height: number
+  imageDataUrl: string; maskDataUrl: string
+}
+
 export interface GenerationRequest {
   engineId: string
   /** Native-owned validated image. Required for real inference. */
@@ -56,6 +61,7 @@ export interface GenerationRequest {
   imageName: string
   geometry: 'draft' | 'balanced' | 'high'
   background?: 'auto' | 'keep'
+  maskSha256?: string | null
   parentAssetId?: string | null
   refinement?: RefinementSettings | null
 }
@@ -128,6 +134,9 @@ export interface BackendStatus {
 export interface SetupProgress { jobId: string; stage: string; progress: number; message: string }
 
 export interface SculptHarness {
+  prepareMask(sourceId: string, background: 'auto' | 'keep', onProgress: (value: GenerationProgress) => void, signal?: AbortSignal): Promise<MaskPreview>
+  saveMask(sourceId: string, dataUrl: string): Promise<MaskPreview>
+  readMask(sourceId: string, sha256: string): Promise<MaskPreview>
   detectHardware(): Promise<HardwareProfile>
   getEngines(profile: HardwareProfile): Promise<EngineProfile[]>
   backendStatus(): Promise<BackendStatus>

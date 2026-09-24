@@ -70,8 +70,13 @@ def main() -> int:
             request = json.loads(args.request.read_text())
             if not validate_install(root):
                 raise ValueError("The local engine is not installed or needs repair. Open runtime setup in Sculpt.")
-            from sculpt_backend.triposr import generate
-            result = generate(request, root, lambda stage, progress, text: message("progress", stage=stage, progress=progress, message=text))
+            emit = lambda stage, progress, text: message("progress", stage=stage, progress=progress, message=text)
+            if request.get('operation') == 'mask':
+                from sculpt_backend.masks import prepare_mask
+                result = prepare_mask(request, emit)
+            else:
+                from sculpt_backend.triposr import generate
+                result = generate(request, root, emit)
             message("result", metrics=result)
         return 0
     except Exception as error:

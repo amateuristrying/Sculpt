@@ -23,7 +23,7 @@ def machine_info():
     return data
 
 
-def run(manifest_path, output, quality):
+def run(manifest_path, output, quality, masks=None):
     manifest_path = manifest_path.resolve()
     dataset = load_manifest(manifest_path)
     # Verify the entire set before spending GPU time. No partial source substitution.
@@ -46,7 +46,7 @@ def run(manifest_path, output, quality):
     for case in dataset['cases']:
         print(f"Reconstructing {case['id']} on Metal ({quality})…", flush=True)
         try:
-            result = run_case(case, manifest_path.parent, output, quality)
+            result = run_case(case, manifest_path.parent, output, quality, masks=masks)
             # Source hashes in the run and manifest must agree, including on repeat runs.
             if result['sourceSha256'] != case['sha256']:
                 raise ValueError('Source changed during reconstruction')

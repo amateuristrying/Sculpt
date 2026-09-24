@@ -137,6 +137,7 @@ pub struct PythonRuntime {
     pub output_dir: PathBuf,
     pub scene_cache: Option<PathBuf>,
     pub device: String,
+    pub mask: Option<PathBuf>,
 }
 
 impl InferenceRuntime for PythonRuntime {
@@ -155,6 +156,7 @@ impl InferenceRuntime for PythonRuntime {
         let source_sha256 = self.source_sha256.clone();
         let scene_cache = self.scene_cache.clone();
         let device = self.device.clone();
+        let mask = self.mask.clone();
         Box::pin(async move {
             tauri::async_runtime::spawn_blocking(move || {
                 run_worker(
@@ -167,6 +169,7 @@ impl InferenceRuntime for PythonRuntime {
                     context,
                     scene_cache.as_deref(),
                     &device,
+                    mask.as_deref(),
                 )
             })
             .await
@@ -185,6 +188,7 @@ fn run_worker(
     context: JobContext,
     scene_cache: Option<&Path>,
     device: &str,
+    mask: Option<&Path>,
 ) -> Result<GeneratedAsset, String> {
     if context.cancelled.load(Ordering::Relaxed) {
         return Err("Generation cancelled".into());
@@ -205,7 +209,8 @@ fn run_worker(
     let body = serde_json::json!({"sourcePath":source, "outputPath":output,
         "quality":request.geometry, "background":request.background, "device":device,
         "operation": if request.refinement.is_some() { "refine" } else { "generate" },
-        "sourceSha256":source_sha256, "sceneCachePath":scene_cache, "refinement":request.refinement});
+        "sourceSha256":source_sha256, "sceneCachePath":scene_cache, "refinement":request.refinement,
+        "maskPath":mask, "maskSha256":request.mask_sha256});
     std::fs::write(
         &request_file,
         serde_json::to_vec(&body).map_err(|e| e.to_string())?,
@@ -370,6 +375,7 @@ mod tests {
             engine_id: "triposr".into(),
             source_id: Some(record.asset.id.clone()),
             image_name: "arbitrary-name.jpg".into(),
+            mask_sha256: None,
             geometry: GeometryQuality::Draft,
             background: BackgroundMode::Auto,
             parent_asset_id: None,
@@ -386,6 +392,7 @@ mod tests {
             context,
             None,
             "mps",
+            None,
         )
         .unwrap();
         assert!(!asset.simulated);
@@ -434,6 +441,7 @@ mod tests {
             },
             Some(&cache),
             "mps",
+            None,
         )
         .unwrap();
         assert_eq!(refined.metrics.as_ref().unwrap()["inferenceSeconds"], 0);
@@ -472,6 +480,7 @@ mod tests {
             context,
             None,
             "mps",
+            None,
         );
         assert!(result.unwrap_err().contains("cancelled"));
         assert!(!cancelled_output.join("mesh.glb").exists());

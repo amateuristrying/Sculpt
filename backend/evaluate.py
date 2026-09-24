@@ -14,6 +14,7 @@ def main():
     run.add_argument('--manifest', type=Path, default=DEFAULT_MANIFEST)
     run.add_argument('--output', type=Path, required=True)
     run.add_argument('--quality', choices=['draft', 'balanced', 'high'], default='balanced')
+    run.add_argument('--masks', type=Path, help='Use saved source-coordinate grayscale masks: DIRECTORY/case-id/mask.png')
     reference = commands.add_parser('reference', help='Freeze baseline foreground masks and estimated photo cameras')
     reference.add_argument('--run', type=Path, required=True)
     reference.add_argument('--output', type=Path, required=True)
@@ -27,7 +28,7 @@ def main():
         fetch_photos(args.manifest)
     elif args.command == 'run':
         from sculpt_eval.runner import run
-        return run(args.manifest, args.output, args.quality)
+        return run(args.manifest, args.output, args.quality, args.masks)
     elif args.command == 'reference':
         from sculpt_eval.report import make_reference
         make_reference(args.run, args.output)
