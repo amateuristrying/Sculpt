@@ -140,6 +140,8 @@ def test_comparison_detects_geometry_regression_without_refitting_camera(tmp_pat
     html = (tmp_path / 'comparison/index.html').read_text()
     assert 'A &lt; B' in html and 'data:image/png;base64,' in html
     assert '+270°' in html and 'not human ground truth' in html
+    assert 'Input used for this mesh' in html and 'Worker device: unknown' in html
+    assert result['results'][0]['left']['inputSha256'] == sha256(baseline / 'box/input.png')
     self_check = compare(candidate, candidate, reference, tmp_path / 'self')
     assert self_check['summary']['meanPairedDeltaIou'] == 0
 
@@ -232,3 +234,51 @@ def test_hardware_probe_failure_stays_unknown_in_evaluation(monkeypatch):
     assert info['chip'] is None
     assert info['ramBytes'] > 0
     assert 'machdep.cpu.brand_string' in info['probeErrors']
+
+
+@pytest.mark.parametrize('device', ['mps', 'cpu'])
+def test_evaluation_device_reaches_worker_and_report(tmp_path, monkeypatch, device):
+    from types import SimpleNamespace
+    import benchmark
+    from sculpt_eval import runner
+    import psutil
+    baseline, data = fixture_run(tmp_path)
+    source_mesh = (baseline / 'box/mesh.glb').read_bytes()
+    second_photo = baseline / 'second.png'
+    Image.new('RGB', (64, 64), 'blue').save(second_photo)
+    data['dataset']['cases'].append({**data['dataset']['cases'][0], 'id': 'second',
+                                    'source': str(second_photo), 'sha256': sha256(second_photo)})
+    (baseline / 'photos.json').write_text(json.dumps(data['dataset']))
+    actual_run = benchmark.subprocess.run
+
+    def fake_worker(command, **kwargs):
+        if '--request' not in command:
+            return actual_run(command, **kwargs)
+        request = json.loads(Path(command[-1]).read_text())
+        assert request['device'] == device
+        Path(request['outputPath']).write_bytes(source_mesh)
+        return SimpleNamespace(returncode=0, stderr='', stdout=json.dumps(
+            {'type': 'result', 'metrics': {'device': device}}))
+
+    monkeypatch.setattr(benchmark.subprocess, 'run', fake_worker)
+    monkeypatch.setattr(psutil, 'virtual_memory', lambda: SimpleNamespace(available=8 * 1024**3))
+    monkeypatch.setattr(runner, 'machine_info', lambda: {'chip': None})
+    output = tmp_path / 'device-run'
+    assert runner.run(baseline / 'photos.json', output, 'draft', device=device, case_ids=['box']) == 0
+    report = json.loads((output / 'report.json').read_text())
+    assert report['device'] == device
+    assert report['selectedCaseIds'] == ['box']
+    assert len(report['results']) == 1 and len(report['dataset']['cases']) == 2
+    assert report['datasetSha256'] == sha256(baseline / 'photos.json')
+    assert report['results'][0]['metrics']['device'] == device
+    assert report['results'][0]['sourceSha256'] == data['dataset']['cases'][0]['sha256']
+    with pytest.raises(ValueError, match='known evaluation'):
+        runner.run(baseline / 'photos.json', tmp_path / 'unknown', 'draft', case_ids=['unknown'])
+    assert not (tmp_path / 'unknown').exists()
+
+
+def test_evaluation_does_not_silently_choose_a_device(tmp_path):
+    from sculpt_eval.runner import run
+    with pytest.raises(ValueError, match='explicit'):
+        run(tmp_path / 'absent.json', tmp_path / 'output', 'draft', device='auto')
+    assert not (tmp_path / 'output').exists()

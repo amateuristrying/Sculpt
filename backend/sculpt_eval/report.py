@@ -118,7 +118,7 @@ def render_result(run_path, result, reference, target):
         return {'status': 'failed', 'iou': None, 'error': error}, f'<p class="failure">{escape(str(error))}</p>'
     metrics = result.get('metrics') or {}
     score = {'status': 'ok', 'iou': None, 'wallSeconds': result.get('wallSeconds'),
-             **{key: metrics.get(key) for key in ['totalSeconds', 'peakProcessMemoryMb', 'availableMemoryGbAtStart', 'faces', 'vertices']}}
+             **{key: metrics.get(key) for key in ['device', 'maskSha256', 'totalSeconds', 'peakProcessMemoryMb', 'availableMemoryGbAtStart', 'faces', 'vertices']}}
     try:
         mesh = load_mesh(run_path / result['id'] / 'mesh.glb')
         camera = reference['camera'] or DEFAULT_CAMERA
@@ -130,7 +130,14 @@ def render_result(run_path, result, reference, target):
                 score['iou'] = iou(target, outline)
                 overlay = mask_overlay(target, outline)
         label = f'IoU {number(score["iou"], 3)} · {number(score["totalSeconds"])} s · {number(score["faces"], 0)} faces'
-        body = f'<p class="metrics">{label}</p><div class="views">' + ''.join(views) + '</div>'
+        body = f'<p class="metrics">{label}</p>'
+        input_path = run_path / result['id'] / 'input.png'
+        if input_path.is_file():
+            score['inputSha256'] = sha256(input_path)
+            with Image.open(input_path) as image:
+                preview = image.copy(); preview.thumbnail((256, 256))
+                body += '<details><summary>Input used for this mesh</summary>' + img(preview, 'Actual cropped model input') + '</details>'
+        body += '<div class="views">' + ''.join(views) + '</div>'
         if score['iou'] is not None:
             body += '<details><summary>Silhouette overlap</summary>' + img(overlay, 'White: overlap · blue: mask only · orange: mesh only') + '</details>'
         return score, body
@@ -208,6 +215,7 @@ def compare(left_path, right_path, reference_path, output):
               'referenceSha256': sha256(reference_path / 'reference.json'),
               'leftReportSha256': sha256(left_path / 'report.json'), 'rightReportSha256': sha256(right_path / 'report.json'),
               'leftRun': left_path.name, 'rightRun': right_path.name,
+              'leftDevice': left.get('device'), 'rightDevice': right.get('device'),
               'summary': summary, 'categories': {category: summarize([r for r in rows if r['category'] == category]) for category in sorted({r['category'] for r in rows})},
               'results': rows}
     write_json(output / 'comparison.json', report)
@@ -216,6 +224,7 @@ def compare(left_path, right_path, reference_path, output):
                     f'{number(summary[side]["medianSeconds"])} s median · {number(summary[side]["maxProcessRssMb"], 0)} MB max RSS</p></div>' for side in ['left', 'right'])
     html = '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sculpt · Evaluation</title>' + STYLE
     html += f'<main><header><p class="eyebrow">SCULPT / LOCAL EVALUATION</p><h1>Real photos. Visible failure cases.</h1><p>{len(rows)} CC0 photographs · TripoSR · {escape(left.get("quality", "unknown"))} → {escape(right.get("quality", "unknown"))}<br>{escape(left_path.name)} → {escape(right_path.name)}</p>'
+    html += f'<p>Worker device: {escape(left.get("device", "unknown"))} → {escape(right.get("device", "unknown"))}</p>'
     html += '<p class="note">IoU measures overlap with the frozen baseline mask (U2Net or source alpha), not human ground truth or 3D accuracy. The approximate photo camera is fitted once on the baseline and reused unchanged. A wrong mask can give a high score to a wrong object. Inspect all four views. RSS excludes total system/GPU memory pressure.</p>'
     html += '<div class="stats">' + stats + f'<div><h3>Paired change</h3><p>{number(summary["meanPairedDeltaIou"], 3)} IoU<br>{summary["scoredPairs"]} comparable cases</p></div></div></header>'
     html += ''.join(sections) + '</main></html>'

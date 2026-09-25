@@ -31,9 +31,16 @@ def machine_info():
     return data
 
 
-def run(manifest_path, output, quality, masks=None):
+def run(manifest_path, output, quality, masks=None, device='mps', case_ids=None):
+    if device not in {'mps', 'cpu'}:
+        raise ValueError('Evaluation device must be explicit: mps or cpu')
     manifest_path = manifest_path.resolve()
     dataset = load_manifest(manifest_path)
+    cases = dataset['cases']
+    if case_ids is not None:
+        if not case_ids or not set(case_ids) <= {case['id'] for case in cases}:
+            raise ValueError('Select one or more known evaluation case IDs')
+        cases = [case for case in cases if case['id'] in case_ids]
     # Verify the entire set before spending GPU time. No partial source substitution.
     for case in dataset['cases']:
         verify_photo(case, manifest_path)
@@ -47,14 +54,15 @@ def run(manifest_path, output, quality, masks=None):
     dirty = subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True)
     report = {'schemaVersion': 1, 'dataset': dataset, 'datasetSha256': sha256(manifest_path),
               'createdAt': datetime.datetime.now(datetime.timezone.utc).isoformat(),
-              'engine': 'triposr', 'quality': quality, 'device': 'mps', 'hardware': machine_info(),
+              'engine': 'triposr', 'quality': quality, 'device': device, 'hardware': machine_info(),
+              'selectedCaseIds': [case['id'] for case in cases],
               'codeCommit': git.stdout.strip(), 'codeDirty': bool(dirty.stdout.strip()),
               'runtimeSpec': SPEC, 'results': []}
     write_json(output / 'report.json', report)
-    for case in dataset['cases']:
-        print(f"Reconstructing {case['id']} on Metal ({quality})…", flush=True)
+    for case in cases:
+        print(f"Reconstructing {case['id']} on {'Metal' if device == 'mps' else 'CPU'} ({quality})…", flush=True)
         try:
-            result = run_case(case, manifest_path.parent, output, quality, masks=masks)
+            result = run_case(case, manifest_path.parent, output, quality, masks=masks, device=device)
             # Source hashes in the run and manifest must agree, including on repeat runs.
             if result['sourceSha256'] != case['sha256']:
                 raise ValueError('Source changed during reconstruction')

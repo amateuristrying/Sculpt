@@ -10,10 +10,12 @@ def main():
     commands = parser.add_subparsers(dest='command', required=True)
     fetch = commands.add_parser('fetch', help='Download and hash-check the CC0 photos (network required)')
     fetch.add_argument('--manifest', type=Path, default=DEFAULT_MANIFEST)
-    run = commands.add_parser('run', help='Reconstruct the whole set sequentially on the local MPS runtime')
+    run = commands.add_parser('run', help='Reconstruct the whole set sequentially with an explicit local device')
     run.add_argument('--manifest', type=Path, default=DEFAULT_MANIFEST)
     run.add_argument('--output', type=Path, required=True)
     run.add_argument('--quality', choices=['draft', 'balanced', 'high'], default='balanced')
+    run.add_argument('--device', choices=['mps', 'cpu'], default='mps', help='MPS by default; CPU is an explicit evaluation option, never an automatic fallback')
+    run.add_argument('--case', action='append', dest='case_ids', help='Run only this case; repeat to select several. Missing cases stay visible in comparisons.')
     run.add_argument('--masks', type=Path, help='Use saved source-coordinate grayscale masks: DIRECTORY/case-id/mask.png')
     reference = commands.add_parser('reference', help='Freeze baseline foreground masks and estimated photo cameras')
     reference.add_argument('--run', type=Path, required=True)
@@ -28,7 +30,7 @@ def main():
         fetch_photos(args.manifest)
     elif args.command == 'run':
         from sculpt_eval.runner import run
-        return run(args.manifest, args.output, args.quality, args.masks)
+        return run(args.manifest, args.output, args.quality, args.masks, args.device, args.case_ids)
     elif args.command == 'reference':
         from sculpt_eval.report import make_reference
         make_reference(args.run, args.output)

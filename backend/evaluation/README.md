@@ -10,6 +10,8 @@ sample of customer inputs or proof of commercial-generator parity.
 
 The [M4 baseline findings](FINDINGS.md) record 68 actual Metal reconstructions,
 four-view comparisons, numerical results, and visible failure cases.
+The [foreground evaluation](../../docs/foreground-masks.md) records mask-model
+comparisons and corrected-selection reconstruction separately.
 
 ## Data provenance and licenses
 
@@ -57,6 +59,31 @@ npm run backend:eval -- run --output backend/outputs/eval-candidate --quality ba
 npm run backend:eval -- compare --left backend/outputs/eval-baseline --right backend/outputs/eval-candidate --reference backend/outputs/eval-reference --output backend/outputs/eval-comparison
 open backend/outputs/eval-comparison/index.html
 ```
+
+`run` defaults to `--device mps`. `--device cpu` explicitly exercises the existing
+Python worker on CPU; it never silently replaces a failed Metal run. The selected
+device is stored in the report and sent to every worker. This developer option
+does not change the app's engine recommendations or validate other hardware.
+`--case CASE_ID` (repeatable) runs a subset in a **new** directory, useful for
+investigating a failed photo without repeating the whole set. It preserves the
+full dataset identity; unrun photos remain missing in comparisons. Keep the
+original failed report instead of replacing it with a successful retry.
+
+Saved source-coordinate masks can be measured through actual reconstruction:
+
+```sh
+npm run backend:eval -- run --device cpu --quality draft \
+  --masks backend/outputs/YOUR_U2NET_MASK_RUN --output backend/outputs/mesh-u2net
+npm run backend:eval -- run --device cpu --quality draft \
+  --masks backend/outputs/YOUR_BIREFNET_MASK_RUN --output backend/outputs/mesh-birefnet
+npm run backend:eval -- compare --left backend/outputs/mesh-u2net \
+  --right backend/outputs/mesh-birefnet --reference backend/outputs/eval-reference \
+  --output backend/outputs/mesh-mask-comparison
+```
+
+The old automatic U2Net reference and its camera favor the original selection.
+When another mask changes the selected objects, crop or scale, that score is
+diagnostic only. Inspect all four views; do not call it segmentation accuracy.
 
 The comparison accepts any two evaluation runs using the same dataset and frozen
 reference; they do not have to include the baseline itself. Comparing a run with
@@ -108,7 +135,8 @@ failure probes. Always inspect the photo and all views alongside the numbers.
 
 ## Hardware and interpretation
 
-Runs currently use TripoSR on **MPS**, the only validated inference backend.
+The application and original baseline use TripoSR on **MPS**. Explicit **CPU**
+evaluation runs are labeled separately and do not update the app's support matrix.
 The baseline target is the M4 MacBook Air with 16 GB unified memory. No CUDA,
 Windows, or Linux hardware is claimed validated by these tools. Measurements are
 sequential single-process observations; filesystem caches, other applications,
