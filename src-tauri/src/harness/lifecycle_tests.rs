@@ -98,13 +98,6 @@ impl Fixture {
         with_library(&self.library, |library| Ok(library.job(id).unwrap())).unwrap()
     }
 
-    fn trial(&self) -> Option<String> {
-        with_library(&self.library, |library| {
-            Ok(library.trial_success_job().map(str::to_owned))
-        })
-        .unwrap()
-    }
-
     fn complete_with_cache(&self, bytes: &[u8], include_hash: bool) -> String {
         let mut reservation = self.reserve();
         let id = reservation.id.clone();
@@ -148,25 +141,23 @@ fn generated(id: &str) -> GeneratedAsset {
 }
 
 #[test]
-fn invalid_worker_success_releases_slot_without_spending_trial() {
+fn invalid_worker_success_releases_slot_without_saving_asset() {
     let fixture = Fixture::new();
     let mut reservation = fixture.reserve();
     let id = reservation.id.clone();
     fs::write(fixture.output(&id).join("mesh.glb"), b"not a GLB").unwrap();
     assert!(reservation.finish(Ok(generated(&id))).is_err());
     assert!(!reservation.finalized);
-    assert!(fixture.trial().is_none());
     drop(reservation);
     assert!(fixture.jobs.lock().unwrap().is_empty());
     assert_eq!(fixture.job(&id).state, JobState::Failed);
-    assert!(fixture.trial().is_none());
     // The failed commit cannot leave the library or active-operation slot stuck.
     let retry = fixture.reserve();
     assert_eq!(fixture.job(&retry.id).state, JobState::Running);
 }
 
 #[test]
-fn cancellation_before_commit_discards_worker_success_without_spending_trial() {
+fn cancellation_before_commit_discards_worker_success() {
     let fixture = Fixture::new();
     let mut reservation = fixture.reserve();
     let id = reservation.id.clone();
@@ -180,12 +171,11 @@ fn cancellation_before_commit_discards_worker_success_without_spending_trial() {
     drop(reservation);
     assert!(fixture.jobs.lock().unwrap().is_empty());
     assert_eq!(fixture.job(&id).state, JobState::Cancelled);
-    assert!(fixture.trial().is_none());
     assert!(with_library(&fixture.library, |library| library.asset_path(&id)).is_err());
 }
 
 #[test]
-fn cancellation_after_commit_does_not_erase_asset_or_restore_trial() {
+fn cancellation_after_commit_does_not_erase_asset() {
     let fixture = Fixture::new();
     let mut reservation = fixture.reserve();
     let id = reservation.id.clone();
@@ -195,7 +185,6 @@ fn cancellation_after_commit_does_not_erase_asset_or_restore_trial() {
     drop(reservation);
     assert!(fixture.jobs.lock().unwrap().is_empty());
     assert_eq!(fixture.job(&id).state, JobState::Succeeded);
-    assert_eq!(fixture.trial().as_deref(), Some(id.as_str()));
     assert!(with_library(&fixture.library, |library| library.asset_path(&id)).is_ok());
     assert!(with_library(&fixture.library, |library| library.finish_job(
         &id,
@@ -224,7 +213,6 @@ fn worker_failure_and_abandoned_reservation_both_release_active_slot() {
     drop(abandoned);
     assert_eq!(fixture.job(&abandoned_id).state, JobState::Failed);
     assert!(fixture.jobs.lock().unwrap().is_empty());
-    assert!(fixture.trial().is_none());
 }
 
 #[test]

@@ -111,14 +111,6 @@ export interface GenerationJob {
   asset?: GeneratedAsset | null
 }
 
-export interface AccessStatus {
-  mode: 'development' | 'trial' | 'paid' | 'preview'
-  canGenerate: boolean
-  freeGenerationsRemaining: number | null
-  activationAvailable: boolean
-  message: string
-}
-
 export interface BackendStatus {
   installed: boolean
   engine: string
@@ -146,8 +138,6 @@ export interface SculptHarness {
   readGeneratedAsset(assetId: string): Promise<ArrayBuffer>
   readSource(sourceId: string): Promise<StoredSource>
   listGenerationJobs(): Promise<GenerationJob[]>
-  getAccessStatus(): Promise<AccessStatus>
-  activateLicense(signedLicense: string): Promise<AccessStatus>
   generate(request: GenerationRequest, onProgress: (progress: GenerationProgress) => void, signal?: AbortSignal): Promise<GeneratedAsset>
   refine(parentAssetId: string, settings: RefinementSettings, onProgress: (progress: GenerationProgress) => void, signal?: AbortSignal): Promise<GeneratedAsset>
   saveGeneratedGlb(assetId: string, defaultName: string): Promise<string | null>

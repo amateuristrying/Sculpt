@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { backendStatus, installRuntime, clearDownloadCache, importSource, readGeneratedAsset, detectHardware, generate, getEngines, previewHardware, saveGlb, saveGeneratedGlb, refine, readSource, listGenerationJobs, getAccessStatus, activateLicense } from '../harness'
+import { backendStatus, installRuntime, clearDownloadCache, importSource, readGeneratedAsset, detectHardware, generate, getEngines, previewHardware, saveGlb, saveGeneratedGlb, refine, readSource, listGenerationJobs } from '../harness'
 import type { GenerationProgress, GenerationRequest, HardwareProfile } from '../harness'
 
 vi.mock('@tauri-apps/api/core', () => ({ isTauri: vi.fn(() => false), invoke: vi.fn() }))
@@ -246,13 +246,11 @@ describe('saved assets and refinement boundary', () => {
     expect(invoke).not.toHaveBeenCalledWith('save_glb', expect.anything())
   })
 
-  it('browser preview cannot refine, activate, read saved sources, or export native assets', async () => {
+  it('browser preview cannot refine, read saved sources, or export native assets', async () => {
     await expect(refine('asset-1', settings, vi.fn())).rejects.toThrow(/desktop/)
     await expect(readSource('source-1')).rejects.toThrow(/desktop/)
     await expect(saveGeneratedGlb('asset-1', 'asset.glb')).rejects.toThrow(/desktop/)
-    await expect(activateLicense('license')).rejects.toThrow(/desktop/)
     expect(await listGenerationJobs()).toEqual([])
-    expect(await getAccessStatus()).toMatchObject({ mode: 'preview', canGenerate: false })
     expect(invoke).not.toHaveBeenCalled()
   })
 
@@ -293,7 +291,7 @@ describe('saved assets and refinement boundary', () => {
   })
 })
 
-describe('foreground preparation is independent of trial generation', () => {
+describe('foreground preparation is independent of reconstruction', () => {
   it('returns mask coordinates and identity without treating them as a generated asset', async () => {
     const { prepareMask, saveMask, readMask } = await import('../harness')
     vi.mocked(isTauri).mockReturnValue(true)

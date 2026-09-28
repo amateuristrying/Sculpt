@@ -410,7 +410,6 @@ mod tests {
         library.finish_job(&id, Ok(asset), false).unwrap();
         drop(library);
         let mut library = super::super::library::Library::open(library_root).unwrap();
-        assert_eq!(library.trial_success_job(), Some(id.as_str()));
         let original_bytes = read_valid_glb(&library.asset_path(&id).unwrap()).unwrap();
 
         let refined_id = uuid::Uuid::new_v4().to_string();
@@ -447,7 +446,6 @@ mod tests {
         assert_eq!(refined.metrics.as_ref().unwrap()["inferenceSeconds"], 0);
         println!("Cached refinement: {}", refined.metrics.as_ref().unwrap());
         library.finish_job(&refined_id, Ok(refined), false).unwrap();
-        assert_eq!(library.trial_success_job(), Some(id.as_str()));
         assert_eq!(
             read_valid_glb(&library.asset_path(&refined_id).unwrap()).unwrap(),
             original_bytes
@@ -456,7 +454,7 @@ mod tests {
             read_valid_glb(&library.asset_path(&id).unwrap()).unwrap(),
             original_bytes
         );
-        println!("Restart and refinement preserved original bytes and trial accounting.");
+        println!("Restart and refinement preserved original asset bytes.");
 
         let cancelled = Arc::new(AtomicBool::new(false));
         let flag = cancelled.clone();

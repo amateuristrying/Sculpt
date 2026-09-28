@@ -68,8 +68,6 @@ pub fn run() {
             harness::refine_asset,
             harness::cancel_generation,
             harness::list_generation_jobs,
-            harness::get_access_status,
-            harness::activate_license,
             harness::assets::import_source,
             harness::assets::read_source,
             harness::assets::read_generated_asset,

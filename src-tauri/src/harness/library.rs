@@ -1,8 +1,8 @@
-//! Durable, local ownership of imported sources, jobs and access state.
+//! Durable, local ownership of imported sources and jobs.
 //!
 //! Each mutation writes a complete versioned snapshot before changing memory.
 //! Paths are derived from canonical UUIDs, never accepted from saved JSON. The
-//! lifetime file lock also prevents two app processes from racing trial usage.
+//! lifetime file lock also prevents two app processes from writing conflicting snapshots.
 use super::{
     assets::{self, SourceAsset, SourceRecord},
     runtime::{GeneratedAsset, GenerationRequest},
@@ -19,7 +19,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-const VERSION: u32 = 1;
+const VERSION: u32 = 2;
 const MAX_SNAPSHOT_BYTES: u64 = 32 * 1024 * 1024;
 const MAX_RECORDS: usize = 20_000;
 
@@ -60,8 +60,6 @@ struct Snapshot {
     version: u32,
     sources: BTreeMap<String, SavedSource>,
     jobs: BTreeMap<String, JobRecord>,
-    signed_license: Option<String>,
-    trial_success_job: Option<String>,
 }
 
 impl Default for Snapshot {
@@ -70,8 +68,6 @@ impl Default for Snapshot {
             version: VERSION,
             sources: BTreeMap::new(),
             jobs: BTreeMap::new(),
-            signed_license: None,
-            trial_success_job: None,
         }
     }
 }
@@ -100,11 +96,11 @@ impl Library {
         ensure_directory(&root, "jobs")?;
         let path = root.join("library.json");
         let exists = path.try_exists().map_err(storage_error)?;
-        // A dangling symlink must also fail instead of being treated as a new trial.
+        // A dangling symlink must also fail instead of being treated as an empty library.
         if fs::symlink_metadata(&path).is_ok() {
             reject_symlink(&path)?;
         }
-        let snapshot = if exists {
+        let (snapshot, migrated) = if exists {
             let mut file = open_private(&path, false)?;
             if file.metadata().map_err(storage_error)?.len() > MAX_SNAPSHOT_BYTES {
                 return Err("The Sculpt library exceeds its safe size limit".into());
@@ -117,10 +113,9 @@ impl Library {
             if bytes.len() as u64 > MAX_SNAPSHOT_BYTES {
                 return Err("The Sculpt library exceeds its safe size limit".into());
             }
-            serde_json::from_slice::<Snapshot>(&bytes)
-                .map_err(|_| "The Sculpt library is damaged. Restore library.json from a backup; it has not been reset.".to_string())?
+            read_snapshot(&bytes)?
         } else {
-            Snapshot::default()
+            (Snapshot::default(), false)
         };
         validate_snapshot(&snapshot)?;
         let mut library = Self {
@@ -129,7 +124,7 @@ impl Library {
             _lock: lock,
         };
         let mut recovered = library.snapshot.clone();
-        let mut changed = !exists;
+        let mut changed = !exists || migrated;
         for job in recovered.jobs.values_mut() {
             if job.state == JobState::Running {
                 job.state = JobState::Interrupted;
@@ -288,7 +283,7 @@ impl Library {
     }
 
     /// The returned record is authoritative: cancellation wins if it arrived
-    /// before this transaction, and never consumes the successful-use trial.
+    /// before this transaction commits.
     pub fn finish_job(
         &mut self,
         id: &str,
@@ -356,15 +351,6 @@ impl Library {
         job.artifact_byte_length = artifact.map(|(_, length)| length);
         job.updated_at = now();
         let completed = job.clone();
-        if completed
-            .asset
-            .as_ref()
-            .is_some_and(|asset| !asset.simulated)
-            && completed.request.parent_asset_id.is_none()
-            && next.trial_success_job.is_none()
-        {
-            next.trial_success_job = Some(id.into());
-        }
         self.commit(next)?;
         Ok(completed)
     }
@@ -438,26 +424,6 @@ impl Library {
         Ok(path)
     }
 
-    pub fn signed_license(&self) -> Option<&str> {
-        self.snapshot.signed_license.as_deref()
-    }
-
-    pub fn set_signed_license(&mut self, license: Option<String>) -> Result<(), String> {
-        if license
-            .as_ref()
-            .is_some_and(|license| license.len() > 16_384 || license.is_empty())
-        {
-            return Err("Invalid license size".into());
-        }
-        let mut next = self.snapshot.clone();
-        next.signed_license = license;
-        self.commit(next)
-    }
-
-    pub fn trial_success_job(&self) -> Option<&str> {
-        self.snapshot.trial_success_job.as_deref()
-    }
-
     fn commit(&mut self, next: Snapshot) -> Result<(), String> {
         validate_snapshot(&next)?;
         let bytes = serde_json::to_vec(&next).map_err(storage_error)?;
@@ -501,6 +467,46 @@ impl Library {
     }
 }
 
+// Deserialize obsolete entitlements only to migrate old libraries. Never retain
+// or interpret them. Unknown fields and malformed source/job records still fail.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct LegacySnapshot {
+    version: u32,
+    sources: BTreeMap<String, SavedSource>,
+    jobs: BTreeMap<String, JobRecord>,
+    #[serde(default, rename = "signedLicense")]
+    _license: serde::de::IgnoredAny,
+    #[serde(default, rename = "trialSuccessJob")]
+    _trial: serde::de::IgnoredAny,
+}
+
+fn read_snapshot(bytes: &[u8]) -> Result<(Snapshot, bool), String> {
+    if let Ok(mut snapshot) = serde_json::from_slice::<Snapshot>(bytes) {
+        let migrated = snapshot.version == 1;
+        if migrated {
+            snapshot.version = VERSION;
+        }
+        return Ok((snapshot, migrated));
+    }
+    let legacy: LegacySnapshot = serde_json::from_slice(bytes).map_err(|_| {
+        "The Sculpt library is damaged. Restore library.json from a backup; it has not been reset.".to_string()
+    })?;
+    if legacy.version != 1 {
+        return Err(
+            "This Sculpt library version is unsupported; update Sculpt before opening it".into(),
+        );
+    }
+    Ok((
+        Snapshot {
+            version: VERSION,
+            sources: legacy.sources,
+            jobs: legacy.jobs,
+        },
+        true,
+    ))
+}
+
 fn validate_snapshot(snapshot: &Snapshot) -> Result<(), String> {
     if snapshot.version != VERSION {
         return Err(
@@ -509,13 +515,6 @@ fn validate_snapshot(snapshot: &Snapshot) -> Result<(), String> {
     }
     if snapshot.sources.len() > MAX_RECORDS || snapshot.jobs.len() > MAX_RECORDS {
         return Err("The Sculpt library exceeds its record limit".into());
-    }
-    if snapshot
-        .signed_license
-        .as_ref()
-        .is_some_and(|license| license.is_empty() || license.len() > 16_384)
-    {
-        return Err("The saved license has an invalid size".into());
     }
     for (id, source) in &snapshot.sources {
         validate_source_asset(&source.asset)?;
@@ -590,25 +589,6 @@ fn validate_snapshot(snapshot: &Snapshot) -> Result<(), String> {
         }
     }
     validate_ancestry(snapshot)?;
-    if let Some(id) = &snapshot.trial_success_job {
-        let job = snapshot
-            .jobs
-            .get(id)
-            .ok_or("The saved trial refers to an unknown generation")?;
-        if job.state != JobState::Succeeded
-            || !job.asset.as_ref().is_some_and(|asset| !asset.simulated)
-            || job.request.parent_asset_id.is_some()
-        {
-            return Err("The saved trial must refer to a successful reconstruction".into());
-        }
-    } else if snapshot.jobs.values().any(|job| {
-        job.request.parent_asset_id.is_none()
-            && job.asset.as_ref().is_some_and(|asset| !asset.simulated)
-    }) {
-        return Err(
-            "The Sculpt library has inconsistent trial state; it has not been reset".into(),
-        );
-    }
     Ok(())
 }
 
@@ -910,7 +890,7 @@ mod tests {
     }
 
     #[test]
-    fn refinements_are_durable_without_spending_another_generation() {
+    fn refinements_and_original_assets_survive_restart() {
         let fixture = Fixture::new();
         let mut library = fixture.open();
         let source = source(&mut library);
@@ -925,12 +905,10 @@ mod tests {
             library
                 .finish_job(&refined, Ok(asset(&refined, false)), false)
                 .unwrap();
-            assert_eq!(library.trial_success_job(), Some(original.as_str()));
             parent = refined;
         }
         drop(library);
         let library = fixture.open();
-        assert_eq!(library.trial_success_job(), Some(original.as_str()));
         assert!(library.asset_path(&parent).unwrap().is_file());
         assert!(library.asset_path(&original).unwrap().is_file());
     }
@@ -981,7 +959,7 @@ mod tests {
     }
 
     #[test]
-    fn snapshot_rejects_refinement_cycles_and_refinements_claiming_trial() {
+    fn snapshot_rejects_refinement_cycles() {
         let fixture = Fixture::new();
         let mut library = fixture.open();
         let source = source(&mut library);
@@ -995,9 +973,6 @@ mod tests {
             .finish_job(&refined, Ok(asset(&refined, false)), false)
             .unwrap();
         let mut malformed = library.snapshot.clone();
-        malformed.trial_success_job = Some(refined.clone());
-        assert!(validate_snapshot(&malformed).unwrap_err().contains("trial"));
-        malformed = library.snapshot.clone();
         malformed.jobs.get_mut(&original).unwrap().request = refine_request(&source, &refined);
         assert!(validate_snapshot(&malformed).unwrap_err().contains("cycle"));
     }
@@ -1020,37 +995,92 @@ mod tests {
         fs::write(&path, serde_json::to_vec(&snapshot).unwrap()).unwrap();
         let library = fixture.open();
         assert!(library.asset_path(&original).unwrap().is_file());
-        assert_eq!(library.trial_success_job(), Some(original.as_str()));
     }
 
     #[test]
-    fn restart_preserves_success_sources_license_and_trial() {
-        let fixture = Fixture::new();
-        let mut library = fixture.open();
-        let source = source(&mut library);
-        let job = id();
-        library.begin_job(&job, request(Some(&source))).unwrap();
-        write_mesh(&library, &job);
-        library
-            .finish_job(&job, Ok(asset(&job, false)), false)
-            .unwrap();
-        library
-            .set_signed_license(Some("opaque.signed.license".into()))
-            .unwrap();
-        drop(library);
-        let library = fixture.open();
-        assert_eq!(
-            library.source(&source.id).unwrap().asset.sha256,
-            source.sha256
-        );
-        assert_eq!(library.job(&job).unwrap().state, JobState::Succeeded);
-        assert!(library.asset_path(&job).unwrap().is_file());
-        assert_eq!(library.trial_success_job(), Some(job.as_str()));
-        assert_eq!(library.signed_license(), Some("opaque.signed.license"));
+    fn legacy_entitlements_are_discarded_without_losing_assets_or_refinements() {
+        // Exhausted, unactivated, and malformed old entitlements cannot restrict use.
+        for entitlement in [
+            serde_json::json!("opaque.signed.license"),
+            serde_json::Value::Null,
+            serde_json::json!({"invalid": true}),
+        ] {
+            let fixture = Fixture::new();
+            let mut library = fixture.open();
+            let source = source(&mut library);
+            let original = completed_reconstruction(&mut library, &source);
+            let refined = id();
+            library
+                .begin_job(&refined, refine_request(&source, &original))
+                .unwrap();
+            write_mesh(&library, &refined);
+            library
+                .finish_job(&refined, Ok(asset(&refined, false)), false)
+                .unwrap();
+            let mesh_bytes = fs::read(library.asset_path(&original).unwrap()).unwrap();
+            drop(library);
+            let path = fixture.0.join("library.json");
+            let mut legacy: serde_json::Value =
+                serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+            legacy["version"] = serde_json::json!(1);
+            legacy["signedLicense"] = entitlement;
+            legacy["trialSuccessJob"] = serde_json::json!(original);
+            fs::write(&path, serde_json::to_vec(&legacy).unwrap()).unwrap();
+
+            let mut library = fixture.open();
+            assert_eq!(
+                library.source(&source.id).unwrap().asset.sha256,
+                source.sha256
+            );
+            assert_eq!(
+                fs::read(library.asset_path(&original).unwrap()).unwrap(),
+                mesh_bytes
+            );
+            assert!(library.asset_path(&refined).unwrap().is_file());
+            assert_eq!(
+                library
+                    .job(&refined)
+                    .unwrap()
+                    .request
+                    .parent_asset_id
+                    .as_deref(),
+                Some(original.as_str())
+            );
+            let migrated: serde_json::Value =
+                serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+            assert_eq!(migrated["version"], VERSION);
+            assert!(migrated.get("signedLicense").is_none());
+            assert!(migrated.get("trialSuccessJob").is_none());
+            let second = completed_reconstruction(&mut library, &source);
+            drop(library);
+            let mut library = fixture.open();
+            let third = completed_reconstruction(&mut library, &source);
+            drop(library);
+            let library = fixture.open();
+            for job in [&original, &refined, &second, &third] {
+                assert_eq!(library.job(job).unwrap().state, JobState::Succeeded);
+                assert!(library.asset_path(job).unwrap().is_file());
+            }
+        }
     }
 
     #[test]
-    fn interrupted_failed_cancelled_and_demo_do_not_consume_trial() {
+    fn version_one_without_entitlements_migrates_and_future_versions_do_not() {
+        let (snapshot, migrated) =
+            read_snapshot(br#"{"version":1,"sources":{},"jobs":{}}"#).unwrap();
+        assert!(migrated);
+        assert_eq!(snapshot.version, VERSION);
+        for bytes in [
+            br#"{"version":1,"sources":{},"jobs":{},"unknown":true}"#.as_slice(),
+            br#"{"version":1,"sources":{},"jobs":{},"signedLicense":null,"signedLicense":"duplicate"}"#.as_slice(),
+            br#"{"version":2,"sources":{},"jobs":{},"signedLicense":null}"#.as_slice(),
+        ] {
+            assert!(read_snapshot(bytes).is_err());
+        }
+    }
+
+    #[test]
+    fn interrupted_failed_cancelled_and_demo_records_survive_restart() {
         let fixture = Fixture::new();
         let mut library = fixture.open();
         let source = source(&mut library);
@@ -1084,9 +1114,13 @@ mod tests {
         library
             .finish_job(&demo, Ok(asset(&demo, true)), false)
             .unwrap();
-        assert!(library.trial_success_job().is_none());
         drop(library);
-        assert!(fixture.open().trial_success_job().is_none());
+        let library = fixture.open();
+        assert_eq!(
+            library.job(&interrupted).unwrap().state,
+            JobState::Interrupted
+        );
+        assert_eq!(library.job(&demo).unwrap().state, JobState::Succeeded);
     }
 
     #[test]
@@ -1109,7 +1143,7 @@ mod tests {
     }
 
     #[test]
-    fn missing_or_invalid_mesh_cannot_consume_trial() {
+    fn missing_or_invalid_mesh_cannot_commit_success() {
         let fixture = Fixture::new();
         let mut library = fixture.open();
         let source = source(&mut library);
@@ -1128,7 +1162,6 @@ mod tests {
             .finish_job(&job, Ok(asset(&job, false)), false)
             .is_err());
         assert_eq!(library.job(&job).unwrap().state, JobState::Running);
-        assert!(library.trial_success_job().is_none());
     }
 
     #[test]
@@ -1175,7 +1208,6 @@ mod tests {
         drop(library);
         let library = fixture.open();
         assert!(library.asset_path(&job).is_err());
-        assert_eq!(library.trial_success_job(), Some(job.as_str()));
     }
 
     #[test]
@@ -1195,29 +1227,13 @@ mod tests {
         let library = fixture.open();
         assert!(library.source(&source.id).is_err());
         assert!(library.asset_path(&job).unwrap().is_file());
-        assert_eq!(library.trial_success_job(), Some(job.as_str()));
     }
 
     #[test]
-    fn inconsistent_trial_and_oversized_snapshot_are_not_reset() {
+    fn oversized_snapshot_is_not_reset() {
         let fixture = Fixture::new();
-        let mut library = fixture.open();
-        let source = source(&mut library);
-        let job = id();
-        library.begin_job(&job, request(Some(&source))).unwrap();
-        write_mesh(&library, &job);
-        library
-            .finish_job(&job, Ok(asset(&job, false)), false)
-            .unwrap();
-        drop(library);
+        drop(fixture.open());
         let path = fixture.0.join("library.json");
-        let mut saved: serde_json::Value =
-            serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
-        saved["trialSuccessJob"] = serde_json::Value::Null;
-        let bytes = serde_json::to_vec(&saved).unwrap();
-        fs::write(&path, &bytes).unwrap();
-        assert!(Library::open(fixture.0.clone()).is_err());
-        assert_eq!(fs::read(&path).unwrap(), bytes);
         OpenOptions::new()
             .write(true)
             .open(&path)
@@ -1272,15 +1288,10 @@ mod tests {
         let job = id();
         assert!(library.begin_job(&job, request(None)).is_err());
         assert!(library.job(&job).is_none());
-        assert!(library
-            .set_signed_license(Some("not.saved".into()))
-            .is_err());
-        assert!(library.signed_license().is_none());
-        assert!(library.trial_success_job().is_none());
     }
 
     #[test]
-    fn failed_success_commit_keeps_trial_and_running_record_unchanged() {
+    fn failed_success_commit_keeps_running_record_unchanged() {
         let fixture = Fixture::new();
         let mut library = fixture.open();
         let source = source(&mut library);
@@ -1295,13 +1306,11 @@ mod tests {
             .finish_job(&job, Ok(asset(&job, false)), false)
             .is_err());
         assert_eq!(library.job(&job).unwrap().state, JobState::Running);
-        assert!(library.trial_success_job().is_none());
         fs::remove_dir(&path).unwrap();
         fs::write(&path, previous).unwrap();
         drop(library);
         let library = fixture.open();
         assert_eq!(library.job(&job).unwrap().state, JobState::Interrupted);
-        assert!(library.trial_success_job().is_none());
     }
 
     #[cfg(unix)]

@@ -1,6 +1,6 @@
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import type { MaskPreview, RefinementSettings, AccessStatus, GenerationJob, StoredSource, BackendStatus, SetupProgress, SourceAsset, EngineProfile, GeneratedAsset, GenerationProgress, GenerationRequest, HardwareProfile, SculptHarness } from './types'
+import type { MaskPreview, RefinementSettings, GenerationJob, StoredSource, BackendStatus, SetupProgress, SourceAsset, EngineProfile, GeneratedAsset, GenerationProgress, GenerationRequest, HardwareProfile, SculptHarness } from './types'
 
 export type * from './types'
 
@@ -109,17 +109,6 @@ export async function listGenerationJobs(): Promise<GenerationJob[]> {
   const jobs = await invoke<GenerationJob[]>('list_generation_jobs', { limit: 50 })
   return jobs.map(job => ({ ...job, createdAt: new Date(Number(job.createdAt)).toISOString(),
     updatedAt: new Date(Number(job.updatedAt)).toISOString(), asset: job.asset ? nativeAsset(job.asset) : null }))
-}
-
-export async function getAccessStatus(): Promise<AccessStatus> {
-  if (!isTauri()) return { mode: 'preview', canGenerate: false, freeGenerationsRemaining: null,
-    activationAvailable: false, message: 'Open Sculpt desktop to reconstruct images. The browser offers a workspace demo.' }
-  return invoke<AccessStatus>('get_access_status')
-}
-
-export async function activateLicense(signedLicense: string): Promise<AccessStatus> {
-  if (!isTauri()) throw new Error('License activation requires the Sculpt desktop app')
-  return invoke<AccessStatus>('activate_license', { signedLicense })
 }
 
 export async function getEngines(profile: HardwareProfile): Promise<EngineProfile[]> {
@@ -255,4 +244,4 @@ export async function readMask(sourceId: string, sha256: string): Promise<MaskPr
   return invoke<MaskPreview>('read_mask', { sourceId, sha256 })
 }
 
-export const sculptHarness: SculptHarness = { prepareMask, saveMask, readMask, detectHardware, getEngines, backendStatus, installRuntime, clearDownloadCache, importSource, readGeneratedAsset, readSource, listGenerationJobs, getAccessStatus, activateLicense, generate, refine, saveGeneratedGlb, saveGlb }
+export const sculptHarness: SculptHarness = { prepareMask, saveMask, readMask, detectHardware, getEngines, backendStatus, installRuntime, clearDownloadCache, importSource, readGeneratedAsset, readSource, listGenerationJobs, generate, refine, saveGeneratedGlb, saveGlb }

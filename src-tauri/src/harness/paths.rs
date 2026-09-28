@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
-/// Development reconstruction and trial accounting never alter the release library.
+/// Development reconstruction never alters the release library.
 pub fn library_dir(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(app
         .path()

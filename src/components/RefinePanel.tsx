@@ -29,6 +29,6 @@ export default function RefinePanel({ asset, busy, onApply }: {
         {busy ? <LoaderCircle size={14} className="spin" /> : <SlidersHorizontal size={14} />} Apply refinement <ArrowRight size={13} />
       </button>
     </fieldset>
-    {available && <p className="refine-footnote">Uses your saved scene. No new image inference or trial charge.</p>}
+    {available && <p className="refine-footnote">Uses your saved scene. No new image inference.</p>}
   </section>
 }

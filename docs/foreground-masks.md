@@ -2,7 +2,7 @@
 
 In the native app, import an image and choose **Review foreground**. Sculpt runs
 U2Net locally in a separate, cancellable CPU worker; it does not load TripoSR or
-consume the generation trial. Paint **Add** to restore missing parts or **Erase**
+create a reconstruction job. Paint **Add** to restore missing parts or **Erase**
 to exclude background objects. Overlay, cutout, and grayscale views, brush size,
 undo, and reset are available. **Use this mask** saves the selection; **Generate
 3D** then reconstructs it. With Auto remove, the UI asks for mask review before
@@ -34,9 +34,9 @@ model weight, or runtime dependency changed.
 
 - Frontend/harness tests, Python tests, native unit tests, and mask UI lifecycle
   tests cover preparation, painting, undo, saved identity, library reopening,
-  and trial accounting. Browser UI tests use an explicit native IPC test double.
+  and separation from reconstruction. Browser UI tests use an explicit native IPC test double.
 - A real U2Net job passed through the native Rust supervisor on the development
-  Mac without creating a generation record or spending its trial.
+  Mac without creating a generation record.
 - The macOS `.app` bundle built successfully with the mask worker included.
 - All 34 CC0 evaluation photos produced masks on the M4 / 16 GB. Median worker
   time: **2.073 s**; median process wall time: **2.364 s**; maximum process RSS:

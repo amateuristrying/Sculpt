@@ -4,7 +4,6 @@ pub mod catalog;
 pub mod engines;
 pub mod hardware;
 pub mod library;
-pub mod licensing;
 pub mod masks;
 pub mod paths;
 pub mod process;
@@ -27,7 +26,6 @@ use tauri::{AppHandle, Emitter, State};
 pub struct SculptInferenceHarness {
     jobs: Arc<Mutex<HashMap<String, Arc<AtomicBool>>>>,
     library: Arc<Mutex<Result<library::Library, String>>>,
-    license_policy: licensing::LicensePolicy,
 }
 
 impl SculptInferenceHarness {
@@ -35,7 +33,6 @@ impl SculptInferenceHarness {
         Self {
             jobs: Arc::new(Mutex::new(HashMap::new())),
             library: Arc::new(Mutex::new(root.and_then(library::Library::open))),
-            license_policy: licensing::LicensePolicy::configured(),
         }
     }
 
@@ -75,7 +72,7 @@ struct JobReservation {
 impl JobReservation {
     fn finish(&mut self, result: Result<GeneratedAsset, String>) -> Result<GeneratedAsset, String> {
         // This is the commit boundary. Cancellation either wins before the commit
-        // or observes an already saved result; it cannot undo a completed trial.
+        // or observes an already saved result; it cannot undo a saved asset.
         let mut jobs = self.jobs.lock().map_err(|_| "Job state unavailable")?;
         let was_cancelled = self.cancelled.load(Ordering::Relaxed);
         let result = if was_cancelled {
@@ -122,41 +119,6 @@ pub async fn list_generation_jobs(
 ) -> Result<Vec<library::JobRecord>, String> {
     harness
         .library_work(move |library| Ok(library.list_jobs(limit.unwrap_or(50).clamp(1, 100))))
-        .await
-}
-
-#[tauri::command]
-pub async fn get_access_status(
-    harness: State<'_, SculptInferenceHarness>,
-) -> Result<licensing::AccessStatus, String> {
-    let policy = licensing::LicensePolicy::configured();
-    harness
-        .library_work(move |library| {
-            Ok(licensing::access_status(
-                &policy,
-                library.signed_license(),
-                library.trial_success_job().is_some(),
-            ))
-        })
-        .await
-}
-
-#[tauri::command]
-pub async fn activate_license(
-    harness: State<'_, SculptInferenceHarness>,
-    signed_license: String,
-) -> Result<licensing::AccessStatus, String> {
-    let policy = licensing::LicensePolicy::configured();
-    harness
-        .library_work(move |library| {
-            licensing::validate_activation(&policy, &signed_license)?;
-            library.set_signed_license(Some(signed_license))?;
-            Ok(licensing::access_status(
-                &policy,
-                library.signed_license(),
-                library.trial_success_job().is_some(),
-            ))
-        })
         .await
 }
 
@@ -277,7 +239,6 @@ async fn run_asset(
     let cancelled = Arc::new(AtomicBool::new(false));
     let job_registry = harness.jobs.clone();
     let library = harness.library.clone();
-    let policy = harness.license_policy.clone();
     let admitted_id = job_id.clone();
     let admitted_request = request.clone();
     let admitted_cancelled = cancelled.clone();
@@ -291,17 +252,8 @@ async fn run_asset(
                 "A generation is already running. Cancel it before starting another.".into(),
             );
         }
-        // Admission and trial authorization share the job lock. Two concurrent IPC
-        // requests cannot both reserve the last free generation.
+        // Reserve the single worker slot and persist admission together.
         with_library(&library, |library| {
-            if admitted_request.refinement.is_none() {
-                licensing::authorize_generation(
-                    &policy,
-                    library.signed_license(),
-                    library.trial_success_job().is_some(),
-                    admitted_request.engine_id == "demo",
-                )?;
-            }
             library.begin_job(&admitted_id, admitted_request)
         })?;
         jobs.insert(admitted_id.clone(), admitted_cancelled.clone());

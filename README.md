@@ -30,13 +30,13 @@ Native bundles appear under `src-tauri/target/release/bundle/`. Local builds use
 - Native PNG, JPG, and WEBP import into a Rust-owned source registry with size/type/dimension checks and SHA-256 identity.
 - Local TripoSR reconstruction on Apple Silicon/Metal through an isolated Python worker, with cancellable progress, GLB validation, vertex colors, and real asset loading in the viewport.
 - In-app runtime installation, cancellation, repair, checksum verification, and disposable package-cache clearing.
-- Foreground preview and add/erase brush correction before reconstruction, with immutable source-bound masks and restoration from the library. Mask preparation does not consume a trial generation. See [mask workflow and current evaluation limits](docs/foreground-masks.md).
+- Foreground preview and add/erase brush correction before reconstruction, with immutable source-bound masks and restoration from the library. Mask preparation runs independently of reconstruction. See [mask workflow and current evaluation limits](docs/foreground-masks.md).
 - Memory estimates and headroom checks before loading the model, plus automatic background removal or explicit background preservation.
 - Orbit, pan, zoom, camera reset, grid, lighting, material color, and material/wireframe/points/technical views.
 - Draft, balanced, and high geometry detail, an asset processing stack, and live geometry metadata.
 - Real cached-scene refinement: extraction resolution 96–256, surface density, small-fragment removal, and Taubin smoothing. Each refinement saves a separate version and reuses the original image inference.
 - Persistent local library with source/asset integrity checks, job history, interrupted-job recovery, and reopening after relaunch.
-- Offline signed-license verification and one-successful-generation release trial. Refinement and existing-asset export remain available after the trial; development builds are unlimited. Checkout is not implemented.
+- Free local generation, refinement, and export in both development and packaged builds, with no activation or generation quota. Sculpt code is [MIT licensed](LICENSE); model weights and dependencies retain their own licenses.
 - Binary glTF (`.glb`) export through the native macOS save dialog. Reconstructed assets contain geometry, normals, linear vertex colors, and an explicit nonmetallic material. Viewport grids, lights, and technical overlays are excluded. Generated UVs and texture maps are not implemented.
 
 ## Local runtime setup
@@ -50,7 +50,7 @@ Runtime storage:
 - Development (`npm run desktop`): `.sculpt-runtime/` inside the checkout.
 - Packaged app: `~/Library/Application Support/com.sculpt.desktop/runtime/`.
 - `SCULPT_RUNTIME_DIR` can explicitly override the runtime location for development/testing.
-- Sources and jobs live in `~/Library/Application Support/com.sculpt.desktop/library-development/` for development or `library/` for packaged builds. Each contains a versioned `library.json`, sources, masks, and job folders. Development and release trial records are separate.
+- Sources and jobs live in `~/Library/Application Support/com.sculpt.desktop/library-development/` for development or `library/` for packaged builds. Each contains a versioned `library.json`, sources, masks, and job folders. Development and packaged builds use separate libraries. Version 1 libraries migrate automatically to version 2, preserving sources, assets, and refinement history while removing obsolete activation and trial records. Older Sculpt builds cannot read version 2 libraries; back up the library before downgrading.
 - Older outputs created before the persistent library remain on disk but are not automatically indexed. Assets without a scene cache need a new generation before Refine is available.
 
 The developer CLI remains available when Python 3 and uv are already installed:
@@ -67,7 +67,7 @@ After generation, **Refine geometry** reuses the saved scene to change extractio
 
 ## Verification and benchmarks
 
-See [benchmark procedure and findings](backend/benchmarks/README.md). Unit suites cover the frontend, Python worker, Rust harness, and license issuer. Playwright uses an explicit IPC test double and a self-contained GLB fixture for trial/refinement/reopening/export; an optional test also exercises real generated benchmark meshes. Native process execution and Metal inference are verified separately with opt-in Rust integration tests.
+See [benchmark procedure and findings](backend/benchmarks/README.md). Unit suites cover the frontend, Python worker, and Rust harness, including migration from exhausted trial libraries. Playwright uses an explicit IPC test double and a self-contained GLB fixture for repeated generation, refinement, reopening, and export; an optional test also exercises real generated benchmark meshes. Native process execution and Metal inference are verified separately with opt-in Rust integration tests.
 
 The [real-photo evaluation](backend/evaluation/README.md) uses 34 independently sourced CC0 photographs, with source URLs, license evidence, and exact hashes. `npm run backend:eval -- compare` produces an offline side-by-side HTML report with four views per mesh, timing/memory measurements, and silhouette IoU against a frozen automatic foreground mask. The camera is estimated once from the baseline; this is a regression diagnostic, not a human-ground-truth or complete 3D quality score. Photos and generated artifacts are kept out of Git.
 
@@ -79,7 +79,6 @@ CI uses one cached macOS runner, without weights or GPU inference. Public reposi
 npm run backend:test
 npm run test:ui                       # Workspace/lifecycle tests; requires Google Chrome
 SCULPT_BENCHMARK_OUTPUT=backend/outputs/YOUR_RUN npm run test:ui
-node --test scripts/issue-license.test.mjs
 cargo fmt --manifest-path src-tauri/Cargo.toml --check
 SCULPT_TEST_IMAGE=/absolute/path/to/object.jpg cargo test --manifest-path src-tauri/Cargo.toml real_image_runs_through_rust_supervisor -- --ignored --nocapture
 ```
@@ -88,7 +87,7 @@ SCULPT_TEST_IMAGE=/absolute/path/to/object.jpg cargo test --manifest-path src-ta
 
 TripoSR is a single-image, single-object reconstruction model. It infers unseen surfaces, so clear images with one isolated object produce the most useful results. It does not understand a full scene, guarantee semantic identity, or produce production-ready topology. The current adapter writes geometry and vertex colors; texture baking, decimation, retopology, UV processing, and OBJ/STL export remain planned stages. The Workspace Demo is still available, but it is explicitly labelled and never presented as an AI result.
 
-TRELLIS.2, SF3D, MLX, CUDA, ONNX, WebGPU, and native alternatives remain replaceable runtime/engine slots; they are not claimed to be available. The persistent library currently fails closed on damaged or unsupported snapshots; general schema migrations and record quarantine remain future work.
+TRELLIS.2, SF3D, MLX, CUDA, ONNX, WebGPU, and native alternatives remain replaceable runtime/engine slots; they are not claimed to be available. The persistent library currently fails closed on damaged or unsupported snapshots; migration from the old trial schema is supported, but general schema migrations and record quarantine remain future work.
 
 ## Inference boundary
 
@@ -105,11 +104,11 @@ PythonRuntime → TripoSR (PyTorch / Metal); MockRuntime → explicit demo
 - `src/harness/index.ts` routes native calls through Tauri and supplies the browser-only design preview.
 - `src-tauri/src/harness/hardware.rs` reads macOS `system_profiler`, `sysctl`, `sw_vers`, and `diskutil` results. Missing fields remain unknown. Detected Metal describes a hardware API, not an installed ML runtime; Rosetta does not hide Apple Silicon detection.
 - `src-tauri/src/harness/engines.rs` validates checked-in engine descriptors and plans compatible adapters/devices; `catalog.rs` presents those recommendations. See [adapter boundaries](docs/engine-architecture.md).
-- `src-tauri/src/harness/mod.rs` owns job lifetime, compatibility, events, cancellation, and runtime selection. `library.rs` commits asset history and trial accounting atomically; `licensing.rs` verifies offline entitlements. See [licensing](docs/licensing.md).
+- `src-tauri/src/harness/mod.rs` owns job lifetime, compatibility, events, cancellation, and runtime selection. `library.rs` commits asset history atomically and migrates libraries from the old trial schema. There is no paid entitlement check.
 - `src-tauri/src/harness/python.rs` supervises one isolated Python worker per job, enforces a timeout, validates protocol messages and GLB output, and records metrics. `runtime.rs` remains the replaceable adapter contract.
 - `setup.rs`, `process.rs`, `paths.rs`, and `cache.rs` share native process supervision, packaged resource resolution, installation, and cache ownership. Installation and inference share a single active-operation lock.
 - `backend/runtime-spec.json` pins source/model revisions, model checksums, and quality profiles. `backend/requirements.lock` pins dependency versions and package hashes. Runtime processes remain replaceable behind the harness.
 - `src-tauri/src/harness/assets.rs` validates image inputs and keeps worker paths out of the UI. `src/geometry/importedAsset.ts` parses and fits returned GLBs without changing their export bytes.
 - `src/geometry/sculpture.ts` owns the explicit demo geometry, metadata, and demo GLB export.
 
-Next priorities are completing the mask quality evaluation (including BiRefNet), measured quality presets, additional export formats, texture baking, and library improvements, using the real-photo evaluation to measure output changes. Cached refinement is functional, but 256-resolution extraction remains substantially slower than 128 and smoothing can remove small details. Reconstruction quality still has substantial limits: noisy surfaces, uneven thin structures, and unreliable occluded/cluttered inputs. Competitive quality and cost parity with commercial generators have not been established. Application assets and studio lighting are local; no Sculpt GPU server or per-generation cloud request is used.
+Next priorities are UV unwrapping and a Sculpt-owned texture baker, followed by CUDA support and evaluation of a stronger second engine. Additional export formats and library improvements remain planned. Output changes will be compared on the existing real-photo evaluation set; further TripoSR preset tuning is not the focus. Cached refinement is functional, but 256-resolution extraction remains substantially slower than 128 and smoothing can remove small details. Reconstruction quality still has substantial limits: noisy surfaces, uneven thin structures, and unreliable occluded/cluttered inputs. Competitive quality and cost parity with commercial generators have not been established. Application assets and studio lighting are local; no Sculpt GPU server or per-generation cloud request is used.

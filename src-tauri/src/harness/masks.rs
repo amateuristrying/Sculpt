@@ -1,5 +1,5 @@
 //! Foreground masks are immutable, source-bound artifacts. Preparing or editing
-//! one does not create a generation job or consume the trial.
+//! one does not create a reconstruction job.
 use super::{library::Library, paths, process, runtime::JobContext, SculptInferenceHarness};
 use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::Serialize;
@@ -351,14 +351,13 @@ mod tests {
         bytes.into_inner()
     }
     #[test]
-    fn masks_are_source_bound_and_immutable_without_trial_use() {
+    fn masks_are_source_bound_and_immutable() {
         let (library, source_id, directory) = fixture();
         let first = store_mask(&directory, &png(64, 32, 255)).unwrap();
         let second = store_mask(&directory, &png(64, 32, 192)).unwrap();
         assert_ne!(first, second);
         assert!(mask_path(&library, &source_id, &first).unwrap().is_file());
         assert!(mask_path(&library, &uuid::Uuid::new_v4().to_string(), &first).is_err());
-        assert!(library.trial_success_job().is_none());
         assert!(library.list_jobs(50).is_empty());
         std::fs::write(directory.join(format!("{first}.png")), png(64, 32, 0)).unwrap();
         assert!(mask_path(&library, &source_id, &first)
@@ -384,7 +383,7 @@ mod integration_tests {
     use super::*;
     #[test]
     #[ignore = "requires the installed local runtime and SCULPT_TEST_IMAGE"]
-    fn real_mask_runs_through_native_supervision_without_spending_trial() {
+    fn real_mask_runs_through_native_supervision_without_reconstruction() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .unwrap()
@@ -435,7 +434,6 @@ mod integration_tests {
         assert!(mask_path(&library, &record.asset.id, &hash)
             .unwrap()
             .is_file());
-        assert!(library.trial_success_job().is_none());
         assert!(library.list_jobs(50).is_empty());
         println!("Verified source-bound native mask: {hash}");
     }

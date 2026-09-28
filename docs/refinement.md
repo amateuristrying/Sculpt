@@ -2,9 +2,8 @@
 
 Generate an image in Sculpt desktop, then use **Refine geometry** in the right
 panel. Extraction resolution, surface density, fragment removal, and smoothing
-produce a new saved asset. The original remains in the local library. Refinement
-does not consume another trial generation, including after the free generation
-has been used. Models created before scene caching was introduced must be
+produce a new saved asset. The original remains in the local library. Refinement reuses the saved image inference. Generation, refinement, and export
+are all free, with no activation or generation quota. Models created before scene caching was introduced must be
 generated again once to enable it.
 
 The Python adapter stores a ~2 MB float32 scene representation in a bounded NumPy

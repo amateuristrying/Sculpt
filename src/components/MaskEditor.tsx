@@ -134,6 +134,6 @@ export default function MaskEditor({ sourceId, background, initial, onSave, onCl
       {!preview && error && <p>No mask prepared.</p>}
     </div>
     {error && <p role="alert" className="mask-error">{error}</p>}
-    <footer><div className="mask-views">{(['overlay', 'cutout', 'mask'] as const).map(v => <button key={v} aria-pressed={view === v} onClick={() => setView(v)}>{v[0].toUpperCase() + v.slice(1)}</button>)}</div><p>Mask editing uses no trial generation.</p><button className="primary-button" disabled={busy || !pixels.current} onClick={() => void save()}>Use this mask</button></footer>
+    <footer><div className="mask-views">{(['overlay', 'cutout', 'mask'] as const).map(v => <button key={v} aria-pressed={view === v} onClick={() => setView(v)}>{v[0].toUpperCase() + v.slice(1)}</button>)}</div><p>Your corrections stay with this source image.</p><button className="primary-button" disabled={busy || !pixels.current} onClick={() => void save()}>Use this mask</button></footer>
   </section></div>
 }

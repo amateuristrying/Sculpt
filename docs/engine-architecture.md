@@ -44,7 +44,7 @@ commercial distribution.
 3. Add compatibility fixtures, installation/repair checks, and reconstruction
    benchmarks on the supported hardware. Only then enable the target.
 4. Connect the adapter in the native runtime factory. Keep source identity,
-   durable jobs, licensing, asset validation, and progress shared in the harness.
+   durable jobs, asset validation, and progress shared in the harness.
 
 This registry is an incremental boundary, not a completed multi-engine runtime
 system. The current Python installer and health checker still implement the

@@ -43,10 +43,8 @@
 .runtime-setup .progress-track { width: 100%; margin: 12px 0; }
 .library-button { margin: 0 20px 18px; width: calc(100% - 40px); justify-content: flex-start; }
 .library-button span { margin-left: auto; color: #9cab97; font: 11px var(--mono); }
-.library-access { padding: 15px; margin: 18px 0; border: 1px solid #3d5040; background: #202923; border-radius: 8px; }
-.library-access strong { font-size: 12px; font-weight: 500; }
-.library-access p, .library-footnote, .library-empty { color: #9ba899; font-size: 11px; line-height: 1.65; margin-top: 8px; }
-.library-access .text-button, .library-job .text-button { display: inline-flex; align-items: center; gap: 7px; }
+.library-footnote, .library-empty { color: #9ba899; font-size: 11px; line-height: 1.65; margin-top: 8px; }
+.library-job .text-button { display: inline-flex; align-items: center; gap: 7px; }
 .library-heading { display: flex; align-items: center; justify-content: space-between; }
 .library-jobs { max-height: 290px; overflow: auto; margin: 12px 0 18px; }
 .library-job { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-top: 1px solid #354139; }
@@ -65,7 +63,7 @@
 .refine-checkbox input { accent-color: var(--accent); }
 .refine-panel .refine-footnote { color: #9eb194; }
 
-/* Source preparation is independent of reconstruction and its trial accounting. */
+/* Source preparation is independent of reconstruction. */
 .mask-backdrop{position:fixed;inset:30px 0 0;z-index:110;display:grid;place-items:center;background:#090d0dd9;padding:24px;backdrop-filter:blur(10px)}
 .mask-editor{width:min(1020px,100%);max-height:100%;overflow:auto;border:1px solid #424b41;background:#1b201e;border-radius:12px;box-shadow:0 30px 100px #0008;color:#e2e7de;font-size:12px}
 .mask-editor header{display:flex;justify-content:space-between;align-items:flex-start;padding:24px 28px 18px}.mask-editor h2{font-size:23px;font-weight:500;margin:7px 0}.mask-editor p{font-size:12px;color:#a1aa9d;line-height:1.6}

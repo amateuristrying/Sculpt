@@ -54,30 +54,27 @@ test('browser photo import cannot be mistaken for AI reconstruction', async ({ p
 })
 
 // IPC is a test double here. Real Metal/process tests live in the Rust harness.
-async function nativeBridge(page: Page, installed: boolean, trial = false) {
-  await page.addInitScript(({ installed, trial, fixture }) => {
+async function nativeBridge(page: Page, installed: boolean) {
+  await page.addInitScript(({ installed, fixture }) => {
     const host = window as any
     host.isTauri = true
     const callbacks = new Map<number, (event: any) => void>(), events = new Map<string, number>()
     let next = 1, attempt = 0, cancel = false
     const status = { installed, state: installed ? 'ready' : 'missing', engine: 'TripoSR', runtimePath: '/test/runtime', message: 'Local reconstruction on your Mac.', mpsAvailable: true, downloadCacheBytes: 1024 ** 3, recommendedQuality: 'balanced', qualities: [{ id: 'balanced', estimatedMemoryGb: 4.5, recommendedRamGb: 16, resolution: 128 }] }
     const emit = (name: string, payload: any) => callbacks.get(events.get(name)!)?.({ event: name, payload })
-    const saved = JSON.parse(localStorage.getItem('sculpt-test-library') || '{"jobs":[],"sources":{},"trialUsed":false}')
+    const saved = JSON.parse(localStorage.getItem('sculpt-test-library') || '{"jobs":[],"sources":{}}')
     saved.masks ||= {}
     const assets = new Map<string, number[]>()
     // Browser quota is not the native library's disk capacity. Keep real large
     // benchmark sources in this test process; only tiny fixtures need reloads.
     const persist = () => localStorage.setItem('sculpt-test-library', JSON.stringify({ ...saved,
       sources: Object.fromEntries(Object.entries(saved.sources).filter(([, value]) => (value as any).dataUrl.length < 64 * 1024)) }))
-    const access = () => ({ mode: trial ? 'trial' : 'development', canGenerate: !trial || !saved.trialUsed, freeGenerationsRemaining: trial ? Number(!saved.trialUsed) : null,
-      activationAvailable: false, message: trial && saved.trialUsed ? 'Your free reconstruction is complete. Activate Sculpt to continue generating locally.' : 'Local reconstruction available.' })
     host.__sculptTest = { calls: [] as any[], glb: fixture, metrics: { faces: 4, vertices: 12, totalSeconds: 1, device: 'mps', canRefine: true, resolution: 128 }, exported: [], saved,
       refinementError: null as string | null, holdRefinement: false }
     const complete = (jobId: string, request: any, refined: boolean) => {
       const asset = { id: jobId, seed: 0, simulated: false, generatedAt: String(Date.now()), metrics: { ...host.__sculptTest.metrics, ...(refined ? { refinement: { ...request.refinement } } : {}), operation: refined ? 'refine' : 'generate' } }
       assets.set(jobId, [...host.__sculptTest.glb])
       saved.jobs.unshift({ id: jobId, request, state: 'succeeded', createdAt: asset.generatedAt, updatedAt: asset.generatedAt, error: null, asset })
-      if (!refined) saved.trialUsed = true
       persist(); return asset
     }
     host.__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener: (_: string, id: number) => callbacks.delete(id) }
@@ -92,7 +89,6 @@ async function nativeBridge(page: Page, installed: boolean, trial = false) {
           case 'get_engines': return [{ id: 'triposr', name: 'TripoSR', subtitle: 'Local reconstruction', description: 'On-device geometry', modelSizeGb: 1.8, runtime: 'PyTorch / Metal', compatibility: 'recommended', reason: 'Local inference', implemented: true }, { id: 'demo', name: 'Workspace Demo', subtitle: 'No AI', description: 'Procedural sample', modelSizeGb: null, runtime: 'Mock', compatibility: 'available', reason: 'No reconstruction', implemented: true }]
           case 'backend_status': return { ...status }
           case 'list_generation_jobs': return [...saved.jobs]
-          case 'get_access_status': return access()
           case 'install_runtime': {
             attempt++; cancel = false
             emit('sculpt://setup-progress', { jobId: args.jobId, stage: 'models', progress: 50, message: 'Downloading model weights' })
@@ -125,7 +121,6 @@ async function nativeBridge(page: Page, installed: boolean, trial = false) {
           }
           case 'read_mask': return saved.masks[args.sourceId]
           case 'generate_asset': {
-            if (!access().canGenerate) throw new Error('Trial already used')
             return complete(args.jobId, args.request, false)
           }
           case 'refine_asset': {
@@ -153,7 +148,7 @@ async function nativeBridge(page: Page, installed: boolean, trial = false) {
         }
       },
     }
-  }, { installed, trial, fixture: fixtureGlb() })
+  }, { installed, fixture: fixtureGlb() })
 }
 
 test('installer cancellation, failed download, retry, and cache clearing', async ({ page }) => {
@@ -172,15 +167,40 @@ test('installer cancellation, failed download, retry, and cache clearing', async
   await page.screenshot({ path: 'test-results/runtime-ready.png', fullPage: true })
 })
 
-test('trial asset can be refined, reopened after reload, and exported without another generation', async ({ page }) => {
-  const errors: string[] = []; page.on('pageerror', error => errors.push(error.message))
-  await nativeBridge(page, true, true); await page.goto('/')
+test('local generation remains available after repeated success and relaunch', async ({ page }) => {
+  await nativeBridge(page, true); await page.goto('/')
   await page.getByRole('button', { name: 'Open Sculpt', exact: true }).click()
   await page.locator('input[type=file]').setInputFiles(await imageFixture(page))
   await approveMask(page)
   await page.getByRole('button', { name: 'Generate 3D', exact: true }).click()
   await expect(page.locator('.viewport-title-tag')).toHaveText('RECONSTRUCTED')
-  await expect(page.getByRole('button', { name: 'Generate again', exact: true })).toBeDisabled()
+  await page.getByRole('button', { name: 'Generate again', exact: true }).click()
+  await expect.poll(() => page.evaluate(() => (window as any).__sculptTest.saved.jobs.length)).toBe(2)
+  const originals = await page.evaluate(() => (window as any).__sculptTest.saved.jobs.map((job: any) => job.id))
+  expect(new Set(originals).size).toBe(2)
+
+  await page.reload()
+  await page.getByRole('button', { name: 'Open Sculpt', exact: true }).click()
+  await page.getByRole('button', { name: /Local library/ }).click()
+  await expect(page.getByText('Local generation is free.', { exact: false })).toBeVisible()
+  await page.getByRole('button', { name: 'Open tetrahedron.png', exact: true }).last().click()
+  await page.getByRole('button', { name: 'Generate again', exact: true }).click()
+  await expect.poll(() => page.evaluate(() => (window as any).__sculptTest.saved.jobs.length)).toBe(3)
+  const saved = await page.evaluate(() => (window as any).__sculptTest.saved.jobs)
+  expect(saved.map((job: any) => job.id)).toEqual([expect.any(String), ...originals])
+  expect(saved.every((job: any) => job.state === 'succeeded' && !job.asset.simulated)).toBe(true)
+  await expect(page.getByRole('button', { name: 'Generate again', exact: true })).toBeEnabled()
+})
+
+test('saved asset can be refined, reopened after reload, and exported without another generation', async ({ page }) => {
+  const errors: string[] = []; page.on('pageerror', error => errors.push(error.message))
+  await nativeBridge(page, true); await page.goto('/')
+  await page.getByRole('button', { name: 'Open Sculpt', exact: true }).click()
+  await page.locator('input[type=file]').setInputFiles(await imageFixture(page))
+  await approveMask(page)
+  await page.getByRole('button', { name: 'Generate 3D', exact: true }).click()
+  await expect(page.locator('.viewport-title-tag')).toHaveText('RECONSTRUCTED')
+  await expect(page.getByRole('button', { name: 'Generate again', exact: true })).toBeEnabled()
   const original = await page.evaluate(() => (window as any).__sculptTest.saved.jobs[0].id)
 
   // This fixture makes the normal CI exercise all rendering modes without weights.
@@ -198,13 +218,12 @@ test('trial asset can be refined, reopened after reload, and exported without an
   await page.getByRole('button', { name: 'Apply refinement' }).click()
   await expect(page.getByText('Refined version saved', { exact: true })).toBeVisible()
   const saved = await page.evaluate(() => (window as any).__sculptTest.saved)
-  expect(saved.trialUsed).toBe(true)
   expect(saved.jobs).toHaveLength(2)
   expect(saved.jobs[1].id).toBe(original)
   expect(saved.jobs[0].request).toMatchObject({ parentAssetId: original, refinement: { resolution: 256, densityThreshold: 20, smoothingIterations: 3, removeSmallComponents: true } })
   await expect(page.getByLabel('Extraction resolution')).toHaveValue('256')
-  await expect(page.getByRole('button', { name: 'Generate again', exact: true })).toBeDisabled()
-  await page.screenshot({ path: 'test-results/refine-trial.png', fullPage: true })
+  await expect(page.getByRole('button', { name: 'Generate again', exact: true })).toBeEnabled()
+  await page.screenshot({ path: 'test-results/refine-unlimited.png', fullPage: true })
 
   await page.reload()
   await page.getByRole('button', { name: 'Open Sculpt', exact: true }).click()
@@ -223,7 +242,7 @@ test('trial asset can be refined, reopened after reload, and exported without an
 })
 
 test('failed and cancelled refinements preserve the saved asset and can be retried', async ({ page }) => {
-  await nativeBridge(page, true, true); await page.goto('/')
+  await nativeBridge(page, true); await page.goto('/')
   await page.getByRole('button', { name: 'Open Sculpt', exact: true }).click()
   await page.locator('input[type=file]').setInputFiles(await imageFixture(page))
   await approveMask(page)
@@ -298,7 +317,7 @@ async function approveMask(page: Page) {
 }
 
 test('foreground brush corrections are saved with generation and restored from the library', async ({ page }) => {
-  await nativeBridge(page, true, true); await page.goto('/')
+  await nativeBridge(page, true); await page.goto('/')
   await page.getByRole('button', { name: 'Open Sculpt', exact: true }).click()
   await page.locator('input[type=file]').setInputFiles(await imageFixture(page, 'mask-edit.png'))
   await page.locator('.generate-button').click()
@@ -318,7 +337,6 @@ test('foreground brush corrections are saved with generation and restored from t
   await dialog.getByRole('button', { name: 'Cutout', exact: true }).click()
   await page.screenshot({ path: 'test-results/mask-editor.png', fullPage: true })
   await dialog.getByRole('button', { name: 'Use this mask' }).click()
-  expect(await page.evaluate(() => (window as any).__sculptTest.saved.trialUsed)).toBe(false)
   expect(await page.evaluate(() => (window as any).__sculptTest.saved.jobs)).toHaveLength(0)
   await page.getByRole('button', { name: 'Generate 3D', exact: true }).click()
   await expect(page.locator('.viewport-title-tag')).toHaveText('RECONSTRUCTED')

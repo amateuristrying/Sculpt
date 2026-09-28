@@ -31,10 +31,9 @@ jobs:
           cache: npm
       - name: Install frontend dependencies
         run: npm ci
-      - name: Frontend and license issuer tests
+      - name: Frontend tests
         run: |
           npm test
-          node --test scripts/issue-license.test.mjs
           npm run build
       - name: Install Rust toolchain
         run: rustup toolchain install stable --profile minimal --component rustfmt
