@@ -71,6 +71,8 @@ export interface RefinementSettings {
   densityThreshold: number
   removeSmallComponents: boolean
   smoothingIterations: number
+  textureResolution?: 'vertex' | '1k' | '2k'
+  targetFaceCount?: number | null
 }
 
 export type GenerationStage = 'analyzing' | 'loading' | 'geometry' | 'surface' | 'preparing' | 'complete' | 'cancelled' | 'failed'
@@ -87,7 +89,7 @@ export interface GeneratedAsset {
   seed: number
   generatedAt: string
   simulated: boolean
-  metrics?: { device: string; totalSeconds: number; faces: number; vertices: number; sourceSha256?: string; canRefine?: boolean; operation?: 'generate' | 'refine'; resolution?: number; refinement?: RefinementSettings; meshQuality?: { watertight: boolean; windingConsistent: boolean; components: number; degenerateFaces: number } }
+  metrics?: { device: string; totalSeconds: number; faces: number; vertices: number; sourceSha256?: string; canRefine?: boolean; operation?: 'generate' | 'refine'; resolution?: number; textureResolution?: string; refinement?: RefinementSettings; meshQuality?: { watertight: boolean; windingConsistent: boolean; components: number; degenerateFaces: number } }
 }
 
 export interface SourceAsset {

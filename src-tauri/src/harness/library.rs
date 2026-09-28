@@ -875,6 +875,8 @@ mod tests {
             density_threshold: 25.0,
             remove_small_components: true,
             smoothing_iterations: 2,
+            texture_resolution: super::super::runtime::TextureResolution::Vertex,
+            target_face_count: None,
         });
         request
     }

@@ -5,9 +5,10 @@ import type { GeneratedAsset, RefinementSettings } from '../harness'
 export default function RefinePanel({ asset, busy, onApply }: {
   asset: GeneratedAsset | null; busy: boolean; onApply: (settings: RefinementSettings) => void
 }) {
-  const [settings, setSettings] = useState<RefinementSettings>({ resolution: 128, densityThreshold: 25, removeSmallComponents: false, smoothingIterations: 0 })
+  const defaults: RefinementSettings = { resolution: 128, densityThreshold: 25, removeSmallComponents: false, smoothingIterations: 0, textureResolution: 'vertex', targetFaceCount: null }
+  const [settings, setSettings] = useState<RefinementSettings>(defaults)
   useEffect(() => {
-    setSettings(asset?.metrics?.refinement ?? { resolution: asset?.metrics?.resolution ?? 128, densityThreshold: 25, removeSmallComponents: false, smoothingIterations: 0 })
+    setSettings(asset?.metrics?.refinement ?? { ...defaults, resolution: asset?.metrics?.resolution ?? 128 })
   }, [asset?.id, asset?.metrics])
   const available = !!asset && !asset.simulated && !!asset.metrics?.canRefine
   return <section className="property-section refine-panel" aria-label="Refine geometry">
@@ -25,6 +26,13 @@ export default function RefinePanel({ asset, busy, onApply }: {
       <input id="smoothing-iterations" type="range" min="0" max="10" step="1" value={settings.smoothingIterations} onChange={event => setSettings({ ...settings, smoothingIterations: Number(event.target.value) })} />
       <label className="refine-checkbox"><input type="checkbox" checked={settings.removeSmallComponents} onChange={event => setSettings({ ...settings, removeSmallComponents: event.target.checked })} />Remove tiny fragments</label>
       <p>Removes disconnected pieces below 0.5% of surface area. Small intentional details may be affected.</p>
+      <label className="field-label spaced" htmlFor="texture-resolution">Texture output</label>
+      <select id="texture-resolution" value={settings.textureResolution ?? 'vertex'} onChange={event => setSettings({ ...settings, textureResolution: event.target.value as RefinementSettings['textureResolution'], targetFaceCount: event.target.value === 'vertex' ? null : (settings.targetFaceCount ?? 20000) })}>
+        <option value="vertex">Vertex colors · fastest</option>
+        <option value="1k">Baked color · 1K</option>
+        <option value="2k">Baked color · 2K</option>
+      </select>
+      {settings.textureResolution && settings.textureResolution !== 'vertex' && <><label className="field-label spaced" htmlFor="target-face-count">Target faces <output>{(settings.targetFaceCount ?? 20000).toLocaleString()}</output></label><input id="target-face-count" type="range" min="256" max="100000" step="256" value={settings.targetFaceCount ?? 20000} onChange={event => setSettings({ ...settings, targetFaceCount: Number(event.target.value) })} /><p>UVs and color are baked locally after optional mesh reduction.</p></>}
       <button className="primary-button full-width" onClick={() => onApply(settings)} disabled={!available || busy}>
         {busy ? <LoaderCircle size={14} className="spin" /> : <SlidersHorizontal size={14} />} Apply refinement <ArrowRight size={13} />
       </button>

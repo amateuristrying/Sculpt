@@ -17,8 +17,9 @@ extraction. This is not a warm, persistent model process.
 Fragment removal drops disconnected pieces smaller than 0.5% of total surface
 area, preserving the largest component. Taubin smoothing applies bounded
 shrink/inflate pairs and re-samples colors at the moved vertices. These are
-conservative tools, not retopology or texture baking; intentional tiny detached
-details may be removed and smoothing can soften edges. Density changes the
+conservative tools, not quad retopology. Optional 1K/2K color baking uses the
+saved vertex colors after UV packing; intentional tiny detached details may be
+removed and smoothing can soften edges. Density changes the
 surface threshold, so lower values can thicken structures or join nearby parts.
 
 ## M4 batch-size measurement, September 17, 2026

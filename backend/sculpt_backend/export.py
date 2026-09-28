@@ -24,3 +24,20 @@ def export_glb(mesh, output):
     visual.vertex_attributes['color'] = colors
     mesh.visual = visual
     atomic_write_bytes(output, mesh.export(file_type='glb', include_normals=True))
+
+
+def export_textured_glb(mesh, image, output):
+    from trimesh.visual.material import PBRMaterial
+    from trimesh.visual.texture import TextureVisuals
+    from .files import atomic_write_bytes
+
+    mesh.visual = TextureVisuals(
+        uv=mesh.visual.uv,
+        material=PBRMaterial(
+            name='Baked color',
+            baseColorTexture=image,
+            metallicFactor=0.0,
+            roughnessFactor=0.8,
+        ),
+    )
+    atomic_write_bytes(output, mesh.export(file_type='glb', include_normals=True))

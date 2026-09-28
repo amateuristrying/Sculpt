@@ -4,7 +4,8 @@ import math
 import numpy as np
 
 DEFAULTS = dict(resolution=128, densityThreshold=25.0,
-                removeSmallComponents=False, smoothingIterations=0)
+                removeSmallComponents=False, smoothingIterations=0,
+                textureResolution='vertex', targetFaceCount=None)
 MIN_COMPONENT_AREA_FRACTION = 0.005
 
 
@@ -33,6 +34,8 @@ def refinement_settings(value=None, default_resolution=128):
         raise ValueError('Smoothing must use between 0 and 10 iterations.')
     if type(settings['removeSmallComponents']) is not bool:
         raise ValueError('Remove small components must be enabled or disabled.')
+    from .texture import validate_texture_settings
+    validate_texture_settings(settings['textureResolution'], settings['targetFaceCount'])
     return settings
 
 

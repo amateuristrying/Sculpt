@@ -37,6 +37,10 @@ pub struct RefinementSettings {
     pub density_threshold: f64,
     pub remove_small_components: bool,
     pub smoothing_iterations: u32,
+    #[serde(default)]
+    pub texture_resolution: TextureResolution,
+    #[serde(default)]
+    pub target_face_count: Option<u32>,
 }
 
 impl RefinementSettings {
@@ -50,8 +54,24 @@ impl RefinementSettings {
                 "Refinement requires resolution 96–256, density 10–40, and smoothing 0–10.".into(),
             );
         }
+        if let Some(faces) = self.target_face_count {
+            if !(256..=250_000).contains(&faces) {
+                return Err("Texture face target must be between 256 and 250000.".into());
+            }
+        }
         Ok(())
     }
+}
+
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TextureResolution {
+    #[default]
+    Vertex,
+    #[serde(rename = "1k")]
+    OneK,
+    #[serde(rename = "2k")]
+    TwoK,
 }
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]

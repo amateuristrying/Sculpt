@@ -134,7 +134,7 @@ def generate(request: dict, root: Path, emit) -> dict:
         mesh = model.extract_mesh(scene_codes, True, resolution=settings['resolution'], threshold=settings['densityThreshold'])[0]
         before_cleanup = {'faces': len(mesh.faces), 'vertices': len(mesh.vertices)}
         mesh, cleanup_metrics = clean_mesh(mesh, settings)
-        if settings['smoothingIterations']:
+        if settings['smoothingIterations'] or settings['textureResolution'] != 'vertex':
             # Re-query color at moved vertices so smoothing does not drag old
             # samples over the surface. mesh remains in TripoSR's Z-up coordinates.
             positions = torch.as_tensor(np.asarray(mesh.vertices), dtype=scene_codes.dtype, device=device)
@@ -143,6 +143,12 @@ def generate(request: dict, root: Path, emit) -> dict:
         raise ValueError("The model returned an empty mesh. Try a clearer object image.")
     if not np.isfinite(mesh.vertices).all():
         raise ValueError("The generated mesh contains invalid coordinates.")
+    texture_metrics = {'textureResolution': 'Vertex colors', 'facesBefore': len(mesh.faces), 'facesAfter': len(mesh.faces), 'reduced': False}
+    if settings['textureResolution'] != 'vertex':
+        from .texture import bake
+        from .export import export_textured_glb
+        resolution = {'1k': 1024, '2k': 2048}[settings['textureResolution']]
+        mesh, image, texture_metrics = bake(mesh, resolution, settings['targetFaceCount'])
     # Diagnostic metrics describe topology; they do not claim semantic accuracy.
     mesh_quality = {'watertight': bool(mesh.is_watertight), 'windingConsistent': bool(mesh.is_winding_consistent),
                     'components': int(len(mesh.split(only_watertight=False))),
@@ -152,13 +158,17 @@ def generate(request: dict, root: Path, emit) -> dict:
     # TripoSR is Z-up. glTF is Y-up. Apply a proper rotation, not a reflection.
     mesh.apply_transform(np.array([[1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1]], dtype=float))
     mesh.metadata.update({"generator": "Sculpt / TripoSR", "simulated": False, "modelRevision": MODEL_REVISION})
-    from .export import export_glb
-    export_glb(mesh, output)
+    if settings['textureResolution'] == 'vertex':
+        from .export import export_glb
+        export_glb(mesh, output)
+    else:
+        from .export import export_textured_glb
+        export_textured_glb(mesh, image, output)
     metrics = {
         "engine": "triposr", "device": device, "quality": quality,
         'operation': operation, 'refinement': settings,
         'queryChunkSize': chunk_size,
-        'cleanup': {**cleanup_metrics, 'before': before_cleanup,
+        'cleanup': {**cleanup_metrics, **texture_metrics, 'before': before_cleanup,
                     'after': {'faces': len(mesh.faces), 'vertices': len(mesh.vertices)}},
         'canRefine': True, 'sceneCacheSha256': hashlib.sha256(cache_output.read_bytes()).hexdigest(),
         'sourceSha256': source_sha, 'maskSha256': mask_sha,
@@ -166,7 +176,7 @@ def generate(request: dict, root: Path, emit) -> dict:
         "torchVersion": torch.__version__, "faces": len(mesh.faces), "vertices": len(mesh.vertices),
         "meshQuality": mesh_quality, "availableMemoryGbAtStart": round(available_gb, 2),
         "background": background,
-        "materials": 1, "textureResolution": "Vertex colors", "format": "GLB",
+        "materials": 1, "textureResolution": texture_metrics['textureResolution'], "format": "GLB",
         "prepareSeconds": round(prepare_seconds, 2),
         "loadSeconds": round(loaded_at - started - prepare_seconds, 2),
         "inferenceSeconds": round(inferred_at - loaded_at, 2) if operation == 'generate' else 0,

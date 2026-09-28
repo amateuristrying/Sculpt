@@ -422,6 +422,8 @@ mod tests {
             density_threshold: 25.0,
             remove_small_components: false,
             smoothing_iterations: 0,
+            texture_resolution: TextureResolution::Vertex,
+            target_face_count: None,
         });
         library
             .begin_job(&refined_id, refined_request.clone())

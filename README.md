@@ -37,7 +37,7 @@ Native bundles appear under `src-tauri/target/release/bundle/`. Local builds use
 - Real cached-scene refinement: extraction resolution 96–256, surface density, small-fragment removal, and Taubin smoothing. Each refinement saves a separate version and reuses the original image inference.
 - Persistent local library with source/asset integrity checks, job history, interrupted-job recovery, and reopening after relaunch.
 - Free local generation, refinement, and export in both development and packaged builds, with no activation or generation quota. Sculpt code is [MIT licensed](LICENSE); model weights and dependencies retain their own licenses.
-- Binary glTF (`.glb`) export through the native macOS save dialog. Reconstructed assets contain geometry, normals, linear vertex colors, and an explicit nonmetallic material. Viewport grids, lights, and technical overlays are excluded. Generated UVs and texture maps are not implemented.
+- Binary glTF (`.glb`) export through the native macOS save dialog. Reconstructed assets contain geometry, normals, linear vertex colors, and an explicit nonmetallic material. Refine can optionally pack UVs with MIT xatlas, reduce faces with MIT fast-simplification, and embed a 1K or 2K color texture in the GLB. Viewport grids, lights, and technical overlays are excluded.
 
 ## Local runtime setup
 
@@ -85,7 +85,7 @@ SCULPT_TEST_IMAGE=/absolute/path/to/object.jpg cargo test --manifest-path src-ta
 
 ## Deliberate prototype limits
 
-TripoSR is a single-image, single-object reconstruction model. It infers unseen surfaces, so clear images with one isolated object produce the most useful results. It does not understand a full scene, guarantee semantic identity, or produce production-ready topology. The current adapter writes geometry and vertex colors; texture baking, decimation, retopology, UV processing, and OBJ/STL export remain planned stages. The Workspace Demo is still available, but it is explicitly labelled and never presented as an AI result.
+TripoSR is a single-image, single-object reconstruction model. It infers unseen surfaces, so clear images with one isolated object produce the most useful results. It does not understand a full scene, guarantee semantic identity, or produce production-ready topology. The current adapter writes geometry and vertex colors; optional texture baking and face reduction are available during cached Refine. Quad retopology and OBJ/STL export remain planned stages. The Workspace Demo is still available, but it is explicitly labelled and never presented as an AI result.
 
 TRELLIS.2, SF3D, MLX, CUDA, ONNX, WebGPU, and native alternatives remain replaceable runtime/engine slots; they are not claimed to be available. The persistent library currently fails closed on damaged or unsupported snapshots; migration from the old trial schema is supported, but general schema migrations and record quarantine remain future work.
 
