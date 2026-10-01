@@ -217,6 +217,7 @@ pub fn validate_glb(bytes: &[u8]) -> Result<(), String> {
         return Err("Generated GLB buffer length does not match its data".into());
     }
     let binary = &binary[..declared_length];
+    validate_embedded_images(&scene, binary)?;
     let meshes = scene["meshes"]
         .as_array()
         .filter(|meshes| !meshes.is_empty())
@@ -248,6 +249,50 @@ pub fn validate_glb(bytes: &[u8]) -> Result<(), String> {
                     .all(|value| value.is_finite())
                 {
                     return Err("Generated GLB has non-finite vertex positions".into());
+                }
+            }
+            if let Some(material_index) = primitive.get("material") {
+                let material = scene["materials"]
+                    .as_array()
+                    .and_then(|items| items.get(integer(material_index).ok()?))
+                    .ok_or("Invalid GLB material reference")?;
+                if let Some(texture) = material["pbrMetallicRoughness"].get("baseColorTexture") {
+                    let texture_index = integer(&texture["index"])?;
+                    let source = scene["textures"]
+                        .as_array()
+                        .and_then(|items| items.get(texture_index))
+                        .ok_or("Invalid GLB texture reference")?;
+                    scene["images"]
+                        .as_array()
+                        .and_then(|items| items.get(integer(&source["source"]).ok()?))
+                        .ok_or("Invalid GLB texture image")?;
+                    if texture.get("texCoord").is_some_and(|value| value != 0) {
+                        return Err("Generated textures must use TEXCOORD_0".into());
+                    }
+                    let uv = accessor_data(
+                        &scene,
+                        &primitive["attributes"]["TEXCOORD_0"],
+                        binary,
+                        "VEC2",
+                        2,
+                        &[5126],
+                    )?;
+                    if uv.count != positions.count {
+                        return Err("Texture coordinates do not match the vertices".into());
+                    }
+                    for vertex in 0..uv.count {
+                        for axis in 0..2 {
+                            let offset = vertex * uv.stride + axis * 4;
+                            let value = f32::from_le_bytes(
+                                uv.bytes[offset..offset + 4].try_into().unwrap(),
+                            );
+                            if !value.is_finite() {
+                                return Err(
+                                    "Generated GLB has non-finite texture coordinates".into()
+                                );
+                            }
+                        }
+                    }
                 }
             }
             let indices = primitive
@@ -397,6 +442,49 @@ fn accessor_data<'a>(
     })
 }
 
+fn validate_embedded_images(scene: &serde_json::Value, binary: &[u8]) -> Result<(), String> {
+    let Some(images) = scene.get("images") else {
+        return Ok(());
+    };
+    for image in images.as_array().ok_or("Invalid GLB images")? {
+        if image["mimeType"] != "image/png" {
+            return Err("Generated textures must be embedded PNGs".into());
+        }
+        let view = scene["bufferViews"]
+            .as_array()
+            .and_then(|items| items.get(integer(&image["bufferView"]).ok()?))
+            .ok_or("Invalid GLB image buffer")?;
+        if view["buffer"] != 0 {
+            return Err("Invalid GLB image buffer".into());
+        }
+        let start = view
+            .get("byteOffset")
+            .map(integer)
+            .transpose()?
+            .unwrap_or(0);
+        let end = start
+            .checked_add(integer(&view["byteLength"])?)
+            .ok_or("Invalid GLB image length")?;
+        let bytes = binary.get(start..end).ok_or("Invalid GLB image bounds")?;
+        let reader = image::ImageReader::with_format(Cursor::new(bytes), image::ImageFormat::Png);
+        let (width, height) = reader
+            .into_dimensions()
+            .map_err(|_| "Invalid texture PNG")?;
+        if width == 0 || height == 0 || width > 4096 || height > 4096 {
+            return Err("Generated texture exceeds 4096 pixels per side".into());
+        }
+        let mut reader =
+            image::ImageReader::with_format(Cursor::new(bytes), image::ImageFormat::Png);
+        let mut limits = image::Limits::default();
+        limits.max_alloc = Some(128 * 1024 * 1024);
+        reader.limits(limits);
+        reader
+            .decode()
+            .map_err(|_| "Cannot decode embedded texture PNG")?;
+    }
+    Ok(())
+}
+
 fn validate_scene_graph(scene: &serde_json::Value, mesh_count: usize) -> Result<(), String> {
     let invalid = "Generated GLB has no valid renderable scene";
     let nodes = scene["nodes"].as_array().ok_or(invalid)?;
@@ -538,6 +626,70 @@ fn test_encode_glb(document: &serde_json::Value, binary: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn textured_parts() -> (serde_json::Value, Vec<u8>) {
+        let (mut document, mut binary) = triangle_parts();
+        for value in [0.0f32, 0.0, 1.0, 0.0, 0.0, 1.0] {
+            binary.extend(value.to_le_bytes());
+        }
+        let mut png = Cursor::new(Vec::new());
+        image::DynamicImage::new_rgb8(2, 2)
+            .write_to(&mut png, image::ImageFormat::Png)
+            .unwrap();
+        let image_length = png.get_ref().len();
+        binary.extend(png.into_inner());
+        while binary.len() % 4 != 0 {
+            binary.push(0);
+        }
+        document["buffers"][0]["byteLength"] = binary.len().into();
+        document["bufferViews"].as_array_mut().unwrap().extend([
+            serde_json::json!({"buffer":0, "byteOffset":40, "byteLength":24}),
+            serde_json::json!({"buffer":0, "byteOffset":64, "byteLength":image_length}),
+        ]);
+        document["accessors"]
+            .as_array_mut()
+            .unwrap()
+            .push(serde_json::json!({"bufferView":2,"componentType":5126,"type":"VEC2","count":3}));
+        document["images"] = serde_json::json!([{"bufferView":3,"mimeType":"image/png"}]);
+        document["textures"] = serde_json::json!([{"source":0}]);
+        document["materials"] =
+            serde_json::json!([{"pbrMetallicRoughness":{"baseColorTexture":{"index":0}}}]);
+        document["meshes"][0]["primitives"][0]["material"] = 0.into();
+        document["meshes"][0]["primitives"][0]["attributes"]["TEXCOORD_0"] = 2.into();
+        (document, binary)
+    }
+
+    #[test]
+    fn accepts_baked_texture_and_rejects_broken_image_uv_or_material() {
+        let (document, binary) = textured_parts();
+        assert!(validate_glb(&test_encode_glb(&document, &binary)).is_ok());
+        for category in ["image", "texture", "uv", "material"] {
+            let mut bad = document.clone();
+            match category {
+                "image" => bad["images"][0]["bufferView"] = 99.into(),
+                "texture" => bad["textures"][0]["source"] = 99.into(),
+                "uv" => bad["accessors"][2]["count"] = 2.into(),
+                _ => bad["meshes"][0]["primitives"][0]["material"] = 99.into(),
+            }
+            assert!(
+                validate_glb(&test_encode_glb(&bad, &binary)).is_err(),
+                "{category}"
+            );
+        }
+        let mut corrupt = binary.clone();
+        corrupt[64..].fill(0);
+        assert!(validate_glb(&test_encode_glb(&document, &corrupt)).is_err());
+        let mut invalid_uv = binary;
+        invalid_uv[40..44].copy_from_slice(&f32::NAN.to_le_bytes());
+        assert!(validate_glb(&test_encode_glb(&document, &invalid_uv)).is_err());
+    }
+
+    #[test]
+    #[ignore = "Requires a real local reconstruction asset"]
+    fn validates_real_textured_asset() {
+        let path = std::env::var("SCULPT_TEST_TEXTURED_GLB").expect("Set SCULPT_TEST_TEXTURED_GLB");
+        validate_glb(&std::fs::read(path).unwrap()).unwrap();
+    }
 
     #[test]
     fn invalid_sources_are_rejected_before_writing() {

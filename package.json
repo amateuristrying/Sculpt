@@ -17,6 +17,7 @@
     "backend:test": ".sculpt-runtime/venv/bin/python -m pytest backend/tests -q",
     "backend:generate": ".sculpt-runtime/venv/bin/python backend/generate.py",
     "backend:benchmark": ".sculpt-runtime/venv/bin/python backend/benchmark.py",
+    "backend:benchmark-texture": ".sculpt-runtime/venv/bin/python backend/benchmark_texture.py",
     "backend:eval": ".sculpt-runtime/venv/bin/python backend/evaluate.py"
   },
   "dependencies": {

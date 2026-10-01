@@ -27,12 +27,20 @@ export default function RefinePanel({ asset, busy, onApply }: {
       <label className="refine-checkbox"><input type="checkbox" checked={settings.removeSmallComponents} onChange={event => setSettings({ ...settings, removeSmallComponents: event.target.checked })} />Remove tiny fragments</label>
       <p>Removes disconnected pieces below 0.5% of surface area. Small intentional details may be affected.</p>
       <label className="field-label spaced" htmlFor="texture-resolution">Texture output</label>
-      <select id="texture-resolution" value={settings.textureResolution ?? 'vertex'} onChange={event => setSettings({ ...settings, textureResolution: event.target.value as RefinementSettings['textureResolution'], targetFaceCount: event.target.value === 'vertex' ? null : (settings.targetFaceCount ?? 20000) })}>
+      <select id="texture-resolution" value={settings.textureResolution ?? 'vertex'} onChange={event => setSettings({ ...settings, textureResolution: event.target.value as RefinementSettings['textureResolution'], targetFaceCount: event.target.value === 'vertex' ? null : (settings.targetFaceCount ?? null) })}>
         <option value="vertex">Vertex colors · fastest</option>
         <option value="1k">Baked color · 1K</option>
         <option value="2k">Baked color · 2K</option>
       </select>
-      {settings.textureResolution && settings.textureResolution !== 'vertex' && <><label className="field-label spaced" htmlFor="target-face-count">Target faces <output>{(settings.targetFaceCount ?? 20000).toLocaleString()}</output></label><input id="target-face-count" type="range" min="256" max="100000" step="256" value={settings.targetFaceCount ?? 20000} onChange={event => setSettings({ ...settings, targetFaceCount: Number(event.target.value) })} /><p>UVs and color are baked locally after optional mesh reduction.</p></>}
+      {settings.textureResolution && settings.textureResolution !== 'vertex' && <>
+        <label className="field-label spaced" htmlFor="target-face-count">Target faces</label>
+        <select id="target-face-count" value={settings.targetFaceCount ?? ''} onChange={event => setSettings({ ...settings, targetFaceCount: event.target.value ? Number(event.target.value) : null })}>
+          <option value="">Keep original geometry</option>
+          {[5000, 10000, 20000, 50000].map(value => <option key={value} value={value}>{value.toLocaleString()}</option>)}
+          {settings.targetFaceCount && ![5000, 10000, 20000, 50000].includes(settings.targetFaceCount) && <option value={settings.targetFaceCount}>{settings.targetFaceCount.toLocaleString()}</option>}
+        </select>
+        <p>Bakes color from the saved scene. Face targets are approximate; closed surfaces are preserved. Reducing faces may remove small details.</p>
+      </>}
       <button className="primary-button full-width" onClick={() => onApply(settings)} disabled={!available || busy}>
         {busy ? <LoaderCircle size={14} className="spin" /> : <SlidersHorizontal size={14} />} Apply refinement <ArrowRight size={13} />
       </button>

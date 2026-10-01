@@ -18,7 +18,7 @@ Fragment removal drops disconnected pieces smaller than 0.5% of total surface
 area, preserving the largest component. Taubin smoothing applies bounded
 shrink/inflate pairs and re-samples colors at the moved vertices. These are
 conservative tools, not quad retopology. Optional 1K/2K color baking uses the
-saved vertex colors after UV packing; intentional tiny detached details may be
+cached neural color field after UV packing; intentional tiny detached details may be
 removed and smoothing can soften edges. Density changes the
 surface threshold, so lower values can thicken structures or join nearby parts.
 

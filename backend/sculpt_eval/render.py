@@ -10,12 +10,35 @@ from PIL import Image
 DEFAULT_CAMERA = {'azimuth': 0.0, 'elevation': 0.0, 'distance': 1.9, 'fov': 40.0}
 
 
+def srgb_to_linear(rgb):
+    return np.where(rgb <= .04045, rgb / 12.92, ((rgb + .055) / 1.055) ** 2.4)
+
+
+class RenderMesh(tuple):
+    """Keep the existing three-array API, with optional per-face texture data."""
+    def __new__(cls, vertices, faces, colors, uvs, textures, texture_ids):
+        result = super().__new__(cls, (vertices, faces, colors))
+        result.uvs, result.textures, result.texture_ids = uvs, textures, texture_ids
+        return result
+
+
+def sample_texture(texture, uv):
+    # Bilinear sampling of decoded linear RGB, as in an sRGB glTF sampler.
+    x = np.clip(uv[..., 0] * texture.shape[1] - .5, 0, texture.shape[1] - 1)
+    y = np.clip((1 - uv[..., 1]) * texture.shape[0] - .5, 0, texture.shape[0] - 1)
+    x0, y0 = np.floor(x).astype(int), np.floor(y).astype(int)
+    x1, y1 = np.minimum(x0 + 1, texture.shape[1] - 1), np.minimum(y0 + 1, texture.shape[0] - 1)
+    wx, wy = (x - x0)[..., None], (y - y0)[..., None]
+    return (texture[y0, x0] * (1 - wx) + texture[y0, x1] * wx) * (1 - wy) + (texture[y1, x0] * (1 - wx) + texture[y1, x1] * wx) * wy
+
+
 def load_mesh(path):
     import trimesh
     from benchmark import validate_glb
     validate_glb(path)
     scene = trimesh.load(path, force='scene', process=False)
     vertices, faces, colors = [], [], []
+    uvs, textures, texture_ids = [], [], []
     offset = 0
     for node in scene.graph.nodes_geometry:
         transform, name = scene.graph[node]
@@ -27,8 +50,17 @@ def load_mesh(path):
         if rgba is None:
             rgba = getattr(mesh.visual, 'vertex_colors', np.full((len(mesh.vertices), 4), 180))
         colors.append(np.asarray(rgba)[:, :3].astype(float) / 255)
+        texture = getattr(getattr(mesh.visual, 'material', None), 'baseColorTexture', None)
+        if texture is not None:
+            textures.append(srgb_to_linear(np.asarray(texture.convert('RGB'), dtype=np.float32) / 255))
+            uvs.append(np.asarray(mesh.visual.uv))
+            texture_ids.extend([len(textures) - 1] * len(mesh.faces))
+        else:
+            uvs.append(np.zeros((len(mesh.vertices), 2)))
+            texture_ids.extend([-1] * len(mesh.faces))
         offset += len(mesh.vertices)
-    return np.concatenate(vertices), np.concatenate(faces), np.concatenate(colors)
+    return RenderMesh(np.concatenate(vertices), np.concatenate(faces), np.concatenate(colors),
+                      np.concatenate(uvs), textures, np.asarray(texture_ids))
 
 
 def project(vertices, camera, size):
@@ -81,6 +113,9 @@ def render(mesh, camera=None, size=256):
         covered = (w0 >= -1e-9) & (w1 >= -1e-9) & (w2 >= -1e-9) & (depth < buffer[region])
         buffer[region][covered] = depth[covered]
         rgb = (weights @ colors[faces[index]]) / np.maximum(inv_depth[..., None], 1e-12)
+        if hasattr(mesh, 'textures') and mesh.texture_ids[index] >= 0:
+            uv = (weights @ mesh.uvs[faces[index]]) / np.maximum(inv_depth[..., None], 1e-12)
+            rgb = sample_texture(mesh.textures[mesh.texture_ids[index]], uv)
         linear[region][covered] = (rgb * shade[index])[covered]
     mask = np.isfinite(buffer)
     srgb = np.where(linear <= .0031308, linear * 12.92, 1.055 * np.maximum(linear, 0) ** (1 / 2.4) - .055)

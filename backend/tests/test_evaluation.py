@@ -282,3 +282,20 @@ def test_evaluation_does_not_silently_choose_a_device(tmp_path):
     with pytest.raises(ValueError, match='explicit'):
         run(tmp_path / 'absent.json', tmp_path / 'output', 'draft', device='auto')
     assert not (tmp_path / 'output').exists()
+
+
+def test_textured_glb_renderer_uses_png_orientation_and_color(tmp_path):
+    from sculpt_backend.export import export_textured_glb
+    # A flat square faces the fixed +X camera. Its top has high V.
+    mesh = trimesh.Trimesh(vertices=[[0, -.4, .4], [0, -.4, -.4], [0, .4, -.4], [0, .4, .4]],
+                           faces=[[0, 1, 2], [0, 2, 3]], process=False)
+    mesh.visual = trimesh.visual.texture.TextureVisuals(uv=[[0, 0], [1, 0], [1, 1], [0, 1]])
+    pixels = np.zeros((16, 16, 3), dtype=np.uint8)
+    pixels[:8] = [255, 0, 0]
+    pixels[8:] = [0, 0, 255]
+    path = tmp_path / 'baked.glb'
+    export_textured_glb(mesh, Image.fromarray(pixels), path)
+    image, mask = render(load_mesh(path), size=64)
+    assert mask[24, 32] and mask[40, 32]
+    assert np.asarray(image)[24, 32].tolist() == [255, 0, 0]
+    assert np.asarray(image)[40, 32].tolist() == [0, 0, 255]

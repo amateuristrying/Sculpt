@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import { readFileSync, existsSync } from 'node:fs'
 import path from 'node:path'
+import { createHash } from 'node:crypto'
 
 // Authored tetrahedron fixture: real, self-contained GLB bytes, no model weights
 // or personal photo needed. Neural reconstruction is tested in the native suite.
@@ -265,26 +266,57 @@ test('failed and cancelled refinements preserve the saved asset and can be retri
   expect(await page.evaluate(() => (window as any).__sculptTest.saved.jobs.length)).toBe(2)
 })
 
+test('baked texture controls send the selected settings without new image inference', async ({ page }) => {
+  await nativeBridge(page, true); await page.goto('/')
+  await page.getByRole('button', { name: 'Open Sculpt', exact: true }).click()
+  await page.locator('input[type=file]').setInputFiles(await imageFixture(page))
+  await approveMask(page)
+  await page.getByRole('button', { name: 'Generate 3D', exact: true }).click()
+  await expect(page.locator('.viewport-title-tag')).toHaveText('RECONSTRUCTED')
+  await page.getByLabel('Texture output').selectOption('1k')
+  await expect(page.getByLabel('Target faces')).toHaveValue('')
+  await page.getByLabel('Target faces').selectOption('10000')
+  await page.getByRole('button', { name: 'Apply refinement' }).click()
+  await expect(page.getByText('Refined version saved', { exact: true })).toBeVisible()
+  const calls = await page.evaluate(() => (window as any).__sculptTest.calls)
+  expect(calls.findLast((call: any) => call.command === 'refine_asset').args.settings).toMatchObject({ textureResolution: '1k', targetFaceCount: 10000 })
+  expect(calls.filter((call: any) => call.command === 'generate_asset')).toHaveLength(1)
+  await page.getByLabel('Texture output').selectOption('vertex')
+  await expect(page.getByLabel('Target faces')).toHaveCount(0)
+})
+
 test('benchmark meshes load in every view and export unchanged', async ({ page }) => {
   const folder = process.env.SCULPT_BENCHMARK_OUTPUT
   test.skip(!folder || !existsSync(path.join(folder, 'report.json')), 'Set SCULPT_BENCHMARK_OUTPUT to a completed local benchmark')
   const results = JSON.parse(readFileSync(path.join(folder!, 'report.json'), 'utf8')).results
   const successful = results.filter((item: any) => item.validResult)
   expect(successful.length).toBeGreaterThan(0)
-  // The real-photo set is much larger than the original six showcase fixtures.
-  // Keep a bounded per-asset allowance for five screenshots and byte-exact export.
-  test.setTimeout(Math.max(120_000, successful.length * 20_000))
+  // The backend comparison exercises every real-photo case. The browser test
+  // samples four representative meshes so CI also covers the actual display,
+  // controls, camera interaction and native export without taking 10+ minutes.
+  const browserCases = successful.length <= 4 ? successful :
+    [0, 1, 2, 3].map(index => successful[Math.round(index * (successful.length - 1) / 3)])
+  test.setTimeout(180_000)
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message))
   await nativeBridge(page, true); await page.goto('/')
   await page.getByRole('button', { name: 'Open Sculpt' }).click()
-  for (const result of successful) {
+  let currentBytes: Buffer = Buffer.alloc(0)
+  await page.route('**/__sculpt-fixture.glb', route => route.fulfill({ body: currentBytes, contentType: 'model/gltf-binary' }))
+  for (const result of browserCases) {
+    console.log(`Checking real asset: ${result.id}`)
     const request = JSON.parse(readFileSync(path.join(folder!, result.id, 'request.json'), 'utf8'))
     const bytes = readFileSync(path.join(folder!, result.id, 'mesh.glb'))
-    await page.evaluate(({ glb, metrics }) => { Object.assign((window as any).__sculptTest, { glb, metrics }) }, { glb: [...bytes], metrics: result.metrics })
+    currentBytes = bytes
+    // Avoid serializing millions of numbers over the automation protocol.
+    // The fake native IPC continues to deliver raw GLB bytes to the app.
+    await page.evaluate(async metrics => {
+      const glb = new Uint8Array(await (await fetch('/__sculpt-fixture.glb')).arrayBuffer())
+      Object.assign((window as any).__sculptTest, { glb, metrics })
+    }, result.metrics)
     await page.locator('input[type=file]').setInputFiles(request.sourcePath)
-    await expect(page.getByRole('button', { name: 'Generate 3D', exact: true })).toBeEnabled()
+    await expect(page.locator('.generate-button')).toBeEnabled()
     await approveMask(page)
-  await page.getByRole('button', { name: 'Generate 3D', exact: true }).click()
+    await page.getByRole('button', { name: 'Generate 3D', exact: true }).click()
     await expect(page.locator('.viewport-title-tag')).toHaveText('RECONSTRUCTED')
     await expect(page.locator('.asset-metadata')).toContainText(result.metrics.faces.toLocaleString('en-US'))
     const pixels = new Set<string>()
@@ -302,8 +334,14 @@ test('benchmark meshes load in every view and export unchanged', async ({ page }
     await page.locator('.viewport-stage').screenshot({ path: `test-results/${result.id}-reverse.png` })
     await page.getByRole('button', { name: 'Export', exact: true }).last().click()
     await page.getByRole('button', { name: 'Export GLB', exact: true }).click()
-    expect(Buffer.from(await page.evaluate(() => (window as any).__sculptTest.exported))).toEqual(bytes)
-    const calls = await page.evaluate(() => (window as any).__sculptTest.calls)
+    const exportedHash = await page.evaluate(async () => {
+      const digest = await crypto.subtle.digest('SHA-256', Uint8Array.from((window as any).__sculptTest.exported))
+      return [...new Uint8Array(digest)].map(value => value.toString(16).padStart(2, '0')).join('')
+    })
+    expect(exportedHash).toBe(createHash('sha256').update(bytes).digest('hex'))
+    const calls = await page.evaluate(() => (window as any).__sculptTest.calls.map((call: any) => ({
+      command: call.command, args: { request: call.args?.request, dataUrl: call.args?.dataUrl?.slice(0, 50) },
+    })))
     expect(calls.findLast((call: any) => call.command === 'generate_asset').args.request).toMatchObject({ sourceId: 'validated-source', engineId: 'triposr', background: 'auto' })
     expect(calls.findLast((call: any) => call.command === 'import_source').args.dataUrl).toContain(';base64,')
     await page.getByRole('button', { name: 'Reset camera (F)' }).click()

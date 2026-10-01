@@ -43,12 +43,14 @@ def write_verified_manifest(root, extra_files=()):
     import psutil
     import rembg
     import skimage
+    import xatlas
+    import fast_simplification
     files = {}
     for name, expected in SPEC['artifacts'].items():
         if checksum(root / name) != expected:
             raise ValueError(f'Checksum mismatch for {name}. Remove the damaged file and retry setup.')
     names = [*SPEC['artifacts'], 'venv/bin/python', *extra_files]
-    names += [str(Path(module.__file__).relative_to(root)) for module in (torch, psutil, rembg, skimage)]
+    names += [str(Path(module.__file__).relative_to(root)) for module in (torch, psutil, rembg, skimage, xatlas, fast_simplification)]
     names += [str(path.relative_to(root)) for path in (root / 'TripoSR' / 'tsr').rglob('*.py')]
     for name in names:
         stat = (root / name).stat()

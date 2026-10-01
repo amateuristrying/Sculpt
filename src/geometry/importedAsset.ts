@@ -1,4 +1,4 @@
-import { Box3, BufferGeometry, Material, Matrix4, Mesh, Vector3 } from 'three'
+import { Box3, BufferGeometry, Material, Matrix4, Mesh, MeshStandardMaterial, Texture, Vector3 } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import type { AssetMetadata } from './sculpture'
 
@@ -32,15 +32,25 @@ export async function parseGeneratedGlb(bytes: ArrayBuffer): Promise<ImportedAss
   const transform = new Matrix4().makeTranslation(-center.x * scale, -bounds.min.y * scale + 0.08, -center.z * scale)
     .multiply(new Matrix4().makeScale(scale, scale, scale))
   for (const { geometry } of parts) geometry.applyMatrix4(transform)
+  const textures = new Set<Texture>()
+  for (const material of materials) {
+    for (const value of Object.values(material)) if (value instanceof Texture) textures.add(value)
+  }
+  const colorMaps = [...materials].flatMap(material => material instanceof MeshStandardMaterial && material.map ? [material.map] : [])
+  const resolutions = [...new Set(colorMaps.map(map => {
+    const image = map.image as { width?: number; height?: number } | undefined
+    return image?.width && image.height ? `${image.width} × ${image.height}` : 'Baked color'
+  }))]
   const metadata: AssetMetadata = {
     vertices: parts.reduce((sum, part) => sum + part.geometry.getAttribute('position').count, 0),
     faces: parts.reduce((sum, part) => sum + (part.geometry.index?.count ?? part.geometry.getAttribute('position').count) / 3, 0),
     materials: materials.size,
-    textureResolution: parts.some(part => part.geometry.hasAttribute('color')) ? 'Vertex colors' : 'None',
+    textureResolution: resolutions.length ? resolutions.join(', ') : parts.some(part => part.geometry.hasAttribute('color')) ? 'Vertex colors' : 'None',
     format: 'GLB',
   }
   return { bytes, parts, metadata, dispose() {
     parts.forEach(part => part.geometry.dispose())
     materials.forEach(material => material.dispose())
+    textures.forEach(texture => texture.dispose())
   } }
 }

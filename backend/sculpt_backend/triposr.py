@@ -28,7 +28,6 @@ def generate(request: dict, root: Path, emit) -> dict:
     import torch
 
     from .images import prepare_image
-    from .marching import install_cpu_operator
     from .memory import check_memory
     from .refinement import clean_mesh, refinement_settings, check_refinement_memory
     from .scene_cache import CACHE_FILENAME, read_scene_cache, write_scene_cache, validate_source_hash
@@ -92,34 +91,7 @@ def generate(request: dict, root: Path, emit) -> dict:
         emit('analyzing', 3, 'Restoring the saved scene; image reconstruction will be reused')
     prepare_seconds = time.monotonic() - started
     emit('loading', 12, f"Loading TripoSR {'surface decoder' if operation == 'refine' else 'model'} on {'Metal' if device == 'mps' else 'CPU'}")
-    sys.path.insert(0, str(root / "TripoSR"))
-    install_cpu_operator()
-    from tsr.system import TSR
-    from omegaconf import OmegaConf
-
-    config = OmegaConf.load(root / "models" / "triposr" / "config.yaml")
-    OmegaConf.resolve(config)
-    if operation == 'refine':
-        from tsr.utils import find_class
-
-        class SceneDecoder(TSR):
-            # Retain pinned upstream extraction behavior while loading only the
-            # modules needed to query a saved scene. No image encoder or transformer.
-            def configure(self):
-                self.decoder = find_class(self.cfg.decoder_cls)(self.cfg.decoder)
-                self.renderer = find_class(self.cfg.renderer_cls)(self.cfg.renderer)
-                self.isosurface_helper = None
-
-        model = SceneDecoder(config)
-    else:
-        model = TSR(config)
-    # Only tensors are accepted; never unpickle arbitrary model code.
-    checkpoint = torch.load(root / "models" / "triposr" / "model.ckpt", map_location="cpu", weights_only=True, mmap=True)
-    if operation == 'refine':
-        checkpoint = {key: value for key, value in checkpoint.items() if key.startswith(('decoder.', 'renderer.'))}
-    model.load_state_dict(checkpoint)
-    del checkpoint
-    model.eval().to(device)
+    model = load_model(root, device, decoder_only=operation == 'refine')
     model.renderer.set_chunk_size(chunk_size)
     loaded_at = time.monotonic()
     emit('geometry', 25, 'Reconstructing geometry from the image' if operation == 'generate' else 'Reusing the saved scene representation')
@@ -134,7 +106,7 @@ def generate(request: dict, root: Path, emit) -> dict:
         mesh = model.extract_mesh(scene_codes, True, resolution=settings['resolution'], threshold=settings['densityThreshold'])[0]
         before_cleanup = {'faces': len(mesh.faces), 'vertices': len(mesh.vertices)}
         mesh, cleanup_metrics = clean_mesh(mesh, settings)
-        if settings['smoothingIterations'] or settings['textureResolution'] != 'vertex':
+        if settings['smoothingIterations'] and settings['textureResolution'] == 'vertex':
             # Re-query color at moved vertices so smoothing does not drag old
             # samples over the surface. mesh remains in TripoSR's Z-up coordinates.
             positions = torch.as_tensor(np.asarray(mesh.vertices), dtype=scene_codes.dtype, device=device)
@@ -146,13 +118,27 @@ def generate(request: dict, root: Path, emit) -> dict:
     texture_metrics = {'textureResolution': 'Vertex colors', 'facesBefore': len(mesh.faces), 'facesAfter': len(mesh.faces), 'reduced': False}
     if settings['textureResolution'] != 'vertex':
         from .texture import bake
-        from .export import export_textured_glb
         resolution = {'1k': 1024, '2k': 2048}[settings['textureResolution']]
-        mesh, image, texture_metrics = bake(mesh, resolution, settings['targetFaceCount'])
+        emit('surface', 65, 'Reducing geometry and unwrapping the UV atlas')
+        def query_colors(positions):
+            with torch.inference_mode():
+                points = torch.as_tensor(positions, dtype=scene_codes.dtype, device=device)
+                return model.renderer.query_triplane(model.decoder, points, scene_codes[0])['color'].cpu().numpy()
+
+        last_progress = [0]
+        def baking_progress(fraction):
+            percent = 70 + int(fraction * 20)
+            if percent > last_progress[0]:
+                emit('surface', percent, 'Baking color from the saved neural scene')
+                last_progress[0] = percent
+
+        bake_started = time.monotonic()
+        mesh, image, texture_metrics = bake(mesh, resolution, settings['targetFaceCount'], query_colors,
+                                             progress=baking_progress)
+        texture_metrics['bakeSeconds'] = round(time.monotonic() - bake_started, 2)
     # Diagnostic metrics describe topology; they do not claim semantic accuracy.
-    mesh_quality = {'watertight': bool(mesh.is_watertight), 'windingConsistent': bool(mesh.is_winding_consistent),
-                    'components': int(len(mesh.split(only_watertight=False))),
-                    'degenerateFaces': int((mesh.area_faces <= 1e-12).sum())}
+    from .texture import topology
+    mesh_quality = texture_metrics.get('meshQuality') or topology(mesh)
     extracted_at = time.monotonic()
     emit("preparing", 92, "Writing the reconstructed GLB asset")
     # TripoSR is Z-up. glTF is Y-up. Apply a proper rotation, not a reflection.
@@ -190,3 +176,38 @@ def generate(request: dict, root: Path, emit) -> dict:
     from .files import atomic_write_bytes
     atomic_write_bytes(output.parent / "metrics.json", json.dumps(metrics, indent=2).encode("utf-8"))
     return metrics
+
+
+def load_model(root, device, *, decoder_only=False):
+    """Use the same pinned decoder for jobs and isolated texture evaluation."""
+    import torch
+    from .marching import install_cpu_operator
+    sys.path.insert(0, str(root / "TripoSR"))
+    install_cpu_operator()
+    from tsr.system import TSR
+    from omegaconf import OmegaConf
+
+    config = OmegaConf.load(root / "models" / "triposr" / "config.yaml")
+    OmegaConf.resolve(config)
+    if decoder_only:
+        from tsr.utils import find_class
+
+        class SceneDecoder(TSR):
+            # Retain pinned upstream extraction behavior while loading only the
+            # modules needed to query a saved scene. No image encoder or transformer.
+            def configure(self):
+                self.decoder = find_class(self.cfg.decoder_cls)(self.cfg.decoder)
+                self.renderer = find_class(self.cfg.renderer_cls)(self.cfg.renderer)
+                self.isosurface_helper = None
+
+        model = SceneDecoder(config)
+    else:
+        model = TSR(config)
+    # Only tensors are accepted; never unpickle arbitrary model code.
+    checkpoint = torch.load(root / "models" / "triposr" / "model.ckpt", map_location="cpu", weights_only=True, mmap=True)
+    if decoder_only:
+        checkpoint = {key: value for key, value in checkpoint.items() if key.startswith(('decoder.', 'renderer.'))}
+    model.load_state_dict(checkpoint)
+    del checkpoint
+    model.eval().to(device)
+    return model
