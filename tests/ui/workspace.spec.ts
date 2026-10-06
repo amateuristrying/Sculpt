@@ -144,6 +144,10 @@ async function nativeBridge(page: Page, installed: boolean) {
             if (!saved.jobs.some((job: any) => job.id === args.assetId)) throw new Error('Asset unavailable')
             host.__sculptTest.exported = [...(assets.get(args.assetId) || fixture)]; return '/test/export.glb'
           }
+          case 'save_generated_stl': {
+            if (!saved.jobs.some((job: any) => job.id === args.assetId)) throw new Error('Asset unavailable')
+            return host.__sculptTest.cancelExport ? null : '/test/export.stl'
+          }
           case 'save_glb': host.__sculptTest.exported = args.bytes; return '/test/export.glb'
           default: throw new Error(`Unexpected IPC command: ${command}`)
         }
@@ -240,6 +244,20 @@ test('saved asset can be refined, reopened after reload, and exported without an
   expect(state.calls.findLast((call: any) => call.command === 'save_generated_glb').args).toMatchObject({ assetId: original })
   expect(state.calls.some((call: any) => call.command === 'generate_asset' || call.command === 'save_glb')).toBe(false)
   expect(errors).toEqual([])
+  await page.getByRole('button', { name: 'Export', exact: true }).last().click()
+  await page.getByRole('button', { name: 'STL Geometry for printing' }).click()
+  await page.getByLabel('Object height (mm)').fill('0')
+  await expect(page.getByRole('button', { name: 'Export STL', exact: true })).toBeDisabled()
+  await page.getByLabel('Object height (mm)').fill('120')
+  await page.evaluate(() => { (window as any).__sculptTest.cancelExport = true })
+  await page.getByRole('button', { name: 'Export STL', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Export STL', exact: true })).toBeEnabled()
+  await page.screenshot({ path: 'test-results/export-stl.png' })
+  await page.evaluate(() => { (window as any).__sculptTest.cancelExport = false })
+  await page.getByRole('button', { name: 'Export STL', exact: true }).click()
+  await expect(page.getByLabel('Object height (mm)')).toHaveCount(0)
+  const exported = await page.evaluate(() => (window as any).__sculptTest.calls.findLast((call: any) => call.command === 'save_generated_stl'))
+  expect(exported.args).toEqual({ assetId: original, defaultName: 'tetrahedron.stl', heightMm: 120 })
 })
 
 test('failed and cancelled refinements preserve the saved asset and can be retried', async ({ page }) => {

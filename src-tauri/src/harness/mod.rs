@@ -2,6 +2,7 @@ pub mod assets;
 pub mod cache;
 pub mod catalog;
 pub mod engines;
+pub mod exports;
 pub mod hardware;
 pub mod library;
 pub mod masks;

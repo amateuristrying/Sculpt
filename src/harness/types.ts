@@ -143,5 +143,6 @@ export interface SculptHarness {
   generate(request: GenerationRequest, onProgress: (progress: GenerationProgress) => void, signal?: AbortSignal): Promise<GeneratedAsset>
   refine(parentAssetId: string, settings: RefinementSettings, onProgress: (progress: GenerationProgress) => void, signal?: AbortSignal): Promise<GeneratedAsset>
   saveGeneratedGlb(assetId: string, defaultName: string): Promise<string | null>
+  saveGeneratedStl(assetId: string, defaultName: string, heightMm: number): Promise<string | null>
   saveGlb(bytes: ArrayBuffer, defaultName: string): Promise<string | null>
 }

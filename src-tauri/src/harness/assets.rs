@@ -331,29 +331,29 @@ pub fn validate_glb(bytes: &[u8]) -> Result<(), String> {
     Ok(())
 }
 
-fn integer(value: &serde_json::Value) -> Result<usize, String> {
+pub(super) fn integer(value: &serde_json::Value) -> Result<usize, String> {
     value
         .as_u64()
         .and_then(|number| usize::try_from(number).ok())
         .ok_or_else(|| "Generated GLB has an invalid buffer or accessor value".into())
 }
 
-struct AccessorData<'a> {
+pub(super) struct AccessorData<'a> {
     bytes: &'a [u8],
-    count: usize,
+    pub count: usize,
     stride: usize,
     component_bytes: usize,
 }
 
 impl AccessorData<'_> {
-    fn position(&self, index: usize) -> [f64; 3] {
+    pub fn position(&self, index: usize) -> [f64; 3] {
         std::array::from_fn(|axis| {
             let start = index * self.stride + axis * 4;
             f32::from_le_bytes(self.bytes[start..start + 4].try_into().unwrap()) as f64
         })
     }
 
-    fn index(&self, index: usize) -> usize {
+    pub fn index(&self, index: usize) -> usize {
         let start = index * self.stride;
         match self.component_bytes {
             1 => self.bytes[start] as usize,
@@ -363,7 +363,7 @@ impl AccessorData<'_> {
     }
 }
 
-fn accessor_data<'a>(
+pub(super) fn accessor_data<'a>(
     scene: &serde_json::Value,
     index: &serde_json::Value,
     binary: &'a [u8],
@@ -606,7 +606,7 @@ pub(crate) fn test_triangle_glb() -> Vec<u8> {
 }
 
 #[cfg(test)]
-fn test_encode_glb(document: &serde_json::Value, binary: &[u8]) -> Vec<u8> {
+pub(super) fn test_encode_glb(document: &serde_json::Value, binary: &[u8]) -> Vec<u8> {
     let mut json = serde_json::to_vec(document).unwrap();
     while json.len() % 4 != 0 {
         json.push(b' ');

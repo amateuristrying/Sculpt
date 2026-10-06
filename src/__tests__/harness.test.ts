@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { invoke, isTauri } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
-import { backendStatus, installRuntime, clearDownloadCache, importSource, readGeneratedAsset, detectHardware, generate, getEngines, previewHardware, saveGlb, saveGeneratedGlb, refine, readSource, listGenerationJobs } from '../harness'
+import { backendStatus, installRuntime, clearDownloadCache, importSource, readGeneratedAsset, detectHardware, generate, getEngines, previewHardware, saveGlb, saveGeneratedGlb, saveGeneratedStl, refine, readSource, listGenerationJobs } from '../harness'
 import type { GenerationProgress, GenerationRequest, HardwareProfile } from '../harness'
 
 vi.mock('@tauri-apps/api/core', () => ({ isTauri: vi.fn(() => false), invoke: vi.fn() }))
@@ -247,11 +247,20 @@ describe('saved assets and refinement boundary', () => {
   })
 
   it('browser preview cannot refine, read saved sources, or export native assets', async () => {
+    await expect(saveGeneratedStl('asset-1', 'asset.stl', 100)).rejects.toThrow(/desktop/)
     await expect(refine('asset-1', settings, vi.fn())).rejects.toThrow(/desktop/)
     await expect(readSource('source-1')).rejects.toThrow(/desktop/)
     await expect(saveGeneratedGlb('asset-1', 'asset.glb')).rejects.toThrow(/desktop/)
     expect(await listGenerationJobs()).toEqual([])
     expect(invoke).not.toHaveBeenCalled()
+  })
+
+  it('exports STL with the requested millimetre height and preserves cancellation', async () => {
+    vi.mocked(isTauri).mockReturnValue(true)
+    vi.mocked(invoke).mockResolvedValueOnce('/exports/banana.stl').mockResolvedValueOnce(null)
+    expect(await saveGeneratedStl('asset-1', 'banana.stl', 120)).toBe('/exports/banana.stl')
+    expect(invoke).toHaveBeenCalledWith('save_generated_stl', { assetId: 'asset-1', defaultName: 'banana.stl', heightMm: 120 })
+    expect(await saveGeneratedStl('asset-1', 'banana.stl', 120)).toBeNull()
   })
 
   it('dispatches refinement settings against an existing asset and never starts image generation', async () => {
