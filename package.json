@@ -11,6 +11,7 @@
     "tauri": "tauri",
     "desktop": "tauri dev",
     "desktop:build": "tauri build",
+    "desktop:verify": "node scripts/verify-macos-bundle.mjs",
     "test": "vitest run",
     "test:ui": "playwright test",
     "backend:setup": "python3 backend/setup_runtime.py",
@@ -39,6 +40,6 @@
     "@vitejs/plugin-react": "^4.7.0",
     "typescript": "~5.9.3",
     "vite": "^6.4.1",
-    "vitest": "^3.2.4"
+    "vitest": "4.1.11"
   }
 }

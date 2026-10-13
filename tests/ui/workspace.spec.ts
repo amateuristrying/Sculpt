@@ -156,6 +156,17 @@ async function nativeBridge(page: Page, installed: boolean) {
   }, { installed, fixture: fixtureGlb() })
 }
 
+test('a saved preference cannot skip setup when the native runtime is missing', async ({ page }) => {
+  await nativeBridge(page, false)
+  await page.addInitScript(() => localStorage.setItem('sculpt.workspace.v1', JSON.stringify({ version: 1, engineId: 'triposr' })))
+  await page.goto('/')
+  await expect(page.getByRole('button', { name: 'Install local engine' })).toBeVisible()
+  await page.getByRole('button', { name: 'Open Sculpt', exact: true }).click()
+  await expect(page.getByRole('button', { name: /Local library/ })).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Install local engine' })).toBeVisible()
+})
+
 test('installer cancellation, failed download, retry, and cache clearing', async ({ page }) => {
   await nativeBridge(page, false); await page.goto('/')
   await page.getByRole('button', { name: 'Install local engine' }).click()
@@ -185,7 +196,8 @@ test('local generation remains available after repeated success and relaunch', a
   expect(new Set(originals).size).toBe(2)
 
   await page.reload()
-  await page.getByRole('button', { name: 'Open Sculpt', exact: true }).click()
+  await expect(page.getByRole('button', { name: /Local library/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Open Sculpt', exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: /Local library/ }).click()
   await expect(page.getByText('Local generation is free.', { exact: false })).toBeVisible()
   await page.getByRole('button', { name: 'Open tetrahedron.png', exact: true }).last().click()
@@ -231,7 +243,7 @@ test('saved asset can be refined, reopened after reload, and exported without an
   await page.screenshot({ path: 'test-results/refine-unlimited.png', fullPage: true })
 
   await page.reload()
-  await page.getByRole('button', { name: 'Open Sculpt', exact: true }).click()
+  await expect(page.getByRole('button', { name: /Local library/ })).toBeVisible()
   await page.getByRole('button', { name: /Local library/ }).click()
   await expect(page.getByRole('button', { name: 'Open tetrahedron.png', exact: true })).toHaveCount(2)
   // Reopen the original: refinement must not replace or remove it.
@@ -397,7 +409,8 @@ test('foreground brush corrections are saved with generation and restored from t
   await page.getByRole('button', { name: 'Generate 3D', exact: true }).click()
   await expect(page.locator('.viewport-title-tag')).toHaveText('RECONSTRUCTED')
   expect(await page.evaluate(() => (window as any).__sculptTest.saved.jobs[0].request.maskSha256)).toBe('approved-mask')
-  await page.reload(); await page.getByRole('button', { name: 'Open Sculpt', exact: true }).click()
+  await page.reload()
+  await expect(page.getByRole('button', { name: /Local library/ })).toBeVisible()
   await page.getByRole('button', { name: /Local library/ }).click()
   await page.getByRole('button', { name: 'Open mask-edit.png', exact: true }).click()
   await expect(page.getByRole('button', { name: /Edit foreground mask/ })).toBeVisible()

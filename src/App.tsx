@@ -10,6 +10,7 @@ import MaskEditor from './components/MaskEditor';
 import Viewport, { type AssetMetadata, type ViewportApi, type ViewportMode } from './components/Viewport';
 import { readMask, backendStatus, installRuntime, clearDownloadCache, importSource, readGeneratedAsset, readSource, listGenerationJobs, detectHardware, generate, refine, getEngines, saveGlb, saveGeneratedGlb, saveGeneratedStl } from './harness';
 import { parseGeneratedGlb, type ImportedAsset } from './geometry/importedAsset';
+import { canResumeWorkspace, readPreferredEngine, rememberEngine } from './harness/startup';
 import type { MaskPreview, RefinementSettings, GenerationJob, SetupProgress, BackendStatus, EngineProfile, GeneratedAsset, GenerationProgress, HardwareProfile } from './harness/types';
 
 type SourceImage = { name: string; url: string; width: number; height: number; size: number; sample: boolean; sourceId?: string };
@@ -29,6 +30,7 @@ export default function App() {
   const [engineId, setEngineId] = useState('');
   const [setupError, setSetupError] = useState<string | null>(null);
   const [setupComplete, setSetupComplete] = useState(false);
+  const startupPending = useRef(true);
   const [mask, setMask] = useState<MaskPreview | null>(null);
   const [source, setSource] = useState<SourceImage | null>(null);
   const [sourceLoading, setSourceLoading] = useState(false);
@@ -88,9 +90,20 @@ export default function App() {
       setBackend(status);
       setHardware(profile); setEngines(catalog);
       setEngineId((current) => current || catalog.find((engine) => engine.compatibility === 'recommended')?.id || catalog.find((engine) => engine.compatibility === 'available')?.id || '');
+      if (startupPending.current) {
+        startupPending.current = false;
+        const preferred = readPreferredEngine();
+        if (canResumeWorkspace(preferred, profile, catalog, status)) {
+          setEngineId(preferred!); setSetupComplete(true);
+        }
+      }
     } catch (error) { setSetupError(error instanceof Error ? error.message : 'Hardware detection could not complete.'); }
   }, []);
   useEffect(() => { void loadHardware(); }, [loadHardware]);
+  const enterWorkspace = () => {
+    if (hardware?.detectionSource === 'native') rememberEngine(engineId);
+    setSetupComplete(true);
+  };
   useEffect(() => { if (!toast) return; const timeout = setTimeout(() => setToast(null), 5500); return () => clearTimeout(timeout); }, [toast]);
   useEffect(() => () => { abortRef.current?.abort(); installAbort.current?.abort(); }, []);
 
@@ -243,7 +256,7 @@ export default function App() {
   return <div className="app-shell">
     {modal === 'mask' && source?.sourceId && <MaskEditor sourceId={source.sourceId} background={background} initial={mask} onClose={() => setModal(null)} onSave={value => { setMask(value); setModal(null); notify('Foreground mask saved. Generate to reconstruct this selection.'); }} />}
     <div className="titlebar" data-tauri-drag-region><div className="titlebar-leading" data-tauri-drag-region><span className="titlebar-app">Sculpt</span><span className="titlebar-divider" /> <span>Local 3D studio</span></div><span className="titlebar-project" data-tauri-drag-region>{setupComplete ? source?.name.replace(/\.[^.]+$/, '') || 'Untitled project' : 'Welcome to Sculpt'}</span><span className="titlebar-status"><span className="live-dot" /> On your device</span></div>
-    {!setupComplete ? <Setup runtimeSetup={runtimeSetup} backend={backend} hardware={hardware} engines={engines} selectedEngine={engineId} onSelect={setEngineId} onContinue={() => setSetupComplete(true)} error={setupError} onRetry={() => void loadHardware()} /> : <>
+    {!setupComplete ? <Setup runtimeSetup={runtimeSetup} backend={backend} hardware={hardware} engines={engines} selectedEngine={engineId} onSelect={setEngineId} onContinue={enterWorkspace} error={setupError} onRetry={() => void loadHardware()} /> : <>
       <header className="workspace-header"><Brand compact /><nav className="workflow-nav" aria-label="Asset workflow"><button className={!asset ? 'current' : 'completed'} onClick={() => fileInput.current?.click()} disabled={generating}><span>01</span> Image</button><ChevronRight size={12} /><button className={asset ? 'current' : ''} onClick={() => { setPanelTab('stack'); setFocusViewport(false); }}><span>02</span> Geometry</button><ChevronRight size={12} /><button onClick={() => { setPanelTab('stack'); setFocusViewport(false); document.querySelector('.refine-panel')?.scrollIntoView({ block: 'nearest' }); }}><span>03</span> Refine</button><ChevronRight size={12} /><button onClick={() => setModal('export')} disabled={!viewportReady || generating}><span>04</span> Export</button></nav><div className="header-actions"><button className="hardware-button" onClick={() => setModal('hardware')}><Cpu size={14} />{hardware?.chip}<span className="live-dot" /></button><button className="export-button" onClick={() => setModal('export')} disabled={!viewportReady || generating}><ArrowDownToLine size={14} /> Export <ChevronDown size={12} /></button></div></header>
       <div className={`workspace ${focusViewport ? 'viewport-focused' : ''}`}>
         <aside className="source-panel"><div className="source-controls">

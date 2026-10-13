@@ -24,6 +24,8 @@ npm run desktop:build    # Build the macOS .app and .dmg
 
 Native bundles appear under `src-tauri/target/release/bundle/`. Local builds use ad-hoc signing. Developer ID signing and notarization remain release work. To build only the application, run `npm run desktop:build -- --bundles app`. `npm run dev` is available for UI development at `http://127.0.0.1:1420`, using a clearly labelled M4 hardware fixture. It does not detect the browser host's actual hardware.
 
+See [Mac preview installation and first generation](docs/mac-preview.md) for the usable desktop workflow and current release limits. `npm run desktop:verify` checks the built app's architecture, local signature, version, and bundled Python/installer/license files. Successful public CI runs also provide a `Sculpt-macOS-arm64-preview` download containing the app in a ZIP; model weights are installed separately on first use.
+
 ## What works
 
 - Native hardware inspection and a machine-specific engine planning catalog.
@@ -44,7 +46,9 @@ Native bundles appear under `src-tauri/target/release/bundle/`. Local builds use
 
 Open Sculpt and choose **Install local engine** on the hardware setup screen. The installer prepares its own Python 3.11 environment, the pinned TripoSR engine, PyTorch dependencies, and the reconstruction/background-removal models. A bundled app does not require a separately installed Python, Git, or uv. Allow 5 GB free space and an internet connection for initial setup. The native installer currently targets Apple Silicon Macs with at least 16 GB memory.
 
-Progress represents installation stages, not byte-accurate download percentages. Cancel stops the installer and its child processes. Retry reuses cached downloads; **Verify / repair** checks model hashes and repairs damaged downloads. **Clear downloads** removes disposable package caches while preserving the installed runtime and offline model/config files.
+After opening the native workspace once, subsequent launches skip setup when the remembered reconstruction engine is still compatible and the runtime is ready. A missing or damaged runtime returns to setup. The browser preview and procedural demo do not bypass setup. Hardware settings remain available from the workspace; saved assets can still be opened and exported when the model runtime needs repair.
+
+Progress represents installation stages, not byte-accurate download percentages. Cancel stops the installer and its child processes. Hub model downloads retry transient connection failures, timeouts, HTTP 429 and server errors up to twice, retaining partial downloads and pinned revisions. Other errors still stop setup. Manual Retry also reuses cached downloads; **Verify / repair** checks model hashes and repairs damaged downloads. **Clear downloads** removes disposable package caches while preserving the installed runtime and offline model/config files.
 
 Runtime storage:
 

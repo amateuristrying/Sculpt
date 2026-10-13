@@ -63,6 +63,17 @@ jobs:
         run: python -m pip install --require-hashes -r backend/requirements.lock
       - name: Worker unit tests (CPU only, no weights)
         run: python -m pytest backend/tests -q
+      - name: Build and verify the Mac preview application
+        run: |
+          npm run desktop:build -- --bundles app
+          npm run desktop:verify
+          ditto -c -k --sequesterRsrc --keepParent src-tauri/target/release/bundle/macos/Sculpt.app src-tauri/target/release/bundle/Sculpt-macOS-arm64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sculpt-macOS-arm64-preview
+          path: src-tauri/target/release/bundle/Sculpt-macOS-arm64.zip
+          retention-days: 14
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
