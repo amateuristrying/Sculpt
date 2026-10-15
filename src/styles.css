@@ -73,3 +73,4 @@
 /* Export dimensions remain readable on compact laptop displays. */
 .export-scale-note { font-size: 12px; line-height: 1.6; color: var(--text-muted, #9ca39f); margin: 8px 0 18px; }
 .export-name input[aria-invalid="true"] { outline: 1px solid #d2947d; }
+.dialog .export-format-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}

@@ -73,6 +73,7 @@ pub fn run() {
             harness::assets::read_generated_asset,
             harness::assets::save_generated_glb,
             harness::exports::save_generated_stl,
+            harness::exports::exchange::save_generated_exchange,
             harness::python::backend_status,
             harness::setup::install_runtime,
             harness::cache::clear_download_cache,

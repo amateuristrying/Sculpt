@@ -9,6 +9,7 @@ import ExportPanel, { type ExportFormat } from './components/ExportPanel';
 import MaskEditor from './components/MaskEditor';
 import Viewport, { type AssetMetadata, type ViewportApi, type ViewportMode } from './components/Viewport';
 import { readMask, backendStatus, installRuntime, clearDownloadCache, importSource, readGeneratedAsset, readSource, listGenerationJobs, detectHardware, generate, refine, getEngines, saveGlb, saveGeneratedGlb, saveGeneratedStl } from './harness';
+import { saveGeneratedExchange } from './harness';
 import { parseGeneratedGlb, type ImportedAsset } from './geometry/importedAsset';
 import { canResumeWorkspace, readPreferredEngine, rememberEngine } from './harness/startup';
 import type { MaskPreview, RefinementSettings, GenerationJob, SetupProgress, BackendStatus, EngineProfile, GeneratedAsset, GenerationProgress, HardwareProfile } from './harness/types';
@@ -224,10 +225,12 @@ export default function App() {
     if (!viewportApi.current || exporting) return;
     setExporting(true);
     try {
-      const name = exportName.trim().replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-').replace(/\.(glb|stl)$/i, '') || 'Sculpt asset';
-      if (format === 'stl' && (!asset || asset.simulated)) throw new Error('STL export requires a saved desktop asset');
+      const name = exportName.trim().replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-').replace(/\.(glb|gltf|obj|zip|stl)$/i, '') || 'Sculpt asset';
+      if (format !== 'glb' && (!asset || asset.simulated)) throw new Error('This format requires a saved desktop asset');
       const savedPath = format === 'stl' && asset
         ? await saveGeneratedStl(asset.id, `${name}.stl`, heightMm)
+        : (format === 'obj' || format === 'gltf') && asset
+        ? await saveGeneratedExchange(asset.id, `${name}.${format === 'obj' ? 'zip' : 'gltf'}`, format)
         : asset && !asset.simulated
         ? await saveGeneratedGlb(asset.id, `${name}.glb`)
         : await saveGlb(await viewportApi.current.exportGlb(), `${name}.glb`);

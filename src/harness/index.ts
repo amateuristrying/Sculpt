@@ -102,6 +102,11 @@ export async function saveGeneratedStl(assetId: string, defaultName: string, hei
   return invoke<string | null>('save_generated_stl', { assetId, defaultName, heightMm })
 }
 
+export async function saveGeneratedExchange(assetId: string, defaultName: string, format: 'obj' | 'gltf'): Promise<string | null> {
+  if (!isTauri()) throw new Error('Saved asset export requires the Sculpt desktop app')
+  return invoke<string | null>('save_generated_exchange', { assetId, defaultName, format })
+}
+
 const nativeAsset = (asset: GeneratedAsset): GeneratedAsset => ({ ...asset, generatedAt: new Date(Number(asset.generatedAt)).toISOString() })
 
 export async function readSource(sourceId: string): Promise<StoredSource> {
@@ -249,4 +254,4 @@ export async function readMask(sourceId: string, sha256: string): Promise<MaskPr
   return invoke<MaskPreview>('read_mask', { sourceId, sha256 })
 }
 
-export const sculptHarness: SculptHarness = { prepareMask, saveMask, readMask, detectHardware, getEngines, backendStatus, installRuntime, clearDownloadCache, importSource, readGeneratedAsset, readSource, listGenerationJobs, generate, refine, saveGeneratedGlb, saveGeneratedStl, saveGlb }
+export const sculptHarness: SculptHarness = { prepareMask, saveMask, readMask, detectHardware, getEngines, backendStatus, installRuntime, clearDownloadCache, importSource, readGeneratedAsset, readSource, listGenerationJobs, generate, refine, saveGeneratedGlb, saveGeneratedStl, saveGeneratedExchange, saveGlb }

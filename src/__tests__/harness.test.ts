@@ -3,6 +3,7 @@ import { invoke, isTauri } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { backendStatus, installRuntime, clearDownloadCache, importSource, readGeneratedAsset, detectHardware, generate, getEngines, previewHardware, saveGlb, saveGeneratedGlb, saveGeneratedStl, refine, readSource, listGenerationJobs } from '../harness'
 import type { GenerationProgress, GenerationRequest, HardwareProfile } from '../harness'
+import { saveGeneratedExchange } from '../harness'
 
 vi.mock('@tauri-apps/api/core', () => ({ isTauri: vi.fn(() => false), invoke: vi.fn() }))
 vi.mock('@tauri-apps/api/event', () => ({ listen: vi.fn() }))
@@ -223,6 +224,16 @@ describe('native harness bridge', () => {
 
 describe('saved assets and refinement boundary', () => {
   const settings = { resolution: 192, densityThreshold: 22, removeSmallComponents: true, smoothingIterations: 3 }
+
+  it.each(['obj', 'gltf'] as const)('exports %s natively by ID and treats a dismissed save dialog as cancellation', async format => {
+    await expect(saveGeneratedExchange('asset-1', 'model', format)).rejects.toThrow(/desktop/)
+    expect(invoke).not.toHaveBeenCalled()
+    vi.mocked(isTauri).mockReturnValue(true)
+    vi.mocked(invoke).mockResolvedValueOnce('/exports/model').mockResolvedValueOnce(null)
+    expect(await saveGeneratedExchange('asset-1', 'model', format)).toBe('/exports/model')
+    expect(invoke).toHaveBeenCalledWith('save_generated_exchange', { assetId: 'asset-1', defaultName: 'model', format })
+    expect(await saveGeneratedExchange('asset-1', 'model', format)).toBeNull()
+  })
 
   it('normalizes saved job and asset timestamps while preserving requests and failed records', async () => {
     vi.mocked(isTauri).mockReturnValue(true)

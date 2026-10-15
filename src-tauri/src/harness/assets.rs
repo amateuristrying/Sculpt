@@ -1,5 +1,6 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::{
     io::{Cursor, Read},
@@ -343,13 +344,25 @@ pub(super) struct AccessorData<'a> {
     pub count: usize,
     stride: usize,
     component_bytes: usize,
+    normalized: bool,
 }
 
 impl AccessorData<'_> {
     pub fn position(&self, index: usize) -> [f64; 3] {
+        self.values(index)
+    }
+
+    pub fn values<const N: usize>(&self, index: usize) -> [f64; N] {
         std::array::from_fn(|axis| {
-            let start = index * self.stride + axis * 4;
-            f32::from_le_bytes(self.bytes[start..start + 4].try_into().unwrap()) as f64
+            let start = index * self.stride + axis * self.component_bytes;
+            match self.component_bytes {
+                1 => self.bytes[start] as f64 / if self.normalized { 255. } else { 1. },
+                2 => {
+                    u16::from_le_bytes(self.bytes[start..start + 2].try_into().unwrap()) as f64
+                        / if self.normalized { 65535. } else { 1. }
+                }
+                _ => f32::from_le_bytes(self.bytes[start..start + 4].try_into().unwrap()) as f64,
+            }
         })
     }
 
@@ -371,6 +384,43 @@ pub(super) fn accessor_data<'a>(
     components: usize,
     allowed_components: &[u64],
 ) -> Result<AccessorData<'a>, String> {
+    read_accessor(
+        scene,
+        index,
+        binary,
+        kind,
+        components,
+        allowed_components,
+        false,
+    )
+}
+
+pub(super) fn color_data<'a>(
+    scene: &Value,
+    index: &Value,
+    binary: &'a [u8],
+) -> Result<AccessorData<'a>, String> {
+    let accessor = &scene["accessors"][integer(index)?];
+    let (kind, count) = match accessor["type"].as_str() {
+        Some("VEC3") => ("VEC3", 3),
+        Some("VEC4") => ("VEC4", 4),
+        _ => return Err("Invalid vertex colors".into()),
+    };
+    if accessor["componentType"] != 5126 && accessor["normalized"] != true {
+        return Err("Integer vertex colors must be normalized".into());
+    }
+    read_accessor(scene, index, binary, kind, count, &[5121, 5123, 5126], true)
+}
+
+fn read_accessor<'a>(
+    scene: &serde_json::Value,
+    index: &serde_json::Value,
+    binary: &'a [u8],
+    kind: &str,
+    components: usize,
+    allowed_components: &[u64],
+    allow_normalized: bool,
+) -> Result<AccessorData<'a>, String> {
     let invalid = "Generated GLB has invalid or unsupported geometry accessors";
     let accessor = scene["accessors"]
         .as_array()
@@ -380,7 +430,7 @@ pub(super) fn accessor_data<'a>(
     if accessor["type"] != kind
         || !allowed_components.contains(&component_type)
         || accessor.get("sparse").is_some()
-        || accessor.get("normalized").is_some_and(|v| v != false)
+        || (!allow_normalized && accessor.get("normalized").is_some_and(|v| v != false))
     {
         return Err(invalid.into());
     }
@@ -439,6 +489,7 @@ pub(super) fn accessor_data<'a>(
         count,
         stride,
         component_bytes,
+        normalized: accessor["normalized"] == true,
     })
 }
 

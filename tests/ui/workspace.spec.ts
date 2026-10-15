@@ -148,6 +148,10 @@ async function nativeBridge(page: Page, installed: boolean) {
             if (!saved.jobs.some((job: any) => job.id === args.assetId)) throw new Error('Asset unavailable')
             return host.__sculptTest.cancelExport ? null : '/test/export.stl'
           }
+          case 'save_generated_exchange': {
+            if (!saved.jobs.some((job: any) => job.id === args.assetId)) throw new Error('Asset unavailable')
+            return host.__sculptTest.cancelExport ? null : `/test/export.${args.format === 'obj' ? 'zip' : 'gltf'}`
+          }
           case 'save_glb': host.__sculptTest.exported = args.bytes; return '/test/export.glb'
           default: throw new Error(`Unexpected IPC command: ${command}`)
         }
@@ -270,6 +274,20 @@ test('saved asset can be refined, reopened after reload, and exported without an
   await expect(page.getByLabel('Object height (mm)')).toHaveCount(0)
   const exported = await page.evaluate(() => (window as any).__sculptTest.calls.findLast((call: any) => call.command === 'save_generated_stl'))
   expect(exported.args).toEqual({ assetId: original, defaultName: 'tetrahedron.stl', heightMm: 120 })
+  for (const format of ['obj', 'gltf'] as const) {
+    await page.getByRole('button', { name: 'Export', exact: true }).last().click()
+    await page.getByRole('button', { name: format === 'obj' ? 'OBJ Mesh + MTL + textures' : 'glTF Single embedded file' }).click()
+    await expect(page.getByLabel('Object height (mm)')).toHaveCount(0)
+    await page.evaluate(() => { (window as any).__sculptTest.cancelExport = true })
+    await page.getByRole('button', { name: `Export ${format.toUpperCase()}`, exact: true }).click()
+    await expect(page.getByRole('button', { name: `Export ${format.toUpperCase()}`, exact: true })).toBeEnabled()
+    await page.screenshot({ path: `test-results/export-${format}.png` })
+    await page.evaluate(() => { (window as any).__sculptTest.cancelExport = false })
+    await page.getByRole('button', { name: `Export ${format.toUpperCase()}`, exact: true }).click()
+    await expect(page.getByLabel('File name')).toHaveCount(0)
+    const call = await page.evaluate(() => (window as any).__sculptTest.calls.findLast((call: any) => call.command === 'save_generated_exchange'))
+    expect(call.args).toEqual({ assetId: original, defaultName: `tetrahedron.${format === 'obj' ? 'zip' : 'gltf'}`, format })
+  }
 })
 
 test('failed and cancelled refinements preserve the saved asset and can be retried', async ({ page }) => {

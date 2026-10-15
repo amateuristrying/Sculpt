@@ -2,7 +2,7 @@
 
 Sculpt is a free, MIT-licensed desktop application for local single-object
 image reconstruction, foreground correction, cached refinement, texture baking,
-and GLB/STL export. This is a usable preview, not a claim of production-quality
+and GLB/glTF/OBJ/STL export. This is a usable preview, not a claim of production-quality
 geometry for every image or parity with commercial generators.
 
 ## Install and create an asset
@@ -24,7 +24,8 @@ geometry for every image or parity with commercial generators.
 5. Generate and inspect all sides. Missing backs, thin parts and noisy surfaces
    are limitations of single-image reconstruction. Use Refine for extraction,
    fragment removal, smoothing and optional 1K/2K color textures.
-6. Export GLB for geometry with material/texture, or STL with an explicit height
+6. Export GLB or embedded glTF for geometry with material/texture, OBJ as a ZIP
+   with its MTL and PNGs (unzip before importing), or STL with an explicit height
    in millimetres. STL has geometry only. Check the result in your target tool;
    STL conversion does not repair the reconstructed surface.
 
@@ -52,7 +53,7 @@ separate `library-development` directory.
 ## What this preview does not finish
 
 The next substantial quality work is a stronger engine with measured results,
-followed by validated CUDA/platform support. OBJ/PLY/3MF, retopology, library
+on Mac. CUDA/platform support is future work. USDZ/PLY/3MF, text conditioning, retopology, library
 thumbnails/rename/delete, damaged-record recovery, notarization, automatic
 updates and wider hardware testing remain unfinished. Blender/slicer import
 checks remain unverified. A marketing/download website can document the app;

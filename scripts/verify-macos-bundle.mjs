@@ -18,7 +18,7 @@ assert.ok(statSync(executable).mode & 0o111, 'App executable lost its execute pe
 assert.equal(execFileSync('/usr/bin/lipo', ['-archs', executable], { encoding: 'utf8' }).trim(), 'arm64')
 execFileSync('/usr/bin/codesign', ['--verify', '--deep', '--strict', app], { stdio: 'pipe' })
 
-const files = ['LICENSE', 'backend/TEXTURE-NOTICES.txt', 'backend/worker.py',
+const files = ['LICENSE', 'EXPORT-NOTICES.txt', 'backend/TEXTURE-NOTICES.txt', 'backend/worker.py',
   'backend/setup_runtime.py', 'backend/download_models.py', 'backend/requirements.lock',
   'backend/runtime-spec.json', ...readdirSync(join(root, 'backend/sculpt_backend'))
     .filter(name => name.endsWith('.py')).map(name => `backend/sculpt_backend/${name}`)]
