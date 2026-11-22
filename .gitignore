@@ -1,21 +1,60 @@
+# ==============================================================================
+# Private Planning & Internal Materials (Never commit or publish)
+# ==============================================================================
+.agents/
+
+# ==============================================================================
+# Dependencies & Package Managers
+# ==============================================================================
 node_modules/
+
+# ==============================================================================
+# Frontend & Tauri Application Builds
+# ==============================================================================
 dist/
-src-tauri/target/
 *.tsbuildinfo
-.DS_Store
-test-results/
-playwright-report/
-.env
-.env.*
-!.env.example
-.venv/
+src-tauri/target/
+src-tauri/gen/
+
+# ==============================================================================
+# Python Runtime, Virtual Environments & Caches
+# ==============================================================================
 __pycache__/
+*.py[cod]
 *.pyc
+.venv/
 .pytest_cache/
-.sculpt-runtime/
 backend/.runtime/
 backend/.cache/
 backend/outputs/
-src-tauri/gen/
-*.sculpt-license
+
+# ==============================================================================
+# Sculpt Local Storage, Runtimes & Caches
+# ==============================================================================
+.sculpt-runtime/
+.sculpt-library/
+.sculpt-models/
+.sculpt-cache/
+*.sculpt-support.zip
+
+# ==============================================================================
+# Environment, Credentials & Local Licenses
+# ==============================================================================
+.env
+.env.*
+!.env.example
 *.pem
+*.sculpt-license
+vite.config.local.ts
+
+# ==============================================================================
+# Test Results & Reports
+# ==============================================================================
+test-results/
+playwright-report/
+
+# ==============================================================================
+# Operating System & Editor Artifacts
+# ==============================================================================
+.DS_Store
+Thumbs.db
