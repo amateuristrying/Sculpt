@@ -46,13 +46,15 @@ clearing is forbidden during an active operation and never targets model/config
 caches. One process supervisor enforces cancellation and time limits for both setup
 and inference.
 
-## Next adapter integration points
+## Current adapter boundaries and next steps
 
 - Extend runtime profiles beyond the current validated Apple Silicon adapter.
 - Expand the benchmark beyond the current starter objects and synthetic stress
   inputs. Add perceptual quality ratings rather than treating valid GLBs as likeness scores.
-- Add foreground preview/correction and durable projects.
-- Add cleanup, retopology, UV, and texture adapters as separate stages.
+- Foreground preview and brush correction, the versioned local asset library, mesh
+  cleanup, and optional UV/color-texture baking are already part of the current
+  native workflow. Keep these boundaries explicit when adding runtime adapters.
+- Retopology is not implemented; evaluate it as a separate validated stage.
 - Add explicit fallback policy in the harness; never silently claim another engine
   generated the requested result.
 
