@@ -57,7 +57,7 @@ pub fn run() {
             logger.info(
                 "shell",
                 &format!(
-                    "Sculpt {} starting on {} ({}, {})",
+                    "Sculpt {} starting on {} (process={}, {})",
                     app.package_info().version,
                     std::env::consts::OS,
                     std::env::consts::ARCH,

@@ -62,6 +62,104 @@ fn windows_x64_shell_recommends_demo_without_inference_claims() {
     assert_ne!(triposr.compatibility, "recommended");
 }
 
+fn windows_arm64_snapdragon_profile() -> hardware::HardwareProfile {
+    hardware::profile_from_windows_probes(&hardware::windows::WindowsProbes {
+        os_name: Some("Windows 11 Home".into()),
+        display_version: Some("24H2".into()),
+        build_number: Some("26100".into()),
+        ubr: Some(1000),
+        architecture: Some("ARM64".into()),
+        cpu_name: Some("Snapdragon(R) X Plus - X1P42100 - Qualcomm(R) Oryon(TM) CPU".into()),
+        total_ram_bytes: Some(16 * 1024 * 1024 * 1024),
+        storage_total_bytes: Some(1024 * 1024 * 1024 * 1024),
+        storage_free_bytes: Some(500 * 1024 * 1024 * 1024),
+        gpus: vec![hardware::windows::WindowsGpuAdapter {
+            name: "Qualcomm(R) Adreno(TM) X1-45 GPU".into(),
+            provider: Some("Qualcomm Incorporated".into()),
+            dedicated_vram_bytes: None,
+            shared_ram_bytes: None,
+            driver_version: Some("31.0.82.0".into()),
+        }],
+        npu_name: Some("Qualcomm(R) Hexagon(TM) NPU".into()),
+        has_directml: true,
+        has_vulkan: true,
+        has_cuda: false,
+    })
+}
+
+#[test]
+fn windows_arm64_snapdragon_shell_recommends_demo_without_inference_claims() {
+    let profile = windows_arm64_snapdragon_profile();
+    assert_eq!(profile.os, "Windows");
+    assert_eq!(profile.architecture, "arm64");
+    assert!(profile.unified_memory);
+    assert!(!profile.is_apple_silicon);
+    assert_eq!(profile.detection_source, "native");
+    assert_eq!(profile.compute_backends, vec!["DirectML", "Vulkan", "CPU"]);
+    assert_eq!(profile.npu.as_deref(), Some("Qualcomm(R) Hexagon(TM) NPU"));
+
+    let catalog = catalog::engines(&profile);
+    let demo = catalog
+        .iter()
+        .find(|e| e.id == "demo")
+        .expect("demo engine");
+    assert_eq!(demo.compatibility, "recommended");
+    assert_eq!(
+        demo.compatibility_status,
+        engines::CompatibilityStatus::Supported
+    );
+
+    let triposr = catalog
+        .iter()
+        .find(|e| e.id == "triposr")
+        .expect("triposr engine");
+    assert_eq!(triposr.compatibility, "unsupported");
+    assert_eq!(
+        triposr.compatibility_status,
+        engines::CompatibilityStatus::Unsupported
+    );
+    assert!(engines::resolve("triposr", &profile).is_err());
+
+    let uv = setup::uv_release_for("windows", "aarch64").expect("Windows ARM64 uv release");
+    assert_eq!(uv.archive_filename, "uv-aarch64-pc-windows-msvc.zip");
+    assert_eq!(uv.binary_name, "uv.exe");
+}
+
+#[test]
+fn windows_execution_mode_separates_native_arm64_from_x64_emulation() {
+    assert_eq!(
+        hardware::execution_mode_for("aarch64", "arm64"),
+        "native-arm64"
+    );
+    assert!(!hardware::is_emulated_execution("aarch64", "arm64"));
+
+    assert_eq!(
+        hardware::execution_mode_for("x86_64", "arm64"),
+        "x64-emulation-on-arm64"
+    );
+    assert!(hardware::is_emulated_execution("x86_64", "arm64"));
+
+    assert_eq!(
+        hardware::execution_mode_for("x86_64", "x86_64"),
+        "native-x64"
+    );
+    assert!(!hardware::is_emulated_execution("x86_64", "x86_64"));
+
+    #[cfg(all(target_os = "windows", target_arch = "aarch64"))]
+    {
+        let profile = hardware::detect();
+        assert_eq!(profile.architecture, "arm64");
+        assert_eq!(
+            hardware::execution_mode_for(std::env::consts::ARCH, &profile.architecture),
+            "native-arm64"
+        );
+        assert!(!hardware::is_emulated_execution(
+            std::env::consts::ARCH,
+            &profile.architecture
+        ));
+    }
+}
+
 #[test]
 fn windows_tauri_bundle_and_capabilities_are_valid() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));

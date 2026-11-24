@@ -140,13 +140,19 @@ pub async fn detect_hardware(app: AppHandle) -> Result<hardware::HardwareProfile
         .await
         .map_err(|error| error.to_string())?;
     if let Some(logger) = app.try_state::<logging::HostLogger>() {
+        let mode = hardware::execution_mode_for(std::env::consts::ARCH, &profile.architecture);
+        let emulated =
+            hardware::is_emulated_execution(std::env::consts::ARCH, &profile.architecture);
         logger.info(
             "hardware",
             &format!(
-                "Detected {} {} ({}), {:.1} GB RAM, backends=[{}]",
+                "Detected {} {} (host={}, process={}, mode={}, emulated={}), {:.1} GB RAM, backends=[{}]",
                 profile.os,
                 profile.os_version,
                 profile.architecture,
+                std::env::consts::ARCH,
+                mode,
+                emulated,
                 profile.memory_gb,
                 profile.compute_backends.join(", ")
             ),

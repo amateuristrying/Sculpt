@@ -34,14 +34,42 @@ pub struct WindowsProbes {
     pub has_cuda: bool,
 }
 
+/// Normalizes a Windows or Rust architecture identifier into `"arm64"`, `"x86_64"`, or `"Unknown"`.
+pub fn normalize_arch(raw: Option<&str>) -> String {
+    match raw.map(str::trim) {
+        Some("aarch64" | "arm64" | "ARM64") => "arm64".to_string(),
+        Some("x86_64" | "AMD64" | "amd64" | "x64") => "x86_64".to_string(),
+        Some(other) if !other.is_empty() => other.to_string(),
+        _ => "Unknown".to_string(),
+    }
+}
+
+/// Classifies the host process execution mode from the compiled process architecture and detected
+/// physical host architecture so native ARM64 execution is never conflated with x64 emulation.
+pub fn execution_mode_for(process_arch: &str, host_arch: &str) -> &'static str {
+    let process = normalize_arch(Some(process_arch));
+    let host = normalize_arch(Some(host_arch));
+    match (process.as_str(), host.as_str()) {
+        ("arm64", "arm64") => "native-arm64",
+        ("x86_64", "arm64") => "x64-emulation-on-arm64",
+        ("x86_64", "x86_64") => "native-x64",
+        ("arm64", "x86_64") => "arm64-on-x64",
+        (p, h) if p != "Unknown" && p == h => "native",
+        _ => "unknown",
+    }
+}
+
+/// Returns true only when the compiled process architecture runs under translation/emulation on a
+/// different physical host architecture (for example an x86_64 binary on Windows ARM64).
+pub fn is_emulated_execution(process_arch: &str, host_arch: &str) -> bool {
+    let process = normalize_arch(Some(process_arch));
+    let host = normalize_arch(Some(host_arch));
+    process != "Unknown" && host != "Unknown" && process != host
+}
+
 pub fn profile_from_windows_probes(probes: &WindowsProbes) -> HardwareProfile {
     // 1. Architecture: normalize to "arm64" or "x86_64"
-    let architecture = match probes.architecture.as_deref() {
-        Some("aarch64") | Some("arm64") | Some("ARM64") => "arm64".to_string(),
-        Some("x86_64") | Some("AMD64") | Some("amd64") => "x86_64".to_string(),
-        Some(other) => other.to_string(),
-        None => "Unknown".to_string(),
-    };
+    let architecture = normalize_arch(probes.architecture.as_deref());
 
     // 2. OS version
     let os_version = if let Some(ref build) = probes.build_number {

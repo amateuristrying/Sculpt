@@ -7,7 +7,10 @@ pub use linux::{profile_from_linux_probes, LinuxProbes};
 #[allow(unused_imports)]
 pub use macos::{profile_from_macos_report, MacProbes};
 #[allow(unused_imports)]
-pub use windows::{profile_from_windows_probes, WindowsGpuAdapter, WindowsProbes};
+pub use windows::{
+    execution_mode_for, is_emulated_execution, profile_from_windows_probes, WindowsGpuAdapter,
+    WindowsProbes,
+};
 
 use serde::{Deserialize, Serialize};
 use std::{process::Command, sync::OnceLock};
