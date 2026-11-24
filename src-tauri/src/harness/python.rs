@@ -206,11 +206,20 @@ fn run_worker(
     let request_file = output_dir.join("request.json");
     // The native planner selects an explicit validated device. Never silently
     // substitute CPU execution when that device is unavailable.
-    let body = serde_json::json!({"sourcePath":source, "outputPath":output,
-        "quality":request.geometry, "background":request.background, "device":device,
+    let body = serde_json::json!({
+        "jobId": context.id,
+        "sourcePath": source,
+        "outputPath": output,
+        "quality": request.geometry,
+        "background": request.background,
+        "device": device,
         "operation": if request.refinement.is_some() { "refine" } else { "generate" },
-        "sourceSha256":source_sha256, "sceneCachePath":scene_cache, "refinement":request.refinement,
-        "maskPath":mask, "maskSha256":request.mask_sha256});
+        "sourceSha256": source_sha256,
+        "sceneCachePath": scene_cache,
+        "refinement": request.refinement,
+        "maskPath": mask,
+        "maskSha256": request.mask_sha256
+    });
     std::fs::write(
         &request_file,
         serde_json::to_vec(&body).map_err(|e| e.to_string())?,
@@ -238,42 +247,46 @@ fn run_worker(
         &context.cancelled,
         Duration::from_secs(1200),
         |line| {
-            let event: Value = serde_json::from_str(line)
-                .map_err(|_| "Worker emitted an invalid protocol message")?;
-            if event["protocol"] != 1 {
-                return Err("Unsupported local worker protocol version".into());
-            }
-            match event["type"].as_str() {
-                Some("progress") => {
-                    let stage = event["stage"]
-                        .as_str()
-                        .ok_or("Worker progress has no stage")?;
-                    if !["analyzing", "loading", "geometry", "surface", "preparing"]
-                        .contains(&stage)
-                    {
-                        return Err("Unknown worker stage".into());
-                    }
-                    last_progress = event["progress"]
-                        .as_f64()
-                        .filter(|p| p.is_finite())
-                        .ok_or("Invalid worker progress")?
-                        .clamp(last_progress, 99.0);
+            let envelope = super::protocol::WorkerEnvelope::parse(line)
+                .map_err(|e| format!("Worker emitted an invalid protocol message: {e}"))?;
+            match envelope.event {
+                super::protocol::WorkerEvent::Accepted { message: _ } => {}
+                super::protocol::WorkerEvent::Stage { stage, message } => {
                     context.emit(
-                        stage,
+                        stage.as_str(),
                         last_progress,
-                        event["message"].as_str().unwrap_or("Processing locally"),
+                        message.as_deref().unwrap_or("Processing locally"),
                     );
                 }
-                Some("result") if event["metrics"].is_object() && result_metrics.is_none() => {
-                    result_metrics = Some(event["metrics"].clone())
+                super::protocol::WorkerEvent::Progress {
+                    stage,
+                    progress,
+                    message,
+                } => {
+                    last_progress = progress.clamp(last_progress, 99.0);
+                    context.emit(
+                        stage.as_str(),
+                        last_progress,
+                        message.as_deref().unwrap_or("Processing locally"),
+                    );
                 }
-                Some("error") => {
-                    return Err(event["message"]
-                        .as_str()
-                        .unwrap_or("Local inference failed")
-                        .chars()
-                        .take(1500)
-                        .collect())
+                super::protocol::WorkerEvent::Warning {
+                    code: _,
+                    message: _,
+                } => {}
+                super::protocol::WorkerEvent::Result(ref res) if result_metrics.is_none() => {
+                    envelope
+                        .validate_output_paths(output_dir)
+                        .map_err(|e| format!("Worker reported unsafe output path: {e}"))?;
+                    if let Some(ref m) = res.metrics {
+                        result_metrics = Some(m.clone());
+                    }
+                }
+                super::protocol::WorkerEvent::Error { code: _, message } => {
+                    return Err(message.chars().take(1500).collect());
+                }
+                super::protocol::WorkerEvent::Cancelled { message } => {
+                    return Err(message.unwrap_or_else(|| "Generation cancelled by worker".into()));
                 }
                 _ => return Err("Unexpected local worker protocol message".into()),
             }
@@ -290,6 +303,8 @@ fn run_worker(
         )
     })?;
     let mut metrics = result_metrics.ok_or("The worker exited without returning an asset")?;
+    super::protocol::validate_output_path(&output, output_dir)
+        .map_err(|e| format!("Unsafe output GLB path: {e}"))?;
     let _ = read_valid_glb(&output)?;
     metrics["sourceSha256"] = source_sha256.into();
     // The worker published metrics atomically; preserve that guarantee when

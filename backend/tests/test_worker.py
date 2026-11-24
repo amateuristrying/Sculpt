@@ -18,9 +18,11 @@ def test_missing_runtime_returns_protocol_error_and_no_asset(tmp_path):
     result = subprocess.run([sys.executable, str(WORKER), "--request", str(request)], capture_output=True, text=True,
                             env={**os.environ, "SCULPT_RUNTIME_DIR": str(tmp_path)}, timeout=10)
     assert result.returncode == 1
-    event = json.loads(result.stdout)
-    assert event["protocol"] == 1 and event["type"] == "error"
-    assert "not installed" in event["message"]
+    events = [json.loads(line) for line in result.stdout.strip().splitlines() if line.strip()]
+    assert events[0]["protocol"] == 1 and events[0]["type"] == "accepted"
+    error_event = events[-1]
+    assert error_event["protocol"] == 1 and error_event["type"] == "error"
+    assert "not installed" in error_event["message"]
     assert not list(tmp_path.glob('*.glb'))
 
 

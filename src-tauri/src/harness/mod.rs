@@ -8,6 +8,7 @@ pub mod library;
 pub mod masks;
 pub mod paths;
 pub mod process;
+pub mod protocol;
 pub mod python;
 pub mod runtime;
 pub mod setup;

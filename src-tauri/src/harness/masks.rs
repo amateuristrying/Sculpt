@@ -236,8 +236,14 @@ pub async fn prepare_mask(
         if context.cancelled.load(Ordering::Relaxed) {
             return Err("Mask preparation cancelled".into());
         }
-        let bytes = read_png(&_operation.scratch.join("result/mask.png"))?;
-        let image = read_png(&_operation.scratch.join("result/preview.png"))?;
+        let mask_path = _operation.scratch.join("result/mask.png");
+        let preview_path = _operation.scratch.join("result/preview.png");
+        super::protocol::validate_output_path(&mask_path, &_operation.scratch)
+            .map_err(|e| format!("Unsafe mask output path: {e}"))?;
+        super::protocol::validate_output_path(&preview_path, &_operation.scratch)
+            .map_err(|e| format!("Unsafe preview output path: {e}"))?;
+        let bytes = read_png(&mask_path)?;
+        let image = read_png(&preview_path)?;
         decode_png(&image)?;
         publish(&directory, "preview.png", &image)?;
         // An empty automatic prediction is editable: return it, but save_mask
@@ -267,8 +273,14 @@ fn run_mask_worker(
     let request = scratch.join("request.json");
     std::fs::write(
         &request,
-        serde_json::to_vec(&serde_json::json!({"operation":"mask", "sourcePath":source,
-        "sourceSha256":source_sha, "outputPath":scratch.join("result"), "background":background}))
+        serde_json::to_vec(&serde_json::json!({
+            "jobId": context.id,
+            "operation": "mask",
+            "sourcePath": source,
+            "sourceSha256": source_sha,
+            "outputPath": scratch.join("result"),
+            "background": background
+        }))
         .map_err(|e| e.to_string())?,
     )
     .map_err(|e| e.to_string())?;
@@ -291,25 +303,44 @@ fn run_mask_worker(
         &context.cancelled,
         Duration::from_secs(180),
         |line| {
-            let event: serde_json::Value =
-                serde_json::from_str(line).map_err(|_| "Invalid mask worker message")?;
-            if event["protocol"] != 1 {
-                return Err("Unsupported mask worker protocol".into());
-            }
-            match event["type"].as_str() {
-                Some("progress") => context.emit(
-                    "analyzing",
-                    event["progress"].as_f64().unwrap_or(0.0).clamp(0.0, 99.0),
-                    event["message"].as_str().unwrap_or("Preparing mask"),
-                ),
-                Some("result") if !complete => complete = true,
-                Some("error") => {
-                    return Err(event["message"]
-                        .as_str()
-                        .unwrap_or("Mask preparation failed")
-                        .into())
+            let envelope = super::protocol::WorkerEnvelope::parse(line)
+                .map_err(|e| format!("Invalid mask worker message: {e}"))?;
+            match envelope.event {
+                super::protocol::WorkerEvent::Accepted { .. } => {}
+                super::protocol::WorkerEvent::Stage { stage, message } => {
+                    context.emit(
+                        stage.as_str(),
+                        0.0,
+                        message.as_deref().unwrap_or("Preparing mask"),
+                    );
                 }
-                _ => return Err("Unexpected mask worker response".into()),
+                super::protocol::WorkerEvent::Progress {
+                    stage,
+                    progress,
+                    message,
+                } => {
+                    context.emit(
+                        stage.as_str(),
+                        progress.clamp(0.0, 99.0),
+                        message.as_deref().unwrap_or("Preparing mask"),
+                    );
+                }
+                super::protocol::WorkerEvent::Warning { .. } => {}
+                super::protocol::WorkerEvent::Result(ref res) => {
+                    for artifact in &res.artifacts {
+                        super::protocol::validate_output_path(artifact, scratch)
+                            .map_err(|e| format!("Unsafe mask artifact path: {e}"))?;
+                    }
+                    if !complete {
+                        complete = true;
+                    }
+                }
+                super::protocol::WorkerEvent::Error { message, .. } => {
+                    return Err(message);
+                }
+                super::protocol::WorkerEvent::Cancelled { message } => {
+                    return Err(message.unwrap_or_else(|| "Mask preparation cancelled".into()));
+                }
             }
             Ok(())
         },

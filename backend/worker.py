@@ -14,9 +14,16 @@ import signal
 import threading
 import time
 
-from sculpt_backend import PROTOCOL_VERSION
 from sculpt_backend.config import configure_environment, runtime_root
 from sculpt_backend.health import validate_install
+from sculpt_backend.protocol import (
+    PROTOCOL_VERSION,
+    emit,
+    emit_accepted,
+    emit_error,
+    emit_progress,
+    emit_result,
+)
 
 
 def start_parent_watchdog() -> None:
@@ -51,11 +58,9 @@ def main() -> int:
     args = parser.parse_args()
     protocol_stdout = sys.stdout
 
-    def message(kind, **fields):
-        print(json.dumps({"protocol": PROTOCOL_VERSION, "type": kind, **fields}), file=protocol_stdout, flush=True)
-
     root = runtime_root()
     configure_environment(root)
+    job_id = None
     try:
         with contextlib.redirect_stdout(sys.stderr):
             if args.probe:
@@ -63,25 +68,29 @@ def main() -> int:
                 import rembg
                 import skimage
                 installed = validate_install(root)
-                message("probe", installed=installed, mps=torch.backends.mps.is_available(), torchVersion=torch.__version__)
+                emit("probe", job_id=None, stream=protocol_stdout, installed=installed, mps=torch.backends.mps.is_available(), torchVersion=torch.__version__)
                 return 0
             if args.request is None:
                 raise ValueError("A request file is required.")
             request = json.loads(args.request.read_text())
+            job_id = request.get("jobId") or request.get("job_id")
+            emit_accepted(job_id=job_id, stream=protocol_stdout)
             if not validate_install(root):
                 raise ValueError("The local engine is not installed or needs repair. Open runtime setup in Sculpt.")
-            emit = lambda stage, progress, text: message("progress", stage=stage, progress=progress, message=text)
+            emit = lambda stage, progress, text: emit_progress(stage=stage, progress=progress, message=text, job_id=job_id, stream=protocol_stdout)
             if request.get('operation') == 'mask':
                 from sculpt_backend.masks import prepare_mask
                 result = prepare_mask(request, emit)
             else:
                 from sculpt_backend.triposr import generate
                 result = generate(request, root, emit)
-            message("result", metrics=result)
+            output_path = request.get("outputPath")
+            artifacts = [output_path] if output_path else []
+            emit_result(metrics=result, artifacts=artifacts, job_id=job_id, stream=protocol_stdout)
         return 0
     except Exception as error:
         traceback.print_exc(file=sys.stderr)
-        message("error", message=f"{type(error).__name__}: {error}")
+        emit_error(message=f"{type(error).__name__}: {error}", code="WORKER_ERROR", job_id=job_id, stream=protocol_stdout)
         return 1
 
 
