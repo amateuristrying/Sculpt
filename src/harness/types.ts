@@ -171,12 +171,121 @@ export interface GenerationProgress {
   message: string
 }
 
+export type AssetOperation = 'generate' | 'refine' | 'export' | 'import'
+
+export type CoordinateSystem = 'glTF Y-up' | 'Z-up' | 'Y-up' | string
+
+export type PhysicalUnit = 'meters' | 'millimeters' | 'centimeters' | 'inches' | 'unitless' | 'unknown' | string
+
+export interface BoundingBox {
+  min: [number, number, number]
+  max: [number, number, number]
+}
+
+export type ManifestMaterialChannel =
+  | 'vertex_color'
+  | 'diffuse_texture'
+  | 'diffuse_color'
+  | 'normal'
+  | 'roughness'
+  | 'metallic'
+  | 'ao'
+  | 'ambient_occlusion'
+  | 'emissive'
+  | 'opacity'
+  | string
+
+export type TextureColorSpace = 'sRGB' | 'linear' | 'unknown'
+
+export interface MaterialInventory {
+  channels: ManifestMaterialChannel[]
+  textureWidth?: number | null
+  textureHeight?: number | null
+  textureColorSpace?: TextureColorSpace | null
+  pbr: boolean
+  unknownChannels?: string[]
+}
+
+export interface OutputArtifact {
+  path: string
+  mimeType: string
+  byteLength: number
+  sha256: string
+}
+
+export interface ValidationWarning {
+  code: string
+  message: string
+}
+
+export interface SourceInputs {
+  sourceImageId?: string | null
+  sourceImageSha256?: string | null
+  maskId?: string | null
+  maskSha256?: string | null
+  originalPrompt?: string | null
+  composedPrompt?: string | null
+}
+
+export interface EngineProvenance {
+  engineId: string
+  engineRevision?: string | null
+  modelWeightHashes?: Record<string, string>
+  runtimeVersion?: string | null
+  backend: string
+  device: string
+  driverVersion?: string | null
+}
+
+export interface GenerationParameters {
+  quality?: string | null
+  seed?: number | null
+  resolution?: number | null
+  densityThreshold?: number | null
+  smoothingIterations?: number | null
+  removeSmallComponents?: boolean | null
+  targetFaceCount?: number | null
+  extra?: Record<string, unknown>
+}
+
+export interface AssetLineage {
+  parentAssetId?: string | null
+  parentAssetVersion?: number | null
+  operation: AssetOperation
+  ancestorAssetIds?: string[]
+}
+
+export interface GeometryInventory {
+  vertexCount: number
+  faceCount: number
+  componentCount?: number | null
+  watertight?: boolean | null
+  boundingBox: BoundingBox
+  coordinateSystem: CoordinateSystem
+  unit: PhysicalUnit
+}
+
+export interface AssetManifest {
+  schemaVersion: number
+  assetId: string
+  createdAt: string
+  sourceInputs: SourceInputs
+  provenance: EngineProvenance
+  parameters: GenerationParameters
+  lineage: AssetLineage
+  geometry: GeometryInventory
+  materials: MaterialInventory
+  artifacts: OutputArtifact[]
+  warnings?: ValidationWarning[]
+}
+
 export interface GeneratedAsset {
   id: string
   seed: number
   generatedAt: string
   simulated: boolean
   metrics?: { device: string; totalSeconds: number; faces: number; vertices: number; sourceSha256?: string; canRefine?: boolean; operation?: 'generate' | 'refine'; resolution?: number; textureResolution?: string; refinement?: RefinementSettings; meshQuality?: { watertight: boolean; windingConsistent: boolean; components: number; degenerateFaces: number } }
+  manifest?: AssetManifest | null
 }
 
 export interface SourceAsset {

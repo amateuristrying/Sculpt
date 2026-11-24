@@ -333,4 +333,55 @@ describe('engine descriptor and capability contract', () => {
     expect(triposrDescriptor.targets.some((t: any) => t.platform === 'macos' && t.validated)).toBe(true)
     expect(triposrDescriptor.targets.some((t: any) => t.platform === 'windows' && !t.validated)).toBe(true)
   })
+
+  it('validates engine-independent asset manifest contract structure', () => {
+    const sampleManifest: import('../harness/types').AssetManifest = {
+      schemaVersion: 1,
+      assetId: 'e5b8c9a0-1234-4567-89ab-cdef01234567',
+      createdAt: '2026-11-24T12:00:00Z',
+      sourceInputs: {
+        sourceImageId: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+        sourceImageSha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+      },
+      provenance: {
+        engineId: 'triposr',
+        backend: 'Metal',
+        device: 'mps',
+      },
+      parameters: {
+        quality: 'balanced',
+        resolution: 128,
+      },
+      lineage: {
+        operation: 'generate',
+      },
+      geometry: {
+        vertexCount: 24512,
+        faceCount: 48920,
+        watertight: false,
+        boundingBox: {
+          min: [-0.5, -0.5, -0.5],
+          max: [0.5, 0.5, 0.5],
+        },
+        coordinateSystem: 'glTF Y-up',
+        unit: 'meters',
+      },
+      materials: {
+        channels: ['vertex_color', 'diffuse_texture'],
+        pbr: false,
+      },
+      artifacts: [
+        {
+          path: 'mesh.glb',
+          mimeType: 'model/gltf-binary',
+          byteLength: 3456789,
+          sha256: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+        },
+      ],
+    }
+    expect(sampleManifest.schemaVersion).toBe(1)
+    expect(sampleManifest.materials.pbr).toBe(false)
+    expect(sampleManifest.geometry.coordinateSystem).toBe('glTF Y-up')
+    expect(sampleManifest.artifacts[0].path).toBe('mesh.glb')
+  })
 })

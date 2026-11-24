@@ -1,3 +1,4 @@
+pub mod asset_manifest;
 pub mod assets;
 pub mod cache;
 pub mod catalog;
