@@ -58,8 +58,10 @@ def main():
         background.unlink()
     rembg.new_session("u2net", providers=["CPUExecutionProvider"])
     progress('verifying', 92, 'Verifying model checksums and local compute')
-    write_verified_manifest(root, [str(path.relative_to(root)), str((refs / 'main').relative_to(root))])
-    emit('result', installed=True, mps=torch.backends.mps.is_available())
+    mps_avail = torch.backends.mps.is_available() if hasattr(torch.backends, 'mps') else False
+    cuda_avail = torch.cuda.is_available() if hasattr(torch, 'cuda') else False
+    write_verified_manifest(root, [path.relative_to(root).as_posix(), (refs / 'main').relative_to(root).as_posix()])
+    emit('result', installed=True, mps=mps_avail, cuda=cuda_avail)
 
 
 if __name__ == "__main__":

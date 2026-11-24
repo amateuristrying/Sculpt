@@ -96,14 +96,18 @@ pub fn inspect(root: &Path) -> BackendStatus {
                     })
                 })
         });
-    let repair = root.join("venv").exists();
+    let repair = root.join("venv").exists() || root.join("models").exists();
     BackendStatus {
         download_cache_bytes: super::cache::download_bytes(root),
         installed,
         engine: "TripoSR".into(),
         runtime_path: root.to_string_lossy().into(),
         message: if installed {
-            "Verified local model files are ready. Generation stays on this Mac."
+            if cfg!(target_os = "macos") {
+                "Verified local model files are ready. Generation stays on this Mac."
+            } else {
+                "Verified local model files are ready. Generation stays on this device."
+            }
         } else if repair {
             "Your local runtime needs verification or repair. Setup will reuse cached downloads."
         } else {

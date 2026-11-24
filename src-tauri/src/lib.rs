@@ -75,6 +75,8 @@ pub fn run() {
             harness::exports::save_generated_stl,
             harness::python::backend_status,
             harness::setup::install_runtime,
+            harness::setup::repair_runtime,
+            harness::setup::uninstall_runtime,
             harness::cache::clear_download_cache,
             save_glb,
         ])
