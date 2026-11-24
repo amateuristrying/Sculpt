@@ -184,6 +184,11 @@ fn windows_tauri_bundle_and_capabilities_are_valid() {
         win_conf["bundle"]["windows"]["nsis"]["installMode"],
         "currentUser"
     );
+    assert_eq!(win_conf["bundle"]["windows"]["nsis"]["compression"], "lzma");
+    assert_eq!(
+        win_conf["bundle"]["windows"]["webviewInstallMode"]["type"],
+        "downloadBootstrapper"
+    );
     assert!(manifest_dir.join("icons/icon.ico").is_file());
 
     let cap: serde_json::Value = serde_json::from_str(

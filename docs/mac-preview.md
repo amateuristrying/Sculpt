@@ -2,16 +2,24 @@
 
 Sculpt is a free, MIT-licensed desktop application for local single-object
 image reconstruction, foreground correction, cached refinement, texture baking,
-and GLB/STL export. This is a usable preview, not a claim of production-quality
-geometry for every image or parity with commercial generators.
+and GLB/STL export. This is a usable **Beta** preview for **Apple Silicon
+(`aarch64-apple-darwin`, `.app` / `.dmg` only)**, not a claim of
+production-quality geometry for every image or parity with commercial
+generators. Intel Mac (`x86_64`), Universal, `.pkg`, and `.zip` packages are
+deferred/unsupported.
+
+> **Current scope (App Shell vs Local AI Inference):**
+> - **Desktop App Shell (`Beta`):** `.app` and `.dmg` bundles (`src-tauri/tauri.macos.conf.json`) use ad-hoc signing (`signingIdentity: "-"`). Clean-machine `.dmg` install/launch validation and Developer ID notarization remain pending.
+> - **Local AI Inference (`Beta`):** Retains the Apple Silicon 16 GB+ Metal/MPS TripoSR prototype baseline measured on an M4 MacBook Air (16 GB). Retained in **Beta** until clean-machine retesting on packaged builds.
 
 ## Install and create an asset
 
 1. Use an Apple Silicon Mac with at least 16 GB RAM and 5 GB free for engine
    setup. The machine with real reconstruction measurements is an M4 MacBook
    Air with 16 GB; other hardware has not been validated.
-2. Open the built DMG and copy Sculpt to Applications, or unzip the CI artifact
-   and copy Sculpt.app. These builds use local ad-hoc signing, not Developer ID
+2. Open the built `.dmg` (`Sculpt_<version>_aarch64.dmg`, from local build or
+   the `Sculpt-macOS-arm64-preview` CI artifact) and copy `Sculpt.app` to
+   Applications. These builds use local ad-hoc signing, not Developer ID
    notarization. If macOS blocks a downloaded build you trust, attempt opening
    it once, then use System Settings → Privacy & Security → Open Anyway.
    See [Apple's instructions](https://support.apple.com/en-us/102445).
@@ -64,15 +72,15 @@ the browser UI is currently a procedural demo, not web AI reconstruction.
 npm ci
 npm test
 npm run test:ui
-cargo test --manifest-path src-tauri/Cargo.toml --locked
-npm run desktop:build
-npm run desktop:verify
+cargo test --manifest-path src-tauri/Cargo.toml --target aarch64-apple-darwin --locked
+npm run desktop:build -- --target aarch64-apple-darwin --bundles app,dmg
+npm run desktop:verify:macos-arm64
 ```
 
-The bundle verifier checks the app's executable, arm64 architecture, local
-signature and exact packaged resource bytes. It does not assert notarization
+The bundle verifier checks the `.app` and `.dmg` payload, `arm64`-only architecture,
+local signature and exact packaged resource bytes. It does not assert notarization
 or run the neural model. The `macos-arm64` Beta lane on `macos-15` builds and
-uploads `Sculpt-macOS-arm64-preview` (a ZIP of `Sculpt.app` plus `SHA256SUMS.txt`,
-retained for 14 days for human review only with no automatic release) after
-static/privacy hygiene, unit, Rust, Python, and UI suites pass; it does not
-download model weights or certify GPU hardware.
+uploads `Sculpt-macOS-arm64-preview` (Apple Silicon `Sculpt_<version>_aarch64.dmg`
+plus `SHA256SUMS.txt`, retained for 14 days for human review only with no automatic
+release) after static/privacy hygiene, unit, Rust, Python, and UI suites pass;
+it does not download model weights or certify GPU hardware.

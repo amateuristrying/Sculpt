@@ -430,3 +430,52 @@ fn macos_archive_traversal_protection() {
     assert!(setup::validate_archive_entries(&["/usr/local/bin/evil"]).is_err());
     assert!(setup::validate_archive_entries(&["uv-aarch64-apple-darwin/../../bin/evil"]).is_err());
 }
+
+#[test]
+fn macos_tauri_bundle_and_capabilities_are_valid() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let base_conf: Value =
+        serde_json::from_str(&fs::read_to_string(manifest_dir.join("tauri.conf.json")).unwrap())
+            .expect("valid tauri.conf.json");
+    let macos_conf: Value = serde_json::from_str(
+        &fs::read_to_string(manifest_dir.join("tauri.macos.conf.json")).unwrap(),
+    )
+    .expect("valid tauri.macos.conf.json");
+
+    assert_eq!(
+        base_conf["bundle"]["targets"],
+        serde_json::json!(["app", "dmg"])
+    );
+    assert_eq!(
+        macos_conf["bundle"]["targets"],
+        serde_json::json!(["app", "dmg"])
+    );
+    assert_eq!(
+        macos_conf["bundle"]["macOS"]["minimumSystemVersion"],
+        "12.0"
+    );
+    assert_eq!(macos_conf["bundle"]["macOS"]["signingIdentity"], "-");
+
+    let icons = macos_conf["bundle"]["icon"]
+        .as_array()
+        .expect("macOS bundle icon array");
+    assert!(icons.iter().any(|icon| icon == "icons/icon.icns"));
+    for icon in icons {
+        let rel = icon.as_str().expect("icon path string");
+        assert!(
+            manifest_dir.join(rel).is_file(),
+            "Missing macOS icon file: {rel}"
+        );
+    }
+
+    let cap: Value = serde_json::from_str(
+        &fs::read_to_string(manifest_dir.join("capabilities/default.json")).unwrap(),
+    )
+    .expect("valid capabilities/default.json");
+    let perms = cap["permissions"].as_array().unwrap();
+    assert!(perms.iter().any(|p| p == "core:default"));
+    assert!(perms
+        .iter()
+        .any(|p| p == "core:window:allow-start-dragging"));
+    assert!(cap.get("platforms").is_none());
+}

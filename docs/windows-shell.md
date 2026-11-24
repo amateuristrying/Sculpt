@@ -2,7 +2,9 @@
 
 Sculpt provides native Windows desktop application shells for both Windows x64 (`x86_64-pc-windows-msvc`) and Windows ARM64 (`aarch64-pc-windows-msvc`), built with Tauri 2, WebView2, Rust, React, TypeScript, and React Three Fiber.
 
-> **Current scope:** The Windows desktop shells validate native host execution, hardware detection, image import, local library persistence, 3D viewport rendering, Workspace Demo, and GLB/STL export. Local AI reconstruction (TripoSR) is **not claimed as supported** on Windows yet (`Experimental / unverified` on Windows x64; `Unsupported / unverified` on Windows ARM64 with no native-inference claim).
+> **Current scope (App Shell vs Local AI Inference):**
+> - **Desktop App Shell:** Windows x64 (`x86_64-pc-windows-msvc`) and Windows ARM64 (`aarch64-pc-windows-msvc`, **Beta**) validate native host execution, hardware detection, image import, local library persistence, 3D viewport rendering, Workspace Demo, and GLB/STL export. Both build strictly as per-user NSIS setup executables (`installMode: "currentUser"` in `src-tauri/tauri.windows.conf.json`); Windows MSI, system-wide installers, Store/MSIX, and portable ZIP packages are deferred.
+> - **Local AI Inference:** TripoSR is **not claimed as supported** on Windows yet (`Experimental / unverified` on Windows x64; `Unsupported / unverified` on Windows ARM64 with no native-inference claim).
 
 ## Prerequisites
 

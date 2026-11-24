@@ -75,11 +75,13 @@ describe('CI workflow, privacy hygiene, and candidate artifact checks', () => {
 
     const bundleSummary = validateTauriBundleConfigs(REPO_ROOT)
     expect(bundleSummary.windowsTargets).toEqual(['nsis'])
+    expect(bundleSummary.windowsInstallMode).toBe('currentUser')
     expect(bundleSummary.linuxTargets).toEqual(['deb'])
+    expect(bundleSummary.macosTargets).toEqual(['app', 'dmg'])
     expect(bundleSummary.resourceCount).toBeGreaterThanOrEqual(8)
   })
 
-  it('rejects release publication, deploy steps, write permissions, and private references in workflows', () => {
+  it('rejects release publication, deploy steps, write permissions, deferred package targets, and private references in workflows', () => {
     const baseline = readFileSync(join(REPO_ROOT, '.github/workflows/ci.yml'), 'utf8')
 
     expect(() =>
@@ -109,6 +111,22 @@ describe('CI workflow, privacy hygiene, and candidate artifact checks', () => {
     expect(() =>
       validateCiWorkflow(baseline.replace('retention-days: 14', 'retention-days: 90')),
     ).toThrow(/retention-days/)
+
+    expect(() =>
+      validateCiWorkflow(baseline.replace('--bundles nsis', '--bundles msi')),
+    ).toThrow(/package matrix flag/)
+
+    expect(() =>
+      validateCiWorkflow(baseline.replace('--bundles deb', '--bundles appimage')),
+    ).toThrow(/package matrix flag/)
+
+    expect(() =>
+      validateCiWorkflow(baseline.replace('--target aarch64-apple-darwin', '--target x86_64-apple-darwin')),
+    ).toThrow(/deferred\/forbidden package target/)
+
+    expect(() =>
+      validateCiWorkflow(baseline.replace('--bundles app,dmg', '--bundles pkg')),
+    ).toThrow(/package matrix flag/)
   })
 
   it('rejects incomplete .gitignore rules', () => {

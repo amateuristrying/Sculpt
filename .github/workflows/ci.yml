@@ -107,6 +107,24 @@ jobs:
           npm run desktop:build -- --target x86_64-pc-windows-msvc --bundles nsis
           npm run desktop:verify:windows-x64
           node scripts/verify-ci-hygiene.mjs --check-artifact src-tauri/target/x86_64-pc-windows-msvc/release --artifact-glob "bundle/nsis/*-setup.exe" --write-checksums src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/SHA256SUMS.txt
+      - name: Verify clean per-user NSIS install and uninstall on Windows x64
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*-setup.exe | Select-Object -First 1
+          if (-not $installer) { throw "Missing Windows x64 NSIS installer" }
+          $installDir = Join-Path $env:RUNNER_TEMP "sculpt-x64-install-smoke"
+          if (Test-Path $installDir) { Remove-Item -Recurse -Force $installDir }
+          $installProc = Start-Process -FilePath $installer.FullName -ArgumentList "/S", "/D=$installDir" -Wait -PassThru
+          if ($installProc.ExitCode -ne 0) { throw "NSIS installer failed with exit code $($installProc.ExitCode)" }
+          if (-not (Test-Path (Join-Path $installDir "sculpt.exe"))) { throw "Installed sculpt.exe missing" }
+          $uninstaller = Join-Path $installDir "uninstall.exe"
+          if (-not (Test-Path $uninstaller)) { throw "Installed uninstall.exe missing" }
+          $uninstallProc = Start-Process -FilePath $uninstaller -ArgumentList "/S" -Wait -PassThru
+          if ($uninstallProc.ExitCode -ne 0) { throw "NSIS uninstaller failed with exit code $($uninstallProc.ExitCode)" }
+          $deadline = (Get-Date).AddSeconds(15)
+          while ((Test-Path (Join-Path $installDir "sculpt.exe")) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 250 }
+          if (Test-Path (Join-Path $installDir "sculpt.exe")) { throw "sculpt.exe remained after NSIS uninstall" }
+          if (Test-Path $installDir) { Remove-Item -Recurse -Force $installDir -ErrorAction SilentlyContinue }
       - uses: actions/upload-artifact@v4
         with:
           name: Sculpt-Windows-x64-shell
@@ -176,6 +194,24 @@ jobs:
           npm run desktop:build -- --target aarch64-pc-windows-msvc --bundles nsis
           npm run desktop:verify:windows-arm64
           node scripts/verify-ci-hygiene.mjs --check-artifact src-tauri/target/aarch64-pc-windows-msvc/release --artifact-glob "bundle/nsis/*-setup.exe" --write-checksums src-tauri/target/aarch64-pc-windows-msvc/release/bundle/nsis/SHA256SUMS.txt
+      - name: Verify clean per-user NSIS install and uninstall on Windows ARM64
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem src-tauri/target/aarch64-pc-windows-msvc/release/bundle/nsis/*-setup.exe | Select-Object -First 1
+          if (-not $installer) { throw "Missing Windows ARM64 NSIS installer" }
+          $installDir = Join-Path $env:RUNNER_TEMP "sculpt-arm64-install-smoke"
+          if (Test-Path $installDir) { Remove-Item -Recurse -Force $installDir }
+          $installProc = Start-Process -FilePath $installer.FullName -ArgumentList "/S", "/D=$installDir" -Wait -PassThru
+          if ($installProc.ExitCode -ne 0) { throw "NSIS installer failed with exit code $($installProc.ExitCode)" }
+          if (-not (Test-Path (Join-Path $installDir "sculpt.exe"))) { throw "Installed sculpt.exe missing" }
+          $uninstaller = Join-Path $installDir "uninstall.exe"
+          if (-not (Test-Path $uninstaller)) { throw "Installed uninstall.exe missing" }
+          $uninstallProc = Start-Process -FilePath $uninstaller -ArgumentList "/S" -Wait -PassThru
+          if ($uninstallProc.ExitCode -ne 0) { throw "NSIS uninstaller failed with exit code $($uninstallProc.ExitCode)" }
+          $deadline = (Get-Date).AddSeconds(15)
+          while ((Test-Path (Join-Path $installDir "sculpt.exe")) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 250 }
+          if (Test-Path (Join-Path $installDir "sculpt.exe")) { throw "sculpt.exe remained after NSIS uninstall" }
+          if (Test-Path $installDir) { Remove-Item -Recurse -Force $installDir -ErrorAction SilentlyContinue }
       - uses: actions/upload-artifact@v4
         with:
           name: Sculpt-Windows-arm64-shell
@@ -276,9 +312,9 @@ jobs:
           if-no-files-found: ignore
 
   macos-arm64:
-    name: macOS ARM64 (Beta preview app)
+    name: macOS ARM64 (Beta .app / .dmg shell)
     if: github.event.repository.private == false || github.event_name == 'workflow_dispatch'
-    # Standard Apple Silicon runner; ad-hoc signing only, no model download or GPU inference job.
+    # Standard Apple Silicon runner; ad-hoc signing only, no Intel package, no model download or GPU inference job.
     runs-on: macos-15
     timeout-minutes: 40
     steps:
@@ -296,22 +332,22 @@ jobs:
           npm test
           npm run build
       - name: Install Rust toolchain
-        run: rustup toolchain install stable --profile minimal --component rustfmt,clippy
+        run: rustup toolchain install stable --profile minimal --component rustfmt,clippy --target aarch64-apple-darwin
       - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             src-tauri/target
-          key: ${{ runner.os }}-${{ runner.arch }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-${{ runner.arch }}-cargo-
+          key: ${{ runner.os }}-arm64-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-arm64-cargo-
       - name: Native format, lint, compile, and unit tests
         working-directory: src-tauri
         run: |
           cargo +stable fmt --check
-          cargo +stable clippy --locked --no-deps
-          cargo +stable check --locked
-          cargo +stable test --locked
+          cargo +stable clippy --locked --target aarch64-apple-darwin --no-deps
+          cargo +stable check --locked --target aarch64-apple-darwin
+          cargo +stable test --locked --target aarch64-apple-darwin
       - name: Install UI test browser
         run: npx playwright install chrome
       - name: Workspace UI tests
@@ -326,18 +362,17 @@ jobs:
           python -B -c "import pathlib, py_compile, tempfile; td = tempfile.TemporaryDirectory(); [py_compile.compile(str(p), cfile=str(pathlib.Path(td.name) / (p.name + 'c')), doraise=True) for p in [pathlib.Path('backend/setup_runtime.py'), pathlib.Path('backend/download_models.py'), pathlib.Path('backend/worker.py'), *pathlib.Path('backend/sculpt_backend').glob('*.py')]]"
           python -m pip install --require-hashes -r backend/requirements.lock
           python -m pytest backend/tests -q
-      - name: Build, verify, and audit macOS ARM64 Beta preview app
+      - name: Build, verify, and audit macOS ARM64 Beta .app and .dmg
         run: |
-          npm run desktop:build -- --bundles app
-          npm run desktop:verify
-          ditto -c -k --sequesterRsrc --keepParent src-tauri/target/release/bundle/macos/Sculpt.app src-tauri/target/release/bundle/Sculpt-macOS-arm64.zip
-          node scripts/verify-ci-hygiene.mjs --check-artifact src-tauri/target/release --artifact-glob "bundle/Sculpt-macOS-arm64.zip" --write-checksums src-tauri/target/release/bundle/SHA256SUMS.txt
+          npm run desktop:build -- --target aarch64-apple-darwin --bundles app,dmg
+          npm run desktop:verify:macos-arm64
+          node scripts/verify-ci-hygiene.mjs --check-artifact src-tauri/target/aarch64-apple-darwin/release --artifact-glob "bundle/dmg/*.dmg" --write-checksums src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: Sculpt-macOS-arm64-preview
           path: |
-            src-tauri/target/release/bundle/Sculpt-macOS-arm64.zip
-            src-tauri/target/release/bundle/SHA256SUMS.txt
+            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/SHA256SUMS.txt
           retention-days: 14
           if-no-files-found: error
       - uses: actions/upload-artifact@v4

@@ -1,8 +1,21 @@
 # Sculpt
 
-A macOS desktop prototype for a local image-to-3D asset pipeline: **Generate → Refine → Texture → Export**.
+A local-first desktop application for an image-to-3D asset pipeline: **Generate → Refine → Texture → Export**.
 
 **Your hardware. Your files. Your inference.** Tauri 2 and Rust own the desktop application; React, TypeScript, and React Three Fiber provide the workspace. No Electron, cloud inference, accounts, or generation API is used.
+
+## Platform and package matrix
+
+Sculpt explicitly separates **Desktop App Shell** validation (installer, native launch, hardware detection, image import, local library persistence, Workspace Demo, and GLB/STL export) from **Local AI Inference** validation:
+
+| Platform / arch | Package format | Desktop App Shell | Local AI Inference |
+|---|---|---|---|
+| Windows x64 (`x86_64-pc-windows-msvc`) | NSIS per-user EXE (`*_x64-setup.exe`) | Verified (build/install/launch/uninstall tested under x64 emulation; native x64 CI/hardware run pending) | **Experimental / unverified** (TripoSR CUDA/CPU pending validation) |
+| Windows ARM64 (`aarch64-pc-windows-msvc`) | Conditional NSIS per-user EXE (`*_arm64-setup.exe`) — **Beta** | Verified natively on physical Snapdragon Windows 11 ARM64 (`mode=native-arm64`) | **Unsupported / unverified** (no native ARM64 AI inference claim) |
+| Ubuntu 22.04 LTS x64 (`x86_64-unknown-linux-gnu`) | `.deb` only (`*_amd64.deb`) — **Beta** | **Pending** clean Ubuntu 22.04 runner/VM `.deb` build, install, and launch | **Experimental / unverified** on CUDA; **Unsupported** on CPU-only |
+| macOS Apple Silicon (`aarch64-apple-darwin`) | `.app` / `.dmg` (`*_aarch64.dmg`) — **Beta** | **Beta** (ad-hoc signed; clean Mac `.dmg` retest and notarization pending) | **Beta** (Apple Silicon 16 GB+ Metal/MPS TripoSR prototype baseline) |
+
+Deferred / unsupported packages: Windows MSI, system-wide installer, Store/MSIX, and portable ZIP; Linux AppImage, RPM, Snap, Flatpak, Arch, and non-Ubuntu distributions; macOS Intel (`x86_64`), Universal, `.pkg`, and `.zip`. WSL2 Ubuntu is a developer environment only with no standalone desktop package.
 
 ## Run on Windows (desktop shell, x64 & ARM64)
 
@@ -49,9 +62,9 @@ cargo test --manifest-path src-tauri/Cargo.toml
 npm run desktop:build    # Build the macOS .app and .dmg
 ```
 
-Native bundles appear under `src-tauri/target/release/bundle/`. Local builds use ad-hoc signing. Developer ID signing and notarization remain release work. To build only the application, run `npm run desktop:build -- --bundles app`. `npm run dev` is available for UI development at `http://127.0.0.1:1420`, using a clearly labelled M4 hardware fixture. It does not detect the browser host's actual hardware.
+Native bundles appear under `src-tauri/target/aarch64-apple-darwin/release/bundle/` (or `src-tauri/target/release/bundle/` when no `--target` is passed). Local builds use ad-hoc signing. Developer ID signing and notarization remain release work. Only Apple Silicon (`aarch64-apple-darwin`) `.app` and `.dmg` bundles are configured (`src-tauri/tauri.macos.conf.json`); Intel Mac, Universal, `.pkg`, and `.zip` packages are deferred. `npm run dev` is available for UI development at `http://127.0.0.1:1420`, using a clearly labelled M4 hardware fixture. It does not detect the browser host's actual hardware.
 
-See [Mac preview installation and first generation](docs/mac-preview.md) for the usable desktop workflow and current release limits. `npm run desktop:verify` checks the built app's architecture, local signature, version, and bundled Python/installer/license files. Successful public CI runs also provide a `Sculpt-macOS-arm64-preview` download containing the app in a ZIP; model weights are installed separately on first use.
+See [Mac preview installation and first generation](docs/mac-preview.md) for the usable desktop workflow and current release limits. `npm run desktop:verify:macos-arm64` checks the built `.app` and `.dmg` architecture (`arm64` only), local signature, version, and bundled Python/installer/license files. Successful public CI runs also provide a `Sculpt-macOS-arm64-preview` download containing the Apple Silicon `.dmg` (`Sculpt_<version>_aarch64.dmg`) and `SHA256SUMS.txt`; model weights are installed separately on first use.
 
 ## What works
 

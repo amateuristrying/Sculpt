@@ -16,6 +16,7 @@
     "desktop:build": "tauri build",
     "desktop:verify": "node scripts/verify-desktop-bundle.mjs",
     "desktop:verify:macos": "node scripts/verify-macos-bundle.mjs",
+    "desktop:verify:macos-arm64": "node scripts/verify-macos-bundle.mjs --target aarch64-apple-darwin --expected-arch arm64",
     "desktop:verify:windows": "node scripts/verify-windows-bundle.mjs",
     "desktop:verify:windows-x64": "node scripts/verify-windows-bundle.mjs --target x86_64-pc-windows-msvc --expected-arch x64",
     "desktop:verify:windows-arm64": "node scripts/verify-windows-bundle.mjs --target aarch64-pc-windows-msvc --expected-arch arm64",

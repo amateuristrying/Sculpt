@@ -69,24 +69,32 @@ const EXPECTED_JOBS = {
     isBuildLane: true,
     artifactName: 'Sculpt-Windows-x64-shell',
     verifyCommand: 'npm run desktop:verify:windows-x64',
+    requiredBuildFlags: ['--target x86_64-pc-windows-msvc', '--bundles nsis'],
+    forbiddenPatterns: [/\b--bundles\s+[^\n]*msi\b/i, /\bx86_64-unknown-linux\b/i],
   },
   'windows-arm64': {
     runsOn: 'windows-11-arm',
     isBuildLane: true,
     artifactName: 'Sculpt-Windows-arm64-shell',
     verifyCommand: 'npm run desktop:verify:windows-arm64',
+    requiredBuildFlags: ['--target aarch64-pc-windows-msvc', '--bundles nsis'],
+    forbiddenPatterns: [/\b--bundles\s+[^\n]*msi\b/i],
   },
   'ubuntu-x64': {
     runsOn: 'ubuntu-22.04',
     isBuildLane: true,
     artifactName: 'Sculpt-Ubuntu-22.04-x64-shell',
     verifyCommand: 'npm run desktop:verify:linux-x64',
+    requiredBuildFlags: ['--target x86_64-unknown-linux-gnu', '--bundles deb'],
+    forbiddenPatterns: [/\b(appimage|rpm|snap|flatpak)\b/i],
   },
   'macos-arm64': {
     runsOn: 'macos-15',
     isBuildLane: true,
     artifactName: 'Sculpt-macOS-arm64-preview',
-    verifyCommand: 'npm run desktop:verify',
+    verifyCommand: 'npm run desktop:verify:macos-arm64',
+    requiredBuildFlags: ['--target aarch64-apple-darwin', '--bundles app,dmg'],
+    forbiddenPatterns: [/\bx86_64-apple-darwin\b/i, /\buniversal-apple-darwin\b/i, /\b--bundles\s+[^\n]*pkg\b/i, /Sculpt-macOS-arm64\.zip/i],
   },
 }
 
@@ -108,6 +116,7 @@ const PUBLIC_SCAN_TARGETS = [
   'src-tauri/tauri.conf.json',
   'src-tauri/tauri.windows.conf.json',
   'src-tauri/tauri.linux.conf.json',
+  'src-tauri/tauri.macos.conf.json',
   'src-tauri/capabilities',
   'scripts',
   '.github',
@@ -308,6 +317,15 @@ export function validateCiWorkflow(workflowText) {
       assert.ok(body.includes('pytest'), `Job ${jobId} must run pytest`)
       assert.ok(body.includes('npm run desktop:build'), `Job ${jobId} must run npm run desktop:build`)
       assert.ok(body.includes(spec.verifyCommand), `Job ${jobId} must run ${spec.verifyCommand}`)
+      for (const flag of spec.requiredBuildFlags ?? []) {
+        assert.ok(body.includes(flag), `Job ${jobId} must include package matrix flag "${flag}"`)
+      }
+      for (const forbiddenPattern of spec.forbiddenPatterns ?? []) {
+        assert.ok(
+          !forbiddenPattern.test(body),
+          `Job ${jobId} includes deferred/forbidden package target (${forbiddenPattern})`,
+        )
+      }
       assert.ok(body.includes('--check-artifact'), `Job ${jobId} must run artifact hygiene check before upload`)
       assert.ok(body.includes(`name: ${spec.artifactName}`), `Job ${jobId} must upload artifact ${spec.artifactName}`)
       assert.ok(body.includes('SHA256SUMS.txt'), `Job ${jobId} must generate and upload SHA256SUMS.txt`)
@@ -330,6 +348,7 @@ export function validateTauriBundleConfigs(rootDir = root) {
   const baseConfig = JSON.parse(readFileSync(join(rootDir, 'src-tauri/tauri.conf.json'), 'utf8'))
   const windowsConfig = JSON.parse(readFileSync(join(rootDir, 'src-tauri/tauri.windows.conf.json'), 'utf8'))
   const linuxConfig = JSON.parse(readFileSync(join(rootDir, 'src-tauri/tauri.linux.conf.json'), 'utf8'))
+  const macosConfig = JSON.parse(readFileSync(join(rootDir, 'src-tauri/tauri.macos.conf.json'), 'utf8'))
 
   const resources = Object.keys(baseConfig.bundle?.resources ?? {})
   assert.ok(resources.length > 0, 'tauri.conf.json must define explicit bundle.resources')
@@ -339,13 +358,27 @@ export function validateTauriBundleConfigs(rootDir = root) {
     }
   }
 
+  assert.deepEqual(baseConfig.bundle?.targets, ['app', 'dmg'], 'Base tauri.conf.json bundle.targets must remain ["app", "dmg"]')
   assert.deepEqual(windowsConfig.bundle?.targets, ['nsis'], 'Windows bundle targets must remain ["nsis"]')
+  assert.equal(
+    windowsConfig.bundle?.windows?.nsis?.installMode,
+    'currentUser',
+    'Windows NSIS installMode must remain "currentUser"',
+  )
   assert.deepEqual(linuxConfig.bundle?.targets, ['deb'], 'Linux bundle targets must remain ["deb"]')
+  assert.deepEqual(macosConfig.bundle?.targets, ['app', 'dmg'], 'macOS bundle targets must remain ["app", "dmg"]')
+  assert.equal(
+    macosConfig.bundle?.macOS?.minimumSystemVersion,
+    '12.0',
+    'macOS minimumSystemVersion must remain "12.0"',
+  )
 
   return {
     resourceCount: resources.length,
     windowsTargets: windowsConfig.bundle.targets,
+    windowsInstallMode: windowsConfig.bundle.windows.nsis.installMode,
     linuxTargets: linuxConfig.bundle.targets,
+    macosTargets: macosConfig.bundle.targets,
   }
 }
 

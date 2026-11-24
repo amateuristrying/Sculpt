@@ -2,10 +2,10 @@
 
 **Ubuntu 22.04 LTS x64 (`x86_64-unknown-linux-gnu`, `.deb` package)** is the sole initial Linux target for Sculpt, built with Tauri 2, WebKitGTK 4.1, Rust, React, TypeScript, and React Three Fiber.
 
-> **Current scope and status:**
+> **Current scope (App Shell vs Local AI Inference):**
 > - **Packaging target:** `.deb` only (`src-tauri/tauri.linux.conf.json`). AppImage, RPM, Snap, Flatpak, Arch, and other Linux distributions are **not supported or packaged**.
-> - **AI inference status:** Local AI reconstruction (TripoSR) is **not claimed as supported** on Linux yet (`Experimental / unverified` when NVIDIA CUDA is detected; `Unsupported` on CPU-only machines; Workspace Demo is recommended).
-> - **Verification status:** Tauri `.deb` packaging configuration, Linux hardware discovery/engine catalog unit tests, `.deb` bundle verifier unit tests, Playwright UI smoke tests, CI/artifact hygiene checks (`npm run ci:hygiene`), and the `ubuntu-22.04` GitHub Actions job (`Sculpt-Ubuntu-22.04-x64-shell` with `SHA256SUMS.txt`, retained 14 days for human review with no auto-release) are implemented. Clean Ubuntu 22.04 VM / CI `.deb` build, install, and desktop launch verification remain **pending** execution on an Ubuntu 22.04 host/runner.
+> - **Desktop App Shell (`Beta`):** Tauri `.deb` packaging configuration, Linux hardware discovery/engine catalog unit tests, `.deb` bundle verifier unit tests, Playwright UI smoke tests, CI/artifact hygiene checks (`npm run ci:hygiene`), and the `ubuntu-22.04` GitHub Actions job (`Sculpt-Ubuntu-22.04-x64-shell` with `SHA256SUMS.txt`, retained 14 days for human review with no auto-release) are implemented. Clean Ubuntu 22.04 VM / CI `.deb` build, install, and desktop launch verification remain **pending** execution on an Ubuntu 22.04 host/runner.
+> - **Local AI Inference:** Local AI reconstruction (TripoSR) is **not claimed as supported** on Linux yet (`Experimental / unverified` when NVIDIA CUDA is detected; `Unsupported` on CPU-only machines; Workspace Demo is recommended).
 
 ## System prerequisites (Ubuntu 22.04 LTS x64)
 

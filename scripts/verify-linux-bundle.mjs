@@ -330,6 +330,8 @@ export function verifyLinuxBundle(argv = process.argv.slice(2)) {
   const bundleDir = join(baseDir, 'bundle')
   assert.ok(!existsSync(join(bundleDir, 'appimage')), 'Unexpected AppImage bundle directory; only .deb is supported')
   assert.ok(!existsSync(join(bundleDir, 'rpm')), 'Unexpected RPM bundle directory; only .deb is supported')
+  assert.ok(!existsSync(join(bundleDir, 'snap')), 'Unexpected Snap bundle directory; only .deb is supported')
+  assert.ok(!existsSync(join(bundleDir, 'flatpak')), 'Unexpected Flatpak bundle directory; only .deb is supported')
 
   const debArch = expectedDebArch(exeInfo.architecture)
   const debDir = join(bundleDir, 'deb')

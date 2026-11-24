@@ -19,7 +19,9 @@ export function validateCiWorkflow(workflowText: string): {
 export function validateTauriBundleConfigs(rootDir?: string): {
   resourceCount: number
   windowsTargets: string[]
+  windowsInstallMode: string
   linuxTargets: string[]
+  macosTargets: string[]
 }
 export function isForbiddenArtifactEntry(relativePath: string): string | null
 export function verifyArtifactDirectory(
