@@ -1143,6 +1143,7 @@ mod tests {
             compute_backends: vec!["Metal".into(), "CPU".into()],
             detection_source: "native".into(),
             storage_gb: Some(256.0),
+            npu: Some("Apple Neural Engine".into()),
         }
     }
 
@@ -1218,6 +1219,7 @@ mod tests {
             compute_backends: vec!["CUDA".into(), "DirectML".into(), "CPU".into()],
             detection_source: "native".into(),
             storage_gb: Some(1024.0),
+            npu: None,
         };
         let err = resolve("triposr", &win_cuda).unwrap_err();
         assert!(err.contains("no validated Sculpt runtime"));
@@ -1238,6 +1240,7 @@ mod tests {
             compute_backends: vec!["Vulkan".into(), "DirectML".into(), "CPU".into()],
             detection_source: "native".into(),
             storage_gb: Some(512.0),
+            npu: Some("Qualcomm Hexagon NPU".into()),
         };
         assert!(resolve("triposr", &win_arm).is_err());
 
@@ -1254,6 +1257,7 @@ mod tests {
             compute_backends: vec!["CUDA".into(), "CPU".into()],
             detection_source: "native".into(),
             storage_gb: Some(2048.0),
+            npu: None,
         };
         assert!(resolve("triposr", &linux_cuda).is_err());
 
@@ -1270,6 +1274,7 @@ mod tests {
             compute_backends: vec!["CPU".into()],
             detection_source: "native".into(),
             storage_gb: Some(2048.0),
+            npu: None,
         };
         assert!(resolve("triposr", &cpu_only).is_err());
         // But Demo is supported on CPU!

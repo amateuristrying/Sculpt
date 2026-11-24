@@ -148,6 +148,7 @@ mod tests {
             compute_backends: vec!["Metal".into(), "CPU".into()],
             detection_source: "native".into(),
             storage_gb: Some(256.0),
+            npu: Some("Apple Neural Engine".into()),
         }
     }
 
@@ -248,6 +249,7 @@ mod tests {
             compute_backends: vec!["CUDA".into(), "DirectML".into(), "CPU".into()],
             detection_source: "native".into(),
             storage_gb: Some(1024.0),
+            npu: None,
         };
         let profiles = engines(&win_cuda);
         assert_eq!(profiles[0].id, "triposr");
@@ -274,6 +276,7 @@ mod tests {
             compute_backends: vec!["Vulkan".into(), "DirectML".into(), "CPU".into()],
             detection_source: "native".into(),
             storage_gb: Some(512.0),
+            npu: Some("Qualcomm Hexagon NPU".into()),
         };
         let arm_profiles = engines(&win_arm);
         assert_eq!(arm_profiles[0].id, "triposr");
@@ -300,6 +303,7 @@ mod tests {
             compute_backends: vec!["CPU".into()],
             detection_source: "native".into(),
             storage_gb: Some(1000.0),
+            npu: Some("Apple Neural Engine".into()),
         };
         let profiles = engines(&cpu_workstation);
         assert_eq!(profiles[0].id, "triposr");
@@ -454,6 +458,7 @@ mod tests {
             compute_backends: vec!["DirectML".into(), "CPU".into()],
             detection_source: "native".into(),
             storage_gb: Some(256.0),
+            npu: None,
         };
 
         let eval = evaluate_manifest(&win_directml, &unverified_manifest);

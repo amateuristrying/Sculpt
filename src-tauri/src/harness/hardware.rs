@@ -1,8 +1,18 @@
+pub mod linux;
+pub mod macos;
+pub mod windows;
+
+#[allow(unused_imports)]
+pub use linux::{profile_from_linux_probes, LinuxProbes};
+#[allow(unused_imports)]
+pub use macos::{profile_from_macos_report, MacProbes};
+#[allow(unused_imports)]
+pub use windows::{profile_from_windows_probes, WindowsGpuAdapter, WindowsProbes};
+
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::{process::Command, sync::OnceLock};
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct HardwareProfile {
     pub os: String,
@@ -17,9 +27,31 @@ pub struct HardwareProfile {
     pub detection_source: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub storage_gb: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub npu: Option<String>,
 }
 
-fn command_output(program: &str, args: &[&str]) -> Option<String> {
+impl Default for HardwareProfile {
+    fn default() -> Self {
+        Self {
+            os: "Unknown".into(),
+            os_version: "Unknown".into(),
+            architecture: "Unknown".into(),
+            chip: "Unknown processor".into(),
+            gpu: "GPU not detected".into(),
+            memory_gb: 0.0,
+            unified_memory: false,
+            is_apple_silicon: false,
+            compute_backends: vec!["CPU".into()],
+            detection_source: "native".into(),
+            storage_gb: None,
+            npu: None,
+        }
+    }
+}
+
+#[allow(dead_code)]
+pub(crate) fn command_output(program: &str, args: &[&str]) -> Option<String> {
     // Fixed executables and arguments only. Never invoke a shell or accept UI input here.
     let result = Command::new(program).args(args).output().ok()?;
     result
@@ -28,137 +60,16 @@ fn command_output(program: &str, args: &[&str]) -> Option<String> {
         .then(|| String::from_utf8_lossy(&result.stdout).trim().to_string())
 }
 
-fn field(value: &Value, key: &str) -> Option<String> {
-    value
-        .get(key)?
-        .as_str()
-        .filter(|s| !s.is_empty())
-        .map(str::to_owned)
-}
-
-#[derive(Default)]
-struct MacProbes {
-    cpu: Option<String>,
-    arm64: bool,
-    memory_bytes: Option<f64>,
-    os_version: Option<String>,
-    architecture: Option<String>,
-}
-
-fn profile_from_macos_report(report: &Value, probes: MacProbes) -> HardwareProfile {
-    let hardware = &report["SPHardwareDataType"][0];
-    let displays = report["SPDisplaysDataType"].as_array();
-    let chip = field(hardware, "chip_type")
-        .or(probes.cpu)
-        .or_else(|| field(hardware, "cpu_type"))
-        .unwrap_or_else(|| "Unknown processor".into());
-    // hw.optional.arm64 remains true under Rosetta, unlike the app's build architecture.
-    let is_apple_silicon = chip.starts_with("Apple M") || probes.arm64;
-    let memory_gb = probes
-        .memory_bytes
-        .map(|bytes| bytes / 1_073_741_824.0)
-        .or_else(|| {
-            field(hardware, "physical_memory")
-                .and_then(|value| value.split_whitespace().next()?.parse::<f64>().ok())
-        })
-        .unwrap_or(0.0);
-    let gpu = displays
-        .map(|entries| {
-            entries
-                .iter()
-                .filter_map(|entry| field(entry, "sppci_model").or_else(|| field(entry, "_name")))
-                .collect::<Vec<_>>()
-                .join(" + ")
-        })
-        .filter(|value| !value.is_empty())
-        .unwrap_or_else(|| "GPU not detected".into());
-    let metal = displays.is_some_and(|entries| {
-        entries.iter().any(|entry| {
-            // macOS uses both of these keys across releases. An absent key means unknown.
-            ["spdisplays_metal", "spdisplays_metal_support"]
-                .iter()
-                .any(|key| {
-                    entry.get(key).and_then(Value::as_str).is_some_and(|value| {
-                        let value = value.to_lowercase();
-                        (value.contains("supported") || value.contains("metal"))
-                            && !value.contains("unsupported")
-                            && !value.contains("not_supported")
-                            && !value.contains("not supported")
-                    })
-                })
-        })
-    });
-    let mut compute_backends = vec!["CPU".into()];
-    if metal {
-        compute_backends.insert(0, "Metal".into());
-    }
-    HardwareProfile {
-        os: "macOS".into(),
-        os_version: probes.os_version.unwrap_or_else(|| "Unknown".into()),
-        architecture: if is_apple_silicon {
-            "arm64".into()
-        } else {
-            probes.architecture.unwrap_or_else(|| "Unknown".into())
-        },
-        chip,
-        gpu,
-        memory_gb: (memory_gb * 10.0).round() / 10.0,
-        unified_memory: is_apple_silicon,
-        is_apple_silicon,
-        compute_backends,
-        detection_source: "native".into(),
-        storage_gb: None,
-    }
-}
-
 pub fn detect() -> HardwareProfile {
     static PROFILE: OnceLock<HardwareProfile> = OnceLock::new();
     PROFILE
         .get_or_init(|| {
             if cfg!(target_os = "macos") {
-                let report = command_output(
-                    "/usr/sbin/system_profiler",
-                    &[
-                        "SPHardwareDataType",
-                        "SPDisplaysDataType",
-                        "-detailLevel",
-                        "mini",
-                        "-timeout",
-                        "8",
-                        "-json",
-                    ],
-                )
-                .and_then(|value| serde_json::from_str::<Value>(&value).ok())
-                .unwrap_or(Value::Null);
-                let probes = MacProbes {
-                    cpu: command_output("/usr/sbin/sysctl", &["-n", "machdep.cpu.brand_string"]),
-                    arm64: command_output("/usr/sbin/sysctl", &["-n", "hw.optional.arm64"])
-                        .as_deref()
-                        == Some("1"),
-                    memory_bytes: command_output("/usr/sbin/sysctl", &["-n", "hw.memsize"])
-                        .and_then(|value| value.parse::<f64>().ok()),
-                    os_version: command_output("/usr/bin/sw_vers", &["-productVersion"]),
-                    architecture: Some(std::env::consts::ARCH.into()),
-                };
-                let mut profile = profile_from_macos_report(&report, probes);
-                // Disk Size is the root volume/container capacity; report only when detected.
-                profile.storage_gb = command_output("/usr/sbin/diskutil", &["info", "/"])
-                    .and_then(|output| {
-                        output
-                            .lines()
-                            .find(|line| line.trim_start().starts_with("Disk Size:"))
-                            .map(str::to_owned)
-                    })
-                    .and_then(|line| {
-                        line.split('(')
-                            .nth(1)?
-                            .split_whitespace()
-                            .next()?
-                            .parse::<f64>()
-                            .ok()
-                    })
-                    .map(|bytes| (bytes / 1_000_000_000.0).round());
-                profile
+                macos::detect()
+            } else if cfg!(target_os = "windows") {
+                windows::detect()
+            } else if cfg!(target_os = "linux") {
+                linux::detect()
             } else {
                 HardwareProfile {
                     os: std::env::consts::OS.into(),
@@ -172,6 +83,7 @@ pub fn detect() -> HardwareProfile {
                     compute_backends: vec!["CPU".into()],
                     detection_source: "native".into(),
                     storage_gb: None,
+                    npu: None,
                 }
             }
         })
@@ -181,6 +93,7 @@ pub fn detect() -> HardwareProfile {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::Value;
 
     #[test]
     fn detects_m4_gpu_and_metal_without_assuming_a_runtime() {
@@ -195,6 +108,7 @@ mod tests {
         assert_eq!(profile.memory_gb, 16.0);
         assert!(profile.compute_backends.contains(&"Metal".into()));
         assert!(!profile.compute_backends.contains(&"MLX".into()));
+        assert_eq!(profile.npu, Some("Apple Neural Engine".into()));
     }
 
     #[test]
@@ -214,15 +128,212 @@ mod tests {
         assert_eq!(profile.memory_gb, 8.0);
         assert_eq!(profile.architecture, "x86_64");
         assert_eq!(profile.compute_backends, vec!["CPU"]);
+        assert_eq!(profile.npu, None);
+
         let missing = profile_from_macos_report(&Value::Null, MacProbes::default());
         assert_eq!(missing.chip, "Unknown processor");
         assert_eq!(missing.memory_gb, 0.0);
         assert!(!missing.is_apple_silicon);
+        assert_eq!(missing.npu, None);
     }
 
     #[test]
-    #[ignore = "Runs hardware utilities on this Mac; use --ignored --nocapture for native verification"]
-    fn inspect_development_hardware() {
-        println!("{}", serde_json::to_string_pretty(&detect()).unwrap());
+    fn windows_x64_nvidia_fixture_constructs_accurate_profile() {
+        let probes = WindowsProbes {
+            os_name: Some("Windows 11 Pro".into()),
+            display_version: Some("24H2".into()),
+            build_number: Some("26100".into()),
+            ubr: Some(1742),
+            architecture: Some("x86_64".into()),
+            cpu_name: Some("AMD Ryzen 9 9950X 16-Core Processor".into()),
+            total_ram_bytes: Some(68_719_476_736), // 64 GB
+            storage_total_bytes: Some(1_000_000_000_000), // 1000 GB
+            storage_free_bytes: Some(500_000_000_000),
+            gpus: vec![WindowsGpuAdapter {
+                name: "NVIDIA GeForce RTX 4090".into(),
+                provider: Some("NVIDIA".into()),
+                dedicated_vram_bytes: Some(25_769_803_776), // 24 GB
+                shared_ram_bytes: None,
+                driver_version: Some("560.94".into()),
+            }],
+            npu_name: None,
+            has_directml: true,
+            has_vulkan: true,
+            has_cuda: true,
+        };
+
+        let profile = profile_from_windows_probes(&probes);
+        assert_eq!(profile.os, "Windows");
+        assert_eq!(profile.os_version, "11 24H2 (Build 26100.1742)");
+        assert_eq!(profile.architecture, "x86_64");
+        assert_eq!(profile.chip, "AMD Ryzen 9 9950X 16-Core Processor");
+        assert_eq!(profile.gpu, "NVIDIA GeForce RTX 4090");
+        assert_eq!(profile.memory_gb, 64.0);
+        assert!(!profile.unified_memory);
+        assert!(!profile.is_apple_silicon);
+        assert_eq!(
+            profile.compute_backends,
+            vec!["CUDA", "DirectML", "Vulkan", "CPU"]
+        );
+        assert_eq!(profile.storage_gb, Some(1000.0));
+        assert_eq!(profile.npu, None);
+    }
+
+    #[test]
+    fn windows_arm64_snapdragon_fixture_constructs_accurate_profile() {
+        let probes = WindowsProbes {
+            os_name: Some("Windows 11 Home".into()),
+            display_version: Some("24H2".into()),
+            build_number: Some("26100".into()),
+            ubr: Some(1000),
+            architecture: Some("arm64".into()),
+            cpu_name: Some("Snapdragon(R) X Elite - X1E80100 - Qualcomm(R) Oryon(TM) CPU".into()),
+            total_ram_bytes: Some(34_359_738_368), // 32 GB
+            storage_total_bytes: Some(512_000_000_000),
+            storage_free_bytes: Some(300_000_000_000),
+            gpus: vec![WindowsGpuAdapter {
+                name: "Qualcomm(R) Adreno(TM) X1-85 GPU".into(),
+                provider: Some("Qualcomm Incorporated".into()),
+                dedicated_vram_bytes: None, // Unified SoC memory
+                shared_ram_bytes: None,
+                driver_version: Some("31.0.178.0".into()),
+            }],
+            npu_name: Some("Snapdragon(R) X Elite - X1E80100 - Qualcomm(R) Hexagon(TM) NPU".into()),
+            has_directml: true,
+            has_vulkan: true,
+            has_cuda: false,
+        };
+
+        let profile = profile_from_windows_probes(&probes);
+        assert_eq!(profile.os, "Windows");
+        assert_eq!(profile.os_version, "11 24H2 (Build 26100.1000)");
+        assert_eq!(profile.architecture, "arm64");
+        assert_eq!(
+            profile.chip,
+            "Snapdragon(R) X Elite - X1E80100 - Qualcomm(R) Oryon(TM) CPU"
+        );
+        assert_eq!(profile.gpu, "Qualcomm(R) Adreno(TM) X1-85 GPU");
+        assert_eq!(profile.memory_gb, 32.0);
+        assert!(profile.unified_memory);
+        assert!(!profile.is_apple_silicon);
+        assert_eq!(profile.compute_backends, vec!["DirectML", "Vulkan", "CPU"]);
+        assert_eq!(profile.storage_gb, Some(512.0));
+        assert_eq!(
+            profile.npu,
+            Some("Snapdragon(R) X Elite - X1E80100 - Qualcomm(R) Hexagon(TM) NPU".into())
+        );
+    }
+
+    #[test]
+    fn windows_unknown_stays_unknown_when_probes_empty() {
+        let probes = WindowsProbes::default();
+        let profile = profile_from_windows_probes(&probes);
+        assert_eq!(profile.os, "Windows");
+        assert_eq!(profile.os_version, "Unknown");
+        assert_eq!(profile.architecture, "Unknown");
+        assert_eq!(profile.chip, "Unknown processor");
+        assert_eq!(profile.gpu, "GPU not detected");
+        assert_eq!(profile.memory_gb, 0.0);
+        assert!(!profile.unified_memory);
+        assert_eq!(profile.compute_backends, vec!["CPU"]);
+        assert_eq!(profile.storage_gb, None);
+        assert_eq!(profile.npu, None);
+    }
+
+    #[test]
+    fn linux_ubuntu_cuda_fixture_constructs_accurate_profile() {
+        let probes = LinuxProbes {
+            os_release: Some(
+                r#"NAME="Ubuntu"
+VERSION="22.04.4 LTS (Jammy Jellyfish)"
+ID=ubuntu
+PRETTY_NAME="Ubuntu 22.04.4 LTS"
+VERSION_ID="22.04""#
+                    .into(),
+            ),
+            cpuinfo: Some(
+                r#"processor	: 0
+vendor_id	: AuthenticAMD
+model name	: AMD Ryzen 9 7950X 16-Core Processor
+cpu MHz		: 4500.000"#
+                    .into(),
+            ),
+            meminfo: Some(
+                r#"MemTotal:       32645120 kB
+MemFree:        24123456 kB
+MemAvailable:   28901234 kB"#
+                    .into(),
+            ),
+            df_output: Some(
+                r#"Filesystem     1K-blocks      Used Available Use% Mounted on
+/dev/nvme0n1p2 983040000 123456780 859583220  13% /"#
+                    .into(),
+            ),
+            storage_total_bytes: None,
+            architecture: Some("x86_64".into()),
+            gpu_name: Some("NVIDIA GeForce RTX 4090".into()),
+            has_nvidia: true,
+            has_vulkan: true,
+            is_unified_memory: false,
+        };
+
+        let profile = profile_from_linux_probes(&probes);
+        assert_eq!(profile.os, "Ubuntu");
+        assert_eq!(profile.os_version, "Ubuntu 22.04.4 LTS");
+        assert_eq!(profile.architecture, "x86_64");
+        assert_eq!(profile.chip, "AMD Ryzen 9 7950X 16-Core Processor");
+        assert_eq!(profile.gpu, "NVIDIA GeForce RTX 4090");
+        assert_eq!(profile.memory_gb, 31.1); // 32645120 kB -> 31.1 GB
+        assert!(!profile.unified_memory);
+        assert!(!profile.is_apple_silicon);
+        assert_eq!(profile.compute_backends, vec!["CUDA", "Vulkan", "CPU"]);
+        assert_eq!(profile.storage_gb, Some(1007.0));
+        assert_eq!(profile.npu, None);
+    }
+
+    #[test]
+    fn linux_cpu_only_unknown_stays_unknown_when_probes_empty() {
+        let probes = LinuxProbes::default();
+        let profile = profile_from_linux_probes(&probes);
+        assert_eq!(profile.os, "Linux");
+        assert_eq!(profile.os_version, "Unknown");
+        assert_eq!(profile.architecture, "x86_64");
+        assert_eq!(profile.chip, "Unknown processor");
+        assert_eq!(profile.gpu, "GPU not detected");
+        assert_eq!(profile.memory_gb, 0.0);
+        assert!(!profile.unified_memory);
+        assert_eq!(profile.compute_backends, vec!["CPU"]);
+        assert_eq!(profile.storage_gb, None);
+        assert_eq!(profile.npu, None);
+    }
+
+    #[test]
+    fn native_detect_returns_honest_hardware_numbers() {
+        let profile = detect();
+        // On native platforms, detection must populate real specs instead of 0.0 GB RAM
+        if cfg!(target_os = "windows") {
+            assert_eq!(profile.os, "Windows");
+            assert!(
+                profile.memory_gb > 0.0,
+                "Native Windows detect must find real physical RAM (found {})",
+                profile.memory_gb
+            );
+            assert_ne!(
+                profile.chip, "Unknown processor",
+                "Native Windows detect must find CPU processor string"
+            );
+            assert_ne!(profile.architecture, "Unknown");
+            assert!(profile.compute_backends.contains(&"CPU".into()));
+            eprintln!(
+                "Native Windows HardwareProfile: {}",
+                serde_json::to_string_pretty(&profile).unwrap()
+            );
+        } else if cfg!(target_os = "macos") {
+            assert_eq!(profile.os, "macOS");
+            assert!(profile.compute_backends.contains(&"CPU".into()));
+        } else if cfg!(target_os = "linux") {
+            assert_eq!(profile.os, "Linux");
+            assert!(profile.compute_backends.contains(&"CPU".into()));
+        }
     }
 }

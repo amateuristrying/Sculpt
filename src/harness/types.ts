@@ -12,6 +12,7 @@ export interface HardwareProfile {
   computeBackends: string[]
   detectionSource: 'native' | 'preview'
   storageGb?: number
+  npu?: string
 }
 
 export type CompatibilityStatus =
