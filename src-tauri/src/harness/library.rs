@@ -9,6 +9,8 @@ use super::{
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+#[cfg(windows)]
+use std::os::windows::io::AsRawHandle;
 #[cfg(unix)]
 use std::os::{fd::AsRawFd, unix::fs::OpenOptionsExt};
 use std::{
@@ -72,11 +74,85 @@ impl Default for Snapshot {
     }
 }
 
+#[cfg(windows)]
+#[allow(
+    non_camel_case_types,
+    non_snake_case,
+    non_upper_case_globals,
+    dead_code
+)]
+mod win32 {
+    use std::ffi::c_void;
+
+    pub type HANDLE = *mut c_void;
+    pub type BOOL = i32;
+    pub type DWORD = u32;
+
+    pub const LOCKFILE_FAIL_IMMEDIATELY: DWORD = 0x00000001;
+    pub const LOCKFILE_EXCLUSIVE_LOCK: DWORD = 0x00000002;
+    pub const ERROR_SHARING_VIOLATION: DWORD = 32;
+    pub const ERROR_LOCK_VIOLATION: DWORD = 33;
+
+    #[repr(C)]
+    pub struct OVERLAPPED {
+        pub Internal: usize,
+        pub InternalHigh: usize,
+        pub Offset: u32,
+        pub OffsetHigh: u32,
+        pub hEvent: HANDLE,
+    }
+
+    #[link(name = "kernel32")]
+    extern "system" {
+        pub fn LockFileEx(
+            hFile: HANDLE,
+            dwFlags: DWORD,
+            dwReserved: DWORD,
+            nNumberOfBytesToLockLow: DWORD,
+            nNumberOfBytesToLockHigh: DWORD,
+            lpOverlapped: *mut OVERLAPPED,
+        ) -> BOOL;
+
+        pub fn UnlockFileEx(
+            hFile: HANDLE,
+            dwReserved: DWORD,
+            nNumberOfBytesToUnlockLow: DWORD,
+            nNumberOfBytesToUnlockHigh: DWORD,
+            lpOverlapped: *mut OVERLAPPED,
+        ) -> BOOL;
+
+        pub fn GetLastError() -> DWORD;
+    }
+}
+
+pub struct LibraryLock {
+    file: File,
+}
+
+impl Drop for LibraryLock {
+    fn drop(&mut self) {
+        #[cfg(unix)]
+        {
+            unsafe {
+                libc::flock(self.file.as_raw_fd(), libc::LOCK_UN);
+            }
+        }
+        #[cfg(windows)]
+        {
+            let handle = self.file.as_raw_handle() as win32::HANDLE;
+            let mut overlapped: win32::OVERLAPPED = unsafe { std::mem::zeroed() };
+            unsafe {
+                win32::UnlockFileEx(handle, 0, !0, !0, &mut overlapped);
+            }
+        }
+    }
+}
+
 pub struct Library {
     root: PathBuf,
     snapshot: Snapshot,
-    // Keep the open descriptor, not just its path: flock is released on close.
-    _lock: File,
+    // Keep the open descriptor/lock handle: locking is released on drop or close.
+    _lock: LibraryLock,
 }
 
 impl Library {
@@ -84,13 +160,7 @@ impl Library {
         fs::create_dir_all(&root).map_err(storage_error)?;
         reject_symlink(&root)?;
         let root = root.canonicalize().map_err(storage_error)?;
-        let lock = open_private(&root.join(".library.lock"), true)?;
-        #[cfg(unix)]
-        if unsafe { libc::flock(lock.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } != 0 {
-            return Err("The Sculpt library is open in another app process. Close that process and try again.".into());
-        }
-        #[cfg(not(unix))]
-        return Err("Durable library locking is not implemented on this operating system".into());
+        let lock = acquire_lock(&root.join(".library.lock"))?;
 
         ensure_directory(&root, "sources")?;
         ensure_directory(&root, "jobs")?;
@@ -334,6 +404,7 @@ impl Library {
             self.source(source_id)?;
             let path = self.mesh_path(id)?;
             let bytes = assets::read_valid_glb(&path)?;
+            #[cfg(unix)]
             open_private(&path, false)?
                 .sync_all()
                 .map_err(storage_error)?;
@@ -731,6 +802,79 @@ fn reject_symlink(path: &Path) -> Result<(), String> {
     Ok(())
 }
 
+fn acquire_lock(path: &Path) -> Result<LibraryLock, String> {
+    let mut options = OpenOptions::new();
+    options.read(true).write(true).create(true);
+    #[cfg(unix)]
+    options
+        .mode(0o600)
+        .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
+    let file = match options.open(path) {
+        Ok(file) => file,
+        Err(e) => {
+            #[cfg(windows)]
+            if let Some(code) = e.raw_os_error() {
+                if code == win32::ERROR_SHARING_VIOLATION as i32
+                    || code == win32::ERROR_LOCK_VIOLATION as i32
+                {
+                    return Err(
+                        "The Sculpt library is open in another app process. Close that process and try again."
+                            .into(),
+                    );
+                }
+            }
+            return Err(storage_error(e));
+        }
+    };
+
+    if !file.metadata().map_err(storage_error)?.is_file() {
+        return Err("The library file is not a regular file".into());
+    }
+
+    #[cfg(unix)]
+    {
+        if unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) } != 0 {
+            return Err(
+                "The Sculpt library is open in another app process. Close that process and try again."
+                    .into(),
+            );
+        }
+    }
+
+    #[cfg(windows)]
+    {
+        let handle = file.as_raw_handle() as win32::HANDLE;
+        let mut overlapped: win32::OVERLAPPED = unsafe { std::mem::zeroed() };
+        let res = unsafe {
+            win32::LockFileEx(
+                handle,
+                win32::LOCKFILE_EXCLUSIVE_LOCK | win32::LOCKFILE_FAIL_IMMEDIATELY,
+                0,
+                !0,
+                !0,
+                &mut overlapped,
+            )
+        };
+        if res == 0 {
+            let err = unsafe { win32::GetLastError() };
+            if err == win32::ERROR_LOCK_VIOLATION || err == win32::ERROR_SHARING_VIOLATION {
+                return Err(
+                    "The Sculpt library is open in another app process. Close that process and try again."
+                        .into(),
+                );
+            }
+            return Err(format!(
+                "Could not lock the Sculpt library: Windows error code {err}"
+            ));
+        }
+    }
+
+    #[cfg(not(any(unix, windows)))]
+    return Err("Durable library locking is not implemented on this operating system".into());
+
+    Ok(LibraryLock { file })
+}
+
 fn open_private(path: &Path, create: bool) -> Result<File, String> {
     let mut options = OpenOptions::new();
     options.read(true);
@@ -772,6 +916,7 @@ fn verify_source_file(path: &Path, expected_sha: &str) -> Result<(), String> {
     if format!("{:x}", hash.finalize()) != expected_sha {
         return Err("The stored source image changed or is damaged; import it again".into());
     }
+    #[cfg(unix)]
     file.sync_all().map_err(storage_error)?;
     sync_directory(path.parent().ok_or("Invalid source location")?)
 }
@@ -1334,17 +1479,44 @@ mod tests {
         assert!(Library::open(fixture.0.clone()).is_err());
     }
 
-    #[cfg(unix)]
+    #[test]
+    fn stale_lock_file_does_not_prevent_library_open() {
+        let fixture = Fixture::new();
+        fs::create_dir_all(&fixture.0).unwrap();
+        // Simulate a lock file left behind by a previous or terminated process
+        let lock_path = fixture.0.join(".library.lock");
+        fs::write(&lock_path, b"stale lock marker from previous process").unwrap();
+
+        let library = fixture.open();
+        assert!(lock_path.is_file());
+        drop(library);
+
+        // Reopening also succeeds
+        assert!(Library::open(fixture.0.clone()).is_ok());
+    }
+
     #[test]
     fn lifetime_lock_rejects_second_owner_until_first_closes() {
         const CHILD_ROOT: &str = "SCULPT_LIBRARY_LOCK_TEST_ROOT";
         if let Some(root) = std::env::var_os(CHILD_ROOT) {
-            assert!(Library::open(PathBuf::from(root)).is_err());
+            let err = Library::open(PathBuf::from(root))
+                .err()
+                .expect("expected Library::open to fail for second owner in child");
+            assert_eq!(
+                err,
+                "The Sculpt library is open in another app process. Close that process and try again."
+            );
             return;
         }
         let fixture = Fixture::new();
         let library = fixture.open();
-        assert!(Library::open(fixture.0.clone()).is_err());
+        let err = Library::open(fixture.0.clone())
+            .err()
+            .expect("expected Library::open to fail for second owner in same process");
+        assert_eq!(
+            err,
+            "The Sculpt library is open in another app process. Close that process and try again."
+        );
         let child = std::process::Command::new(std::env::current_exe().unwrap())
             .args([
                 "--exact",
@@ -1355,8 +1527,9 @@ mod tests {
             .unwrap();
         assert!(
             child.status.success(),
-            "{}",
-            String::from_utf8_lossy(&child.stdout)
+            "child failed:\nstdout: {}\nstderr: {}",
+            String::from_utf8_lossy(&child.stdout),
+            String::from_utf8_lossy(&child.stderr)
         );
         drop(library);
         assert!(Library::open(fixture.0.clone()).is_ok());

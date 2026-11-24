@@ -102,7 +102,7 @@ fn publish(directory: &Path, name: &str, bytes: &[u8]) -> Result<(), String> {
             .map_err(|e| e.to_string())?;
         file.write_all(bytes).map_err(|e| e.to_string())?;
         file.sync_all().map_err(|e| e.to_string())?;
-        std::fs::rename(&temporary, directory.join(name)).map_err(|e| e.to_string())
+        super::paths::atomic_replace(&temporary, &directory.join(name))
     })();
     if result.is_err() {
         let _ = std::fs::remove_file(temporary);

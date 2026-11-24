@@ -333,7 +333,7 @@ fn run_worker(
         file.write_all(&serde_json::to_vec_pretty(&metrics).map_err(|e| e.to_string())?)
             .map_err(|e| e.to_string())?;
         file.sync_all().map_err(|e| e.to_string())?;
-        std::fs::rename(&metrics_temp, output_dir.join("metrics.json")).map_err(|e| e.to_string())
+        super::paths::atomic_replace(&metrics_temp, &output_dir.join("metrics.json"))
     })();
     if published.is_err() {
         let _ = std::fs::remove_file(&metrics_temp);

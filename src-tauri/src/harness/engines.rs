@@ -555,6 +555,7 @@ pub struct EngineAvailability {
 
 #[derive(Clone, Copy, Debug)]
 pub struct EngineSelection {
+    #[allow(dead_code)]
     pub manifest: &'static EngineManifest,
     pub adapter: RuntimeAdapter,
     pub device: ComputeDevice,
