@@ -418,3 +418,92 @@ test('foreground brush corrections are saved with generation and restored from t
   await expect(page.getByRole('dialog', { name: 'Keep only your object.' })).toBeVisible()
   expect(await page.evaluate(() => (window as any).__sculptTest.calls.filter((c: any) => c.command === 'prepare_mask'))).toHaveLength(0)
 })
+
+test('windows x64 shell renders device-neutral copy, experimental status, and workspace smoke flow', async ({ page }) => {
+  await page.addInitScript(() => {
+    const host = window as any
+    host.isTauri = true
+    const callbacks = new Map<number, (event: any) => void>(), events = new Map<string, number>()
+    let next = 1
+    const saved = { jobs: [] as any[], sources: {} as Record<string, any> }
+    host.__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener: (_: string, id: number) => callbacks.delete(id) }
+    host.__TAURI_INTERNALS__ = {
+      transformCallback(callback: any) { const id = next++; callbacks.set(id, callback); return id },
+      async invoke(command: string, args: any) {
+        switch (command) {
+          case 'plugin:event|listen': events.set(args.event, args.handler); return args.handler
+          case 'plugin:event|unlisten': return
+          case 'detect_hardware':
+            return {
+              os: 'windows', osVersion: '11 24H2 (Build 26100.1)', chip: 'AMD Ryzen 9 7950X',
+              gpu: 'NVIDIA GeForce RTX 4080', memoryGb: 32, architecture: 'x86_64',
+              isAppleSilicon: false, unifiedMemory: false, detectionSource: 'native',
+              storageGb: 400, computeBackends: ['CUDA', 'DirectML', 'Vulkan', 'CPU'],
+            }
+          case 'get_engines':
+            return [
+              {
+                id: 'triposr', name: 'TripoSR', subtitle: 'Local reconstruction · Experimental',
+                description: 'Reconstruct a single object', modelSizeGb: 1.8, runtime: 'PyTorch / Metal',
+                compatibility: 'available', compatibilityStatus: 'experimental',
+                reason: 'Experimental unverified target on Windows x64.', implemented: true,
+                requiresConfirmation: false, requiresCpuConfirmation: false,
+                resourcePreflight: { passed: true, ramPassed: true, storagePassed: true, ramDetectedGb: 32, details: [] },
+              },
+              {
+                id: 'demo', name: 'Workspace Demo', subtitle: 'Procedural sample · No AI',
+                description: 'Explore the viewport', modelSizeGb: null, runtime: 'Local simulator',
+                compatibility: 'recommended', compatibilityStatus: 'supported',
+                reason: 'Recommended zero-dependency fallback workspace demo.', implemented: true,
+                requiresConfirmation: false, requiresCpuConfirmation: false,
+                resourcePreflight: { passed: true, ramPassed: true, storagePassed: true, ramDetectedGb: 32, details: [] },
+              },
+            ]
+          case 'backend_status':
+            return {
+              installed: false, state: 'missing', engine: 'TripoSR', runtimePath: 'C:\\Users\\Test\\AppData\\Local\\com.sculpt.desktop\\runtime',
+              message: 'Set up your local engine once.', mpsAvailable: false, downloadCacheBytes: 0,
+              recommendedQuality: 'high', qualities: [{ id: 'balanced', estimatedMemoryGb: 4.5, recommendedRamGb: 16, resolution: 128 }],
+            }
+          case 'list_generation_jobs': return [...saved.jobs]
+          case 'import_source': {
+            const asset = { id: 'win-src-1', name: args.name, sha256: 'abc', mimeType: 'image/png', width: 64, height: 64 }
+            saved.sources[asset.id] = { asset, dataUrl: args.dataUrl, size: 1024 }
+            return asset
+          }
+          case 'generate_asset': {
+            const asset = { id: args.jobId, seed: 7, simulated: true, generatedAt: String(Date.now()) }
+            saved.jobs.unshift({ id: args.jobId, request: args.request, state: 'succeeded', createdAt: asset.generatedAt, updatedAt: asset.generatedAt, error: null, asset })
+            return asset
+          }
+          default: throw new Error(`Unexpected IPC command: ${command}`)
+        }
+      },
+    }
+  })
+
+  await page.goto('/')
+  await expect(page.getByText('Powered by your hardware.')).toBeVisible()
+  await expect(page.getByText('Matched to your device')).toBeVisible()
+  await expect(page.locator('.engine-tag', { hasText: 'EXPERIMENTAL' })).toBeVisible()
+  await expect(page.locator('.engine-tag', { hasText: 'RECOMMENDED' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Install local engine' })).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Open Sculpt', exact: true }).click()
+  await expect(page.locator('.app-shell')).toHaveAttribute('data-platform', 'desktop')
+  await page.locator('input[type=file]').setInputFiles(await imageFixture(page, 'win-photo.png'))
+  await expect(page.locator('.source-file')).toContainText('win-photo.png')
+  await expect(page.getByText('Set up your local engine once.')).toBeVisible()
+  await page.getByRole('button', { name: 'Remove source image' }).click()
+  await page.getByRole('button', { name: 'Explore the demo' }).click()
+  await page.getByRole('button', { name: 'Generate demo', exact: true }).click()
+  await expect(page.locator('.viewport-title-tag')).toHaveText('DEMO')
+
+  await page.getByRole('button', { name: /Local library/ }).click()
+  await expect(page.getByText('saved on this device')).toBeVisible()
+  await page.getByRole('button', { name: 'Close dialog' }).click()
+
+  await page.getByRole('button', { name: /A little guidance/ }).click()
+  await expect(page.getByText('Ctrl + O')).toBeVisible()
+  await expect(page.getByText('⌘ O')).toHaveCount(0)
+})

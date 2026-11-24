@@ -81,3 +81,66 @@ jobs:
           path: test-results/
           retention-days: 7
           if-no-files-found: ignore
+
+  windows-x64:
+    if: github.event.repository.private == false || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Frontend tests and build
+        run: |
+          npm test
+          npm run build
+      - name: Install Rust toolchain
+        shell: pwsh
+        run: rustup toolchain install stable --profile minimal --component rustfmt --target x86_64-pc-windows-msvc
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-x64-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+      - name: Native format, compile, and unit tests
+        working-directory: src-tauri
+        shell: pwsh
+        run: |
+          cargo +stable fmt --check
+          cargo +stable check --locked --target x86_64-pc-windows-msvc
+          cargo +stable test --locked --target x86_64-pc-windows-msvc
+      - name: Install UI test browser
+        run: npx playwright install chrome
+      - name: Workspace UI tests
+        run: npm run test:ui
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Worker protocol tests (no ML dependencies or weights)
+        run: |
+          python -m pip install pytest
+          python -m pytest backend/tests/test_protocol.py -q
+      - name: Build and verify the Windows x64 desktop shell installer
+        shell: pwsh
+        run: |
+          npm run desktop:build -- --target x86_64-pc-windows-msvc --bundles nsis
+          npm run desktop:verify
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sculpt-Windows-x64-shell
+          path: src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*-setup.exe
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: windows-ui-failure-details
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore

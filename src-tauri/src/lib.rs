@@ -53,9 +53,37 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
-            app.manage(harness::SculptInferenceHarness::new(
-                harness::paths::library_dir(app.handle()),
-            ));
+            let logger = harness::logging::HostLogger::new(harness::paths::log_dir(app.handle()));
+            logger.info(
+                "shell",
+                &format!(
+                    "Sculpt {} starting on {} ({}, {})",
+                    app.package_info().version,
+                    std::env::consts::OS,
+                    std::env::consts::ARCH,
+                    if cfg!(debug_assertions) {
+                        "debug"
+                    } else {
+                        "release"
+                    }
+                ),
+            );
+            let library_root = harness::paths::library_dir(app.handle());
+            let runtime_root = harness::paths::runtime_dir(app.handle());
+            logger.info(
+                "paths",
+                &format!(
+                    "Directories resolved: library={} runtime={}",
+                    if library_root.is_ok() { "ok" } else { "err" },
+                    if runtime_root.is_ok() { "ok" } else { "err" }
+                ),
+            );
+            let harness_state = harness::SculptInferenceHarness::new(library_root);
+            if let Err(err) = harness_state.library_status() {
+                logger.error("library", &format!("Library initialization error: {err}"));
+            }
+            app.manage(logger);
+            app.manage(harness_state);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

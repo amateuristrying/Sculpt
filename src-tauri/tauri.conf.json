@@ -5,7 +5,7 @@
   "identifier": "com.sculpt.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://127.0.0.1:1420",
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },
@@ -28,14 +28,14 @@
     }],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost blob: data:; connect-src ipc: http://ipc.localhost 'self'; font-src 'self' data:; worker-src 'self' blob:",
-      "devCsp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost blob: data:; connect-src ipc: http://ipc.localhost 'self' ws://localhost:1420 http://localhost:1420; font-src 'self' data:; worker-src 'self' blob:"
+      "devCsp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost blob: data:; connect-src ipc: http://ipc.localhost 'self' ws://127.0.0.1:1420 http://127.0.0.1:1420 ws://localhost:1420 http://localhost:1420; font-src 'self' data:; worker-src 'self' blob:"
     }
   },
   "bundle": {
     "active": true,
     "resources": { "../LICENSE": "LICENSE", "../backend/TEXTURE-NOTICES.txt": "backend/TEXTURE-NOTICES.txt", "../backend/worker.py": "backend/worker.py", "../backend/setup_runtime.py": "backend/setup_runtime.py", "../backend/download_models.py": "backend/download_models.py", "../backend/requirements.lock": "backend/requirements.lock", "../backend/runtime-spec.json": "backend/runtime-spec.json", "../backend/sculpt_backend/*.py": "backend/sculpt_backend/" },
     "targets": ["app", "dmg"],
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns"],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
     "category": "GraphicsAndDesign",
     "shortDescription": "A local 3D asset workspace",
     "longDescription": "Generate, inspect, and export 3D assets on your own hardware. Experimental local reconstruction through the Sculpt Inference Harness.",

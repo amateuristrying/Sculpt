@@ -67,6 +67,27 @@ pub fn app_cache_dir(app: &AppHandle) -> Result<PathBuf, String> {
     app.path().app_cache_dir().map_err(|e| e.to_string())
 }
 
+/// Resolves the application log directory via Tauri (`SCULPT_LOG_DIR` overrides for tests).
+pub fn log_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    if let Some(path) = std::env::var_os("SCULPT_LOG_DIR") {
+        let candidate = PathBuf::from(path);
+        if !candidate.as_os_str().is_empty() {
+            return Ok(candidate);
+        }
+    }
+    let base = app.path().app_log_dir().map_err(|e| e.to_string())?;
+    Ok(log_dir_for_base(&base, cfg!(debug_assertions)))
+}
+
+/// Parameterized log directory resolver separating development and packaged logs.
+pub fn log_dir_for_base(base: &Path, is_debug: bool) -> PathBuf {
+    if is_debug {
+        base.join("development")
+    } else {
+        base.to_path_buf()
+    }
+}
+
 /// Resolves the runtime-level cache directory using the app handle.
 #[allow(dead_code)]
 pub fn runtime_cache_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -560,6 +581,14 @@ mod tests {
         assert_eq!(cache_dir(root), root.join("package-cache"));
         assert_eq!(models_dir(root), root.join("models"));
         assert_eq!(jobs_dir(root), root.join("jobs"));
+        assert_eq!(
+            log_dir_for_base(Path::new("/custom/logs"), false),
+            PathBuf::from("/custom/logs")
+        );
+        assert_eq!(
+            log_dir_for_base(Path::new("/custom/logs"), true),
+            PathBuf::from("/custom/logs").join("development")
+        );
     }
 
     #[test]

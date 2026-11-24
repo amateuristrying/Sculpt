@@ -6,6 +6,7 @@ pub mod engines;
 pub mod exports;
 pub mod hardware;
 pub mod library;
+pub mod logging;
 pub mod masks;
 pub mod paths;
 pub mod process;
@@ -22,7 +23,7 @@ use std::{
         Arc, Mutex,
     },
 };
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 /// Owns job lifetime, compatibility, cancellation and runtime selection. Future model
 /// download/load/fallback policies belong here, never inside the React workspace.
@@ -37,6 +38,14 @@ impl SculptInferenceHarness {
             jobs: Arc::new(Mutex::new(HashMap::new())),
             library: Arc::new(Mutex::new(root.and_then(library::Library::open))),
         }
+    }
+
+    pub fn library_status(&self) -> Result<(), String> {
+        let guard = self
+            .library
+            .lock()
+            .map_err(|_| "Local library unavailable")?;
+        guard.as_ref().map(|_| ()).map_err(|e| e.clone())
     }
 
     // Filesystem work never blocks Tauri's async executor or the window thread.
@@ -126,10 +135,24 @@ pub async fn list_generation_jobs(
 }
 
 #[tauri::command]
-pub async fn detect_hardware() -> Result<hardware::HardwareProfile, String> {
-    tauri::async_runtime::spawn_blocking(hardware::detect)
+pub async fn detect_hardware(app: AppHandle) -> Result<hardware::HardwareProfile, String> {
+    let profile = tauri::async_runtime::spawn_blocking(hardware::detect)
         .await
-        .map_err(|error| error.to_string())
+        .map_err(|error| error.to_string())?;
+    if let Some(logger) = app.try_state::<logging::HostLogger>() {
+        logger.info(
+            "hardware",
+            &format!(
+                "Detected {} {} ({}), {:.1} GB RAM, backends=[{}]",
+                profile.os,
+                profile.os_version,
+                profile.architecture,
+                profile.memory_gb,
+                profile.compute_backends.join(", ")
+            ),
+        );
+    }
+    Ok(profile)
 }
 
 #[tauri::command]
@@ -362,3 +385,5 @@ fn verified_scene_cache(
 mod lifecycle_tests;
 #[cfg(test)]
 mod macos_regression_tests;
+#[cfg(test)]
+mod windows_shell_tests;

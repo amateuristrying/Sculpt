@@ -6,7 +6,7 @@ export default function Library({ jobs, error, busy, onRefresh, onOpen }: {
   onRefresh: () => void; onOpen: (job: GenerationJob) => void
 }) {
   return <>
-    <p className="dialog-description">Your images and reconstructed assets are saved on this Mac. Reopen an asset or retry a previous source.</p>
+    <p className="dialog-description">Your images and reconstructed assets are saved on this device. Reopen an asset or retry a previous source.</p>
     <div className="library-heading"><span className="section-label">RECENT GENERATIONS</span><button className="icon-button" onClick={onRefresh} disabled={busy} aria-label="Refresh library"><RotateCcw size={14} /></button></div>
     {error && <div className="generation-error" role="alert">{error}</div>}
     <div className="library-jobs">

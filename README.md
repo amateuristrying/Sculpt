@@ -4,6 +4,20 @@ A macOS desktop prototype for a local image-to-3D asset pipeline: **Generate →
 
 **Your hardware. Your files. Your inference.** Tauri 2 and Rust own the desktop application; React, TypeScript, and React Three Fiber provide the workspace. No Electron, cloud inference, accounts, or generation API is used.
 
+## Run on Windows x64 (desktop shell)
+
+Install Node.js 22+, a current stable Rust toolchain (`x86_64-pc-windows-msvc`), and Visual Studio 2022 Build Tools (Desktop development with C++). From the project directory:
+
+```powershell
+npm install
+npm test
+cargo test --manifest-path src-tauri/Cargo.toml --target x86_64-pc-windows-msvc
+npm run desktop:build -- --target x86_64-pc-windows-msvc --bundles nsis
+npm run desktop:verify
+```
+
+This produces a per-user NSIS installer (`src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/Sculpt_<version>_x64-setup.exe`) and stores local library and shell log data under `%LOCALAPPDATA%\com.sculpt.desktop\` (`library\`, `library-development\`, `logs\`). On Windows, local AI reconstruction (TripoSR) remains unvalidated and is not yet claimed as supported; the desktop shell runs hardware detection, native image import, local library persistence, the Workspace Demo, and GLB/STL export. See [Windows x64 desktop shell notes](docs/windows-shell.md).
+
 ## Run on macOS
 
 Install Node.js 22+, a current stable Rust toolchain, and Xcode Command Line Tools (`xcode-select --install`). Then, from the project directory:
@@ -78,7 +92,7 @@ The [real-photo evaluation](backend/evaluation/README.md) uses 34 independently 
 
 The [mask evaluation](docs/foreground-masks.md) compares U2Net and an optional, separately downloaded MIT BiRefNet model on all 34 photos. U2Net remains the default: observed median CPU worker times were 1.20 s versus 19.35 s, with mixed selections and no independent accuracy ground truth yet. A real corrected-mask reconstruction isolates the wooden-horse test subject; it does not establish a general reconstruction-quality improvement.
 
-CI uses one cached macOS runner, without weights or GPU inference. Public repositories run on push/PR. Private repositories require manually starting the workflow to avoid automatic macOS minute consumption; that manual run still uses the repository's Actions allowance.
+CI uses macOS and Windows x64 runners, without model weights or GPU inference. Public repositories run on push/PR; private repositories require manually starting the workflow (`workflow_dispatch`).
 
 ```sh
 npm run backend:test
