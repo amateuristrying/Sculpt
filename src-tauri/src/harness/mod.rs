@@ -360,3 +360,5 @@ fn verified_scene_cache(
 
 #[cfg(test)]
 mod lifecycle_tests;
+#[cfg(test)]
+mod macos_regression_tests;

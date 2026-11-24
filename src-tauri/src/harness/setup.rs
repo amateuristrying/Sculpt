@@ -326,7 +326,9 @@ pub fn ensure_uv(
 
 /// Evaluates hardware resource preflight for runtime installation across platforms.
 pub fn validate_setup_hardware(hardware: &super::hardware::HardwareProfile) -> Result<(), String> {
-    if hardware.os == "macos" && !hardware.is_apple_silicon {
+    if (hardware.os.eq_ignore_ascii_case("macos") || hardware.os.eq_ignore_ascii_case("darwin"))
+        && !hardware.is_apple_silicon
+    {
         return Err("On macOS, Sculpt requires an Apple Silicon Mac (M1 or later).".into());
     }
     if hardware.memory_gb.is_finite() && hardware.memory_gb > 0.0 && hardware.memory_gb < 8.0 {
