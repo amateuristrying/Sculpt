@@ -222,6 +222,176 @@ impl TargetValidationStatus {
     }
 }
 
+/// Fine-grained compatibility states per roadmap Section 8.2.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum CompatibilityStatus {
+    Supported,
+    CompatibleUnverified,
+    Experimental,
+    InsufficientResources,
+    RuntimeMissing,
+    Unsupported,
+}
+
+impl CompatibilityStatus {
+    #[allow(dead_code)]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Supported => "supported",
+            Self::CompatibleUnverified => "compatible_unverified",
+            Self::Experimental => "experimental",
+            Self::InsufficientResources => "insufficient_resources",
+            Self::RuntimeMissing => "runtime_missing",
+            Self::Unsupported => "unsupported",
+        }
+    }
+}
+
+/// Resource preflight results evaluating physical RAM, recommended RAM, and disk footprint.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ResourcePreflight {
+    pub passed: bool,
+    pub ram_passed: bool,
+    pub storage_passed: bool,
+    pub ram_detected_gb: f64,
+    pub ram_minimum_gb: Option<f64>,
+    pub ram_recommended_gb: Option<f64>,
+    pub storage_detected_gb: Option<f64>,
+    pub storage_required_gb: Option<f64>,
+    pub details: Vec<String>,
+}
+
+impl ResourcePreflight {
+    pub fn evaluate(
+        hardware: &HardwareProfile,
+        manifest: &EngineManifest,
+        target: Option<&EngineTarget>,
+    ) -> Self {
+        let ram_detected_gb = hardware.memory_gb;
+        let ram_minimum_gb = target.and_then(|t| t.minimum_ram_gb).or_else(|| {
+            manifest
+                .resource_thresholds
+                .as_ref()
+                .and_then(|r| r.ram_min_gb)
+        });
+        let ram_recommended_gb = target.and_then(|t| t.recommended_ram_gb).or_else(|| {
+            manifest
+                .resource_thresholds
+                .as_ref()
+                .and_then(|r| r.ram_recommended_gb)
+        });
+
+        let storage_detected_gb = hardware.storage_gb;
+        let storage_required_gb = manifest
+            .resource_thresholds
+            .as_ref()
+            .and_then(|r| r.installed_footprint_bytes.or(r.disk_download_bytes))
+            .map(|b| (b as f64) / 1_000_000_000.0);
+
+        let mut details = Vec::new();
+
+        let ram_passed = if let Some(min_ram) = ram_minimum_gb {
+            if !ram_detected_gb.is_finite() || ram_detected_gb < min_ram {
+                details.push(format!(
+                    "Detected RAM ({:.1} GB) is below required minimum ({:.1} GB).",
+                    if ram_detected_gb.is_finite() {
+                        ram_detected_gb
+                    } else {
+                        0.0
+                    },
+                    min_ram
+                ));
+                false
+            } else {
+                if let Some(rec_ram) = ram_recommended_gb {
+                    if ram_detected_gb < rec_ram {
+                        details.push(format!(
+                            "Detected RAM ({:.1} GB) meets minimum ({:.1} GB) but is below recommended ({:.1} GB).",
+                            ram_detected_gb, min_ram, rec_ram
+                        ));
+                    } else {
+                        details.push(format!(
+                            "Detected RAM ({:.1} GB) meets recommended specification ({:.1} GB).",
+                            ram_detected_gb, rec_ram
+                        ));
+                    }
+                } else {
+                    details.push(format!(
+                        "Detected RAM ({:.1} GB) meets minimum requirement ({:.1} GB).",
+                        ram_detected_gb, min_ram
+                    ));
+                }
+                true
+            }
+        } else {
+            details.push(format!(
+                "No minimum RAM specified; detected RAM is {:.1} GB.",
+                if ram_detected_gb.is_finite() {
+                    ram_detected_gb
+                } else {
+                    0.0
+                }
+            ));
+            true
+        };
+
+        let storage_passed =
+            if let (Some(req_gb), Some(det_gb)) = (storage_required_gb, storage_detected_gb) {
+                if det_gb < req_gb {
+                    details.push(format!(
+                        "Detected storage ({:.1} GB) is below estimated footprint ({:.1} GB).",
+                        det_gb, req_gb
+                    ));
+                    false
+                } else {
+                    details.push(format!(
+                    "Detected storage ({:.1} GB) is sufficient for estimated footprint ({:.1} GB).",
+                    det_gb, req_gb
+                ));
+                    true
+                }
+            } else {
+                true
+            };
+
+        let passed = ram_passed && storage_passed;
+
+        Self {
+            passed,
+            ram_passed,
+            storage_passed,
+            ram_detected_gb: if ram_detected_gb.is_finite() {
+                ram_detected_gb
+            } else {
+                0.0
+            },
+            ram_minimum_gb,
+            ram_recommended_gb,
+            storage_detected_gb,
+            storage_required_gb,
+            details,
+        }
+    }
+}
+
+/// Detailed dynamic evaluation of an engine manifest against detected hardware.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct EngineEvaluation {
+    pub engine_id: String,
+    pub compatibility: String,
+    pub compatibility_status: CompatibilityStatus,
+    pub reason: String,
+    pub recommendation_reason: Option<String>,
+    pub requires_confirmation: bool,
+    pub requires_cpu_confirmation: bool,
+    pub confirmation_reason: Option<String>,
+    pub resource_preflight: ResourcePreflight,
+    pub candidate_target: Option<EngineTarget>,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct EngineTarget {
@@ -373,6 +543,7 @@ pub struct EngineManifest {
     pub notes: Option<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct EngineAvailability {
@@ -519,7 +690,61 @@ pub fn manifests() -> &'static [EngineManifest] {
         }"#,
         )
         .expect("Valid bundled demo descriptor");
-        vec![triposr, demo]
+        let trellis = EngineManifest::parse(
+            r#"{
+            "schemaVersion": 1,
+            "id": "trellis-2",
+            "name": "TRELLIS.2",
+            "description": "A demanding engine profile reserved for a future supported runtime.",
+            "publisher": "Microsoft",
+            "upstreamUrl": "https://github.com/microsoft/TRELLIS.2",
+            "licenseIdentifier": "MIT",
+            "engineRevision": null,
+            "runtimeSpecPath": null,
+            "adapter": null,
+            "implemented": false,
+            "nativeHardwareRequired": true,
+            "supportedInputs": ["single_image", "text_prompt"],
+            "materialCapabilities": {
+                "channels": ["diffuse_color", "normal", "roughness", "metallic"],
+                "claimsPbr": true
+            },
+            "resourceThresholds": {
+                "ramMinGb": 32.0,
+                "ramRecommendedGb": 64.0,
+                "vramMinGb": 24.0,
+                "vramRecommendedGb": 24.0,
+                "diskDownloadBytes": 15000000000,
+                "installedFootprintBytes": 30000000000
+            },
+            "capabilities": {
+                "progressReporting": true,
+                "cancellation": true,
+                "refinement": true,
+                "supportedOutputFormats": ["glb", "stl", "obj"]
+            },
+            "targets": [
+                {
+                    "platform": "linux",
+                    "architecture": "x86_64",
+                    "computeBackend": "CUDA",
+                    "device": "cuda",
+                    "minimumRamGb": 32.0,
+                    "recommendedRamGb": 64.0,
+                    "minimumVramGb": 24.0,
+                    "requiresAppleSilicon": false,
+                    "validated": false,
+                    "validationStatus": "experimental"
+                }
+            ],
+            "knownLimits": [
+                "Requires minimum 24GB VRAM GPU."
+            ],
+            "notes": "No validated runtime or model adapter is included. Not recommended for this Mac; installation and generation are unavailable."
+        }"#,
+        )
+        .expect("Valid bundled TRELLIS.2 descriptor");
+        vec![triposr, demo, trellis]
     })
 }
 
@@ -595,7 +820,273 @@ fn plan_engine(
     )
 }
 
+/// Dynamically evaluate an engine manifest against detected hardware,
+/// separating detected hardware, declared compatibility, validated support,
+/// fine-grained compatibility states, and resource preflight.
+pub fn evaluate_manifest(
+    hardware: &HardwareProfile,
+    manifest: &EngineManifest,
+) -> EngineEvaluation {
+    if !manifest.implemented {
+        let reason = manifest.notes.clone().unwrap_or_else(|| {
+            "No validated runtime adapter is included for this engine. Installation and generation are unavailable.".into()
+        });
+        return EngineEvaluation {
+            engine_id: manifest.id.clone(),
+            compatibility: "unsupported".into(),
+            compatibility_status: CompatibilityStatus::Unsupported,
+            reason,
+            recommendation_reason: None,
+            requires_confirmation: false,
+            requires_cpu_confirmation: false,
+            confirmation_reason: None,
+            resource_preflight: ResourcePreflight::evaluate(hardware, manifest, None),
+            candidate_target: None,
+        };
+    }
+
+    if manifest.native_hardware_required && hardware.detection_source != "native" {
+        return EngineEvaluation {
+            engine_id: manifest.id.clone(),
+            compatibility: "unsupported".into(),
+            compatibility_status: CompatibilityStatus::Unsupported,
+            reason: "Open the desktop app to detect this machine and use local reconstruction."
+                .into(),
+            recommendation_reason: Some(
+                "Desktop application required for local hardware acceleration.".into(),
+            ),
+            requires_confirmation: false,
+            requires_cpu_confirmation: false,
+            confirmation_reason: None,
+            resource_preflight: ResourcePreflight::evaluate(hardware, manifest, None),
+            candidate_target: None,
+        };
+    }
+
+    let matching_platform_targets: Vec<&EngineTarget> = manifest
+        .targets
+        .iter()
+        .filter(|target| platform_matches(target, hardware))
+        .collect();
+
+    if matching_platform_targets.is_empty() {
+        return EngineEvaluation {
+            engine_id: manifest.id.clone(),
+            compatibility: "unsupported".into(),
+            compatibility_status: CompatibilityStatus::Unsupported,
+            reason: "This hardware has no validated Sculpt runtime for this engine. Installation and generation are unavailable.".into(),
+            recommendation_reason: None,
+            requires_confirmation: false,
+            requires_cpu_confirmation: false,
+            confirmation_reason: None,
+            resource_preflight: ResourcePreflight::evaluate(hardware, manifest, None),
+            candidate_target: None,
+        };
+    }
+
+    // Filter candidate targets where hardware has the required compute backend
+    let matching_backend_targets: Vec<&EngineTarget> = matching_platform_targets
+        .iter()
+        .copied()
+        .filter(|target| {
+            hardware
+                .compute_backends
+                .iter()
+                .any(|b| b == &target.compute_backend)
+        })
+        .collect();
+
+    // Filter out explicitly unsupported targets (e.g. TripoSR CPU target which has validationStatus == Unsupported)
+    let usable_targets: Vec<&EngineTarget> = matching_backend_targets
+        .into_iter()
+        .filter(|target| target.validation_status != Some(TargetValidationStatus::Unsupported))
+        .collect();
+
+    if usable_targets.is_empty() {
+        // If there were platform-matching targets that are validated, but compute backend was missing
+        let reason = if matching_platform_targets
+            .iter()
+            .any(|t| t.is_target_validated())
+        {
+            "The compute backend required by this validated runtime was not detected.".into()
+        } else {
+            "This hardware has no validated Sculpt runtime for this engine. Installation and generation are unavailable.".into()
+        };
+        return EngineEvaluation {
+            engine_id: manifest.id.clone(),
+            compatibility: "unsupported".into(),
+            compatibility_status: CompatibilityStatus::Unsupported,
+            reason,
+            recommendation_reason: None,
+            requires_confirmation: false,
+            requires_cpu_confirmation: false,
+            confirmation_reason: None,
+            resource_preflight: ResourcePreflight::evaluate(hardware, manifest, None),
+            candidate_target: None,
+        };
+    }
+
+    // Select the best candidate target:
+    // Prioritize GPU (non-CPU) targets over CPU targets; then prioritize Validated > CompatibleUnverified > Experimental
+    let best_target = usable_targets
+        .into_iter()
+        .min_by_key(|t| {
+            let is_cpu = t.device == ComputeDevice::Cpu;
+            let tier = match t.validation_status.unwrap_or(if t.validated {
+                TargetValidationStatus::Validated
+            } else {
+                TargetValidationStatus::Experimental
+            }) {
+                TargetValidationStatus::Validated | TargetValidationStatus::Supported => 0,
+                TargetValidationStatus::CompatibleUnverified => 1,
+                TargetValidationStatus::Experimental => 2,
+                TargetValidationStatus::Unsupported => 99,
+            };
+            (if is_cpu { 10 } else { 0 }) + tier
+        })
+        .expect("At least one usable target exists");
+
+    // Perform resource preflight check on best target
+    let preflight = ResourcePreflight::evaluate(hardware, manifest, Some(best_target));
+
+    if !preflight.ram_passed {
+        let min_gb = preflight.ram_minimum_gb.unwrap_or(16.0);
+        return EngineEvaluation {
+            engine_id: manifest.id.clone(),
+            compatibility: "unsupported".into(),
+            compatibility_status: CompatibilityStatus::InsufficientResources,
+            reason: format!(
+                "This validated runtime requires at least {min_gb} GB of detected system memory."
+            ),
+            recommendation_reason: Some(format!(
+                "Detected memory ({:.1} GB) is below minimum admission threshold ({:.1} GB).",
+                hardware.memory_gb, min_gb
+            )),
+            requires_confirmation: false,
+            requires_cpu_confirmation: false,
+            confirmation_reason: None,
+            resource_preflight: preflight,
+            candidate_target: Some(best_target.clone()),
+        };
+    }
+
+    if !preflight.storage_passed {
+        let req_gb = preflight.storage_required_gb.unwrap_or(0.0);
+        return EngineEvaluation {
+            engine_id: manifest.id.clone(),
+            compatibility: "unsupported".into(),
+            compatibility_status: CompatibilityStatus::InsufficientResources,
+            reason: format!(
+                "Insufficient disk space: engine requires {req_gb:.1} GB free storage."
+            ),
+            recommendation_reason: Some(
+                "Free disk space is below required installation footprint.".into(),
+            ),
+            requires_confirmation: false,
+            requires_cpu_confirmation: false,
+            confirmation_reason: None,
+            resource_preflight: preflight,
+            candidate_target: Some(best_target.clone()),
+        };
+    }
+
+    // CPU fallback confirmation policy:
+    // CPU fallback must be explicitly selected/confirmed, supported by that engine, and resource-gated.
+    // NEVER silently downgrade from GPU to CPU.
+    let is_cpu_target = best_target.device == ComputeDevice::Cpu;
+    let is_inference_engine = manifest.adapter != Some(RuntimeAdapter::Demo);
+    let (requires_confirmation, requires_cpu_confirmation, confirmation_reason) = if is_cpu_target
+        && is_inference_engine
+    {
+        (
+                true,
+                true,
+                Some(
+                    "CPU execution is significantly slower than GPU acceleration and may cause high CPU and thermal load. Explicit confirmation is required to run on CPU."
+                        .into(),
+                ),
+            )
+    } else {
+        (false, false, None)
+    };
+
+    // Determine fine-grained compatibility status based on target validation status
+    let val_status = best_target
+        .validation_status
+        .unwrap_or(if best_target.validated {
+            TargetValidationStatus::Validated
+        } else {
+            TargetValidationStatus::Experimental
+        });
+
+    match val_status {
+        TargetValidationStatus::Validated | TargetValidationStatus::Supported => EngineEvaluation {
+            engine_id: manifest.id.clone(),
+            compatibility: if manifest.id == "triposr" {
+                "recommended".into()
+            } else {
+                "available".into()
+            },
+            compatibility_status: CompatibilityStatus::Supported,
+            reason: if manifest.id == "triposr" {
+                "Runs locally through an isolated Python worker. Best with one clearly visible object. Unseen surfaces are inferred; quality varies. One-time runtime setup is required.".into()
+            } else if manifest.id == "demo" {
+                "An explicit demonstration of the workspace. Output is a procedural sculpture, not an AI reconstruction.".into()
+            } else {
+                "A validated adapter is available; runtime installation is checked separately.".into()
+            },
+            recommendation_reason: Some(format!("Validated for {} acceleration.", best_target.compute_backend)),
+            requires_confirmation,
+            requires_cpu_confirmation,
+            confirmation_reason,
+            resource_preflight: preflight,
+            candidate_target: Some(best_target.clone()),
+        },
+        TargetValidationStatus::CompatibleUnverified => EngineEvaluation {
+            engine_id: manifest.id.clone(),
+            compatibility: "available".into(),
+            compatibility_status: CompatibilityStatus::CompatibleUnverified,
+            reason: "Hardware meets requirements, but this target has not been validated end-to-end yet.".into(),
+            recommendation_reason: Some(
+                "Unverified compatibility: may run, but stability and quality have not been confirmed.".into(),
+            ),
+            requires_confirmation,
+            requires_cpu_confirmation,
+            confirmation_reason,
+            resource_preflight: preflight,
+            candidate_target: Some(best_target.clone()),
+        },
+        TargetValidationStatus::Experimental => EngineEvaluation {
+            engine_id: manifest.id.clone(),
+            compatibility: "available".into(),
+            compatibility_status: CompatibilityStatus::Experimental,
+            reason: "Experimental support: opt-in inference with known limitations.".into(),
+            recommendation_reason: Some(
+                "Experimental target: intended for testing; unexpected errors or quality degradation may occur.".into(),
+            ),
+            requires_confirmation,
+            requires_cpu_confirmation,
+            confirmation_reason,
+            resource_preflight: preflight,
+            candidate_target: Some(best_target.clone()),
+        },
+        TargetValidationStatus::Unsupported => EngineEvaluation {
+            engine_id: manifest.id.clone(),
+            compatibility: "unsupported".into(),
+            compatibility_status: CompatibilityStatus::Unsupported,
+            reason: "This hardware has no validated Sculpt runtime for this engine. Installation and generation are unavailable.".into(),
+            recommendation_reason: None,
+            requires_confirmation: false,
+            requires_cpu_confirmation: false,
+            confirmation_reason: None,
+            resource_preflight: preflight,
+            candidate_target: Some(best_target.clone()),
+        },
+    }
+}
+
 /// Pure planning: no downloads, process launches, filesystem reads or fallback.
+#[allow(dead_code)]
 pub fn plan(hardware: &HardwareProfile, manifests: &[EngineManifest]) -> Vec<EngineAvailability> {
     manifests
         .iter()

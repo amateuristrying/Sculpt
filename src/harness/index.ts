@@ -16,27 +16,80 @@ export async function detectHardware(): Promise<HardwareProfile> {
   return { ...previewHardware, computeBackends: [...previewHardware.computeBackends] }
 }
 
-function previewEngines(_profile: HardwareProfile): EngineProfile[] {
+function previewEngines(profile: HardwareProfile): EngineProfile[] {
   return [
     {
       id: 'triposr', name: 'TripoSR', subtitle: 'Local reconstruction · Desktop required',
       description: 'Real geometry and vertex colors from a single image.',
       modelSizeGb: 1.8, runtime: 'PyTorch / Metal', compatibility: 'unsupported',
+      compatibilityStatus: 'unsupported',
       reason: 'Open the Tauri desktop app for local inference. Browser previews cannot launch the Python worker.',
+      recommendationReason: 'Desktop application required for local hardware acceleration.',
+      requiresConfirmation: false,
+      confirmationReason: null,
+      requiresCpuConfirmation: false,
+      resourcePreflight: {
+        passed: profile.memoryGb >= 16,
+        ramPassed: profile.memoryGb >= 16,
+        storagePassed: true,
+        ramDetectedGb: profile.memoryGb,
+        ramMinimumGb: 16,
+        ramRecommendedGb: 16,
+        storageDetectedGb: profile.storageGb ?? null,
+        storageRequiredGb: 5,
+        details: [
+          profile.memoryGb >= 16
+            ? 'Detected RAM satisfies minimum requirements.'
+            : `Detected RAM (${profile.memoryGb} GB) is below required minimum (16.0 GB).`
+        ],
+      },
       implemented: true,
     },
     {
       id: 'demo', name: 'Workspace Demo', subtitle: 'Procedural sample · No AI',
       description: 'Explore the viewport. Does not reconstruct your image.',
       modelSizeGb: null, runtime: 'Local simulator', compatibility: 'recommended',
+      compatibilityStatus: 'supported',
       reason: 'An explicit workspace demonstration using a procedural sculpture.',
+      recommendationReason: 'Recommended zero-dependency fallback workspace demo.',
+      requiresConfirmation: false,
+      confirmationReason: null,
+      requiresCpuConfirmation: false,
+      resourcePreflight: {
+        passed: true,
+        ramPassed: true,
+        storagePassed: true,
+        ramDetectedGb: profile.memoryGb,
+        ramMinimumGb: null,
+        ramRecommendedGb: null,
+        storageDetectedGb: profile.storageGb ?? null,
+        storageRequiredGb: null,
+        details: ['Procedural sample demo does not require model weights.'],
+      },
       implemented: true,
     },
     {
       id: 'trellis-2', name: 'TRELLIS.2', subtitle: 'Future adapter',
       description: 'No validated adapter is included.', modelSizeGb: null,
       runtime: 'CUDA / PyTorch · planned', compatibility: 'unsupported',
-      reason: 'This engine has not been integrated.', implemented: false,
+      compatibilityStatus: 'unsupported',
+      reason: 'This engine has not been integrated.',
+      recommendationReason: null,
+      requiresConfirmation: false,
+      confirmationReason: null,
+      requiresCpuConfirmation: false,
+      resourcePreflight: {
+        passed: false,
+        ramPassed: profile.memoryGb >= 32,
+        storagePassed: true,
+        ramDetectedGb: profile.memoryGb,
+        ramMinimumGb: 32,
+        ramRecommendedGb: 64,
+        storageDetectedGb: profile.storageGb ?? null,
+        storageRequiredGb: 30,
+        details: ['Unimplemented future engine descriptor.'],
+      },
+      implemented: false,
     },
   ]
 }

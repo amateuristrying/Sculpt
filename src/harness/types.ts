@@ -14,6 +14,26 @@ export interface HardwareProfile {
   storageGb?: number
 }
 
+export type CompatibilityStatus =
+  | 'supported'
+  | 'compatible_unverified'
+  | 'experimental'
+  | 'insufficient_resources'
+  | 'runtime_missing'
+  | 'unsupported'
+
+export interface ResourcePreflight {
+  passed: boolean
+  ramPassed: boolean
+  storagePassed: boolean
+  ramDetectedGb: number
+  ramMinimumGb?: number | null
+  ramRecommendedGb?: number | null
+  storageDetectedGb?: number | null
+  storageRequiredGb?: number | null
+  details: string[]
+}
+
 export interface EngineProfile {
   id: string
   name: string
@@ -24,7 +44,13 @@ export interface EngineProfile {
   runtime: string
   /** Suitability targets; inspect implemented before offering actual inference. */
   compatibility: 'recommended' | 'available' | 'unsupported'
+  compatibilityStatus: CompatibilityStatus
   reason: string
+  recommendationReason?: string | null
+  requiresConfirmation: boolean
+  confirmationReason?: string | null
+  requiresCpuConfirmation?: boolean
+  resourcePreflight: ResourcePreflight
   implemented: boolean
 }
 

@@ -385,3 +385,79 @@ describe('engine descriptor and capability contract', () => {
     expect(sampleManifest.artifacts[0].path).toBe('mesh.glb')
   })
 })
+
+describe('compatibility and recommendation state machine contract', () => {
+  it('exposes fine-grained compatibility status and resource preflight', async () => {
+    const catalog = await getEngines(previewHardware)
+    const triposr = catalog.find(engine => engine.id === 'triposr')
+    expect(triposr).toBeDefined()
+    expect(triposr?.compatibilityStatus).toBe('unsupported')
+    expect(triposr?.requiresConfirmation).toBe(false)
+    expect(triposr?.requiresCpuConfirmation).toBe(false)
+    expect(triposr?.resourcePreflight).toBeDefined()
+    expect(triposr?.resourcePreflight.ramPassed).toBe(true)
+    expect(triposr?.resourcePreflight.ramDetectedGb).toBe(16)
+    expect(triposr?.resourcePreflight.details).toBeInstanceOf(Array)
+
+    const demo = catalog.find(engine => engine.id === 'demo')
+    expect(demo).toBeDefined()
+    expect(demo?.compatibilityStatus).toBe('supported')
+    expect(demo?.compatibility).toBe('recommended')
+    expect(demo?.requiresConfirmation).toBe(false)
+    expect(demo?.resourcePreflight.passed).toBe(true)
+
+    const trellis = catalog.find(engine => engine.id === 'trellis-2')
+    expect(trellis).toBeDefined()
+    expect(trellis?.compatibilityStatus).toBe('unsupported')
+    expect(trellis?.compatibility).toBe('unsupported')
+    expect(trellis?.implemented).toBe(false)
+    expect(trellis?.resourcePreflight.passed).toBe(false)
+  })
+
+  it('fails resource preflight when memory is below minimum', async () => {
+    const lowMemHardware: HardwareProfile = { ...previewHardware, memoryGb: 8 }
+    const catalog = await getEngines(lowMemHardware)
+    const triposr = catalog.find(engine => engine.id === 'triposr')
+    expect(triposr?.resourcePreflight.ramPassed).toBe(false)
+    expect(triposr?.resourcePreflight.passed).toBe(false)
+    expect(triposr?.resourcePreflight.ramDetectedGb).toBe(8)
+    expect(triposr?.resourcePreflight.details.some(d => d.includes('below required minimum'))).toBe(true)
+  })
+
+  it('preserves native desktop contract structure via invoke', async () => {
+    vi.mocked(isTauri).mockReturnValue(true)
+    const mockProfile: import('../harness/types').EngineProfile = {
+      id: 'triposr',
+      name: 'TripoSR',
+      subtitle: 'Local reconstruction',
+      description: 'Single image to 3D',
+      modelSizeGb: 1.8,
+      runtime: 'PyTorch / Metal',
+      compatibility: 'recommended',
+      compatibilityStatus: 'supported',
+      reason: 'Runs locally',
+      recommendationReason: 'Validated for Metal acceleration.',
+      requiresConfirmation: false,
+      confirmationReason: null,
+      requiresCpuConfirmation: false,
+      resourcePreflight: {
+        passed: true,
+        ramPassed: true,
+        storagePassed: true,
+        ramDetectedGb: 16,
+        ramMinimumGb: 16,
+        ramRecommendedGb: 16,
+        storageDetectedGb: 256,
+        storageRequiredGb: 5,
+        details: ['All preflight checks passed.'],
+      },
+      implemented: true,
+    }
+    vi.mocked(invoke).mockResolvedValueOnce([mockProfile])
+    const catalog = await getEngines(previewHardware)
+    expect(invoke).toHaveBeenCalledWith('get_engines', { profile: previewHardware })
+    expect(catalog[0].compatibilityStatus).toBe('supported')
+    expect(catalog[0].requiresConfirmation).toBe(false)
+    expect(catalog[0].resourcePreflight.ramPassed).toBe(true)
+  })
+})

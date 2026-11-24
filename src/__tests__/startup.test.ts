@@ -4,8 +4,18 @@ import { previewHardware } from '../harness'
 import type { BackendStatus, EngineProfile } from '../harness'
 
 const hardware = { ...previewHardware, detectionSource: 'native' as const }
-const engine: EngineProfile = { id: 'triposr', name: 'TripoSR', subtitle: '', description: '',
-  modelSizeGb: 1.8, runtime: 'PyTorch / Metal', compatibility: 'recommended', reason: '', implemented: true }
+const engine: EngineProfile = {
+  id: 'triposr', name: 'TripoSR', subtitle: '', description: '',
+  modelSizeGb: 1.8, runtime: 'PyTorch / Metal', compatibility: 'recommended',
+  compatibilityStatus: 'supported', reason: '', recommendationReason: null,
+  requiresConfirmation: false, confirmationReason: null, requiresCpuConfirmation: false,
+  resourcePreflight: {
+    passed: true, ramPassed: true, storagePassed: true, ramDetectedGb: 16,
+    ramMinimumGb: 16, ramRecommendedGb: 16, storageDetectedGb: 256, storageRequiredGb: 5,
+    details: ['Ready'],
+  },
+  implemented: true,
+}
 const backend: BackendStatus = { installed: true, state: 'ready', mpsAvailable: true, engine: 'TripoSR',
   runtimePath: '', message: '', downloadCacheBytes: 0, recommendedQuality: 'balanced', qualities: [] }
 
