@@ -44,8 +44,21 @@ pub fn inspect(root: &Path) -> BackendStatus {
         .and_then(|v| serde_json::from_slice(&v).ok())
         .unwrap_or(Value::Null);
     let files = manifest["files"].as_object();
+    let python_key = if files
+        .as_ref()
+        .is_some_and(|f| f.contains_key("venv/Scripts/python.exe"))
+    {
+        "venv/Scripts/python.exe"
+    } else if files
+        .as_ref()
+        .is_some_and(|f| f.contains_key("venv/python.exe"))
+    {
+        "venv/python.exe"
+    } else {
+        "venv/bin/python"
+    };
     let required = [
-        "venv/bin/python",
+        python_key,
         "TripoSR/tsr/system.py",
         "models/triposr/config.yaml",
         "models/triposr/model.ckpt",
@@ -227,7 +240,7 @@ fn run_worker(
     .map_err(|e| e.to_string())?;
     context.emit("analyzing", 1.0, "Starting the local inference worker");
     let log = std::fs::File::create(output_dir.join("worker.log")).map_err(|e| e.to_string())?;
-    let mut command = Command::new(root.join("venv/bin/python"));
+    let mut command = Command::new(super::paths::python_executable(root));
     command
         .arg(worker)
         .arg("--request")

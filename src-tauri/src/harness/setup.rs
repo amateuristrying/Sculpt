@@ -93,7 +93,7 @@ pub fn install(root: &Path, script: &Path, context: &JobContext) -> Result<(), S
         .env("SCULPT_UV", &uv)
         .env("SCULPT_PARENT_PID", std::process::id().to_string())
         .env("UV_PYTHON_INSTALL_DIR", root.join("python"))
-        .env("UV_CACHE_DIR", root.join("package-cache"))
+        .env("UV_CACHE_DIR", paths::cache_dir(root))
         .env("UV_NO_CONFIG", "1")
         .env("UV_NO_PROGRESS", "1")
         .env("PYTHONUNBUFFERED", "1")

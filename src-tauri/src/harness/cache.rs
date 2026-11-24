@@ -17,11 +17,11 @@ pub fn download_bytes(root: &Path) -> u64 {
             .map(|entries| entries.flatten().map(|e| size(&e.path())).sum())
             .unwrap_or(0)
     }
-    size(&root.join("package-cache"))
+    size(&paths::cache_dir(root))
 }
 
 fn clear(root: &Path) -> Result<(), String> {
-    let cache = root.join("package-cache");
+    let cache = paths::cache_dir(root);
     match std::fs::symlink_metadata(&cache) {
         Ok(info) if info.is_dir() && !info.is_symlink() => {
             std::fs::remove_dir_all(cache).map_err(|e| e.to_string())

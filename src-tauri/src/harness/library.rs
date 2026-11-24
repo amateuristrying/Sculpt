@@ -450,13 +450,12 @@ impl Library {
             file.sync_all().map_err(storage_error)?;
             // Opening/syncing the directory before rename catches inaccessible or
             // unsupported storage before the commit point.
-            let directory = File::open(&self.root).map_err(storage_error)?;
-            directory.sync_all().map_err(storage_error)?;
-            fs::rename(&temporary, &destination).map_err(storage_error)?;
+            super::paths::sync_directory(&self.root).map_err(storage_error)?;
+            super::paths::atomic_replace(&temporary, &destination).map_err(storage_error)?;
             // Rename is the commit point. Keep memory aligned even if a filesystem
             // cannot confirm the final directory flush after accepting the rename.
             self.snapshot = next;
-            directory.sync_all().map_err(|e| {
+            super::paths::sync_directory(&self.root).map_err(|e| {
                 format!("The library was saved, but its durability could not be confirmed: {e}")
             })
         })();
@@ -778,9 +777,7 @@ fn verify_source_file(path: &Path, expected_sha: &str) -> Result<(), String> {
 }
 
 fn sync_directory(path: &Path) -> Result<(), String> {
-    File::open(path)
-        .and_then(|file| file.sync_all())
-        .map_err(storage_error)
+    super::paths::sync_directory(path).map_err(storage_error)
 }
 
 fn now() -> String {

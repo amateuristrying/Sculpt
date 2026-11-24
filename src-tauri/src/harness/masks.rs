@@ -285,7 +285,7 @@ fn run_mask_worker(
     )
     .map_err(|e| e.to_string())?;
     let log = directory.join("mask-worker.log");
-    let mut command = Command::new(root.join("venv/bin/python"));
+    let mut command = Command::new(paths::python_executable(root));
     command
         .arg(worker)
         .arg("--request")
