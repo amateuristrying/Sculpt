@@ -2,21 +2,52 @@
   "schemaVersion": 1,
   "id": "triposr",
   "name": "TripoSR",
+  "description": "Fast feedforward 3D reconstruction generating textured meshes from a single image.",
+  "publisher": "VAST AI Research / Stability AI",
+  "upstreamUrl": "https://github.com/VAST-AI-Research/TripoSR",
   "licenseIdentifier": "MIT",
   "engineRevision": "107cefdc244c39106fa830359024f6a2f1c78871",
   "runtimeSpecPath": "backend/runtime-spec.json",
   "adapter": "triposr",
   "implemented": true,
   "nativeHardwareRequired": true,
+  "supportedInputs": [
+    "single_image"
+  ],
+  "materialCapabilities": {
+    "channels": [
+      "vertex_color",
+      "diffuse_color"
+    ],
+    "claimsPbr": false
+  },
+  "resourceThresholds": {
+    "ramMinGb": 16.0,
+    "ramRecommendedGb": 16.0,
+    "vramMinGb": 6.0,
+    "vramRecommendedGb": 8.0,
+    "diskDownloadBytes": 1800000000,
+    "installedFootprintBytes": 5000000000
+  },
+  "capabilities": {
+    "progressReporting": true,
+    "cancellation": true,
+    "refinement": true,
+    "supportedOutputFormats": [
+      "glb",
+      "stl"
+    ]
+  },
   "targets": [
     {
       "platform": "macos",
       "architecture": "arm64",
       "computeBackend": "Metal",
       "device": "mps",
-      "minimumRamGb": 16,
+      "minimumRamGb": 16.0,
       "requiresAppleSilicon": true,
-      "validated": true
+      "validated": true,
+      "validationStatus": "validated"
     },
     {
       "platform": "linux",
@@ -25,7 +56,8 @@
       "device": "cuda",
       "minimumRamGb": null,
       "requiresAppleSilicon": false,
-      "validated": false
+      "validated": false,
+      "validationStatus": "experimental"
     },
     {
       "platform": "windows",
@@ -34,7 +66,8 @@
       "device": "cuda",
       "minimumRamGb": null,
       "requiresAppleSilicon": false,
-      "validated": false
+      "validated": false,
+      "validationStatus": "experimental"
     },
     {
       "platform": "any",
@@ -43,7 +76,16 @@
       "device": "cpu",
       "minimumRamGb": null,
       "requiresAppleSilicon": false,
-      "validated": false
+      "validated": false,
+      "validationStatus": "unsupported"
     }
-  ]
+  ],
+  "knownLimits": [
+    "Single-object reconstruction only; occluded or cluttered backgrounds degrade mesh quality.",
+    "Unseen surfaces are inferred by the model rather than observed directly.",
+    "Outputs vertex colors or baked diffuse color texture only; does not generate full PBR channels.",
+    "Mesh extraction can produce thin non-manifold geometry or disconnected fragments requiring post-refinement.",
+    "Not guaranteed to be watertight or directly 3D-printable without slicer inspection."
+  ],
+  "notes": "Bundled baseline image-to-3D engine for Sculpt."
 }

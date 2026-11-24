@@ -31,6 +31,93 @@ export interface EngineProfile {
 export type RuntimeKind = 'mock' | 'pytorch' | 'mlx' | 'cuda-pytorch' | 'onnx' | 'webgpu' | 'native'
 export type ModelState = 'not-installed' | 'downloading' | 'ready' | 'loading' | 'loaded' | 'error'
 
+export type RuntimeAdapter = 'triposr' | 'demo'
+
+export type ComputeDevice = 'mps' | 'cuda' | 'vulkan' | 'directml' | 'cpu'
+
+export type InputModality = 'single_image' | 'multi_image' | 'text_prompt'
+
+export type MaterialChannel =
+  | 'vertex_color'
+  | 'diffuse_color'
+  | 'normal'
+  | 'roughness'
+  | 'metallic'
+  | 'ambient_occlusion'
+  | 'emissive'
+
+export interface MaterialCapabilities {
+  channels: MaterialChannel[]
+  claimsPbr?: boolean
+}
+
+export interface ResourceThresholds {
+  ramMinGb?: number | null
+  ramRecommendedGb?: number | null
+  vramMinGb?: number | null
+  vramRecommendedGb?: number | null
+  diskDownloadBytes?: number | null
+  installedFootprintBytes?: number | null
+}
+
+export type OutputFormat = 'glb' | 'stl' | 'obj'
+
+export interface EngineCapabilities {
+  progressReporting: boolean
+  cancellation: boolean
+  refinement: boolean
+  supportedOutputFormats: OutputFormat[]
+}
+
+export type TargetValidationStatus =
+  | 'validated'
+  | 'supported'
+  | 'experimental'
+  | 'compatible_unverified'
+  | 'unsupported'
+
+export interface EngineTarget {
+  platform: 'macos' | 'windows' | 'linux' | 'any' | string
+  architecture: 'arm64' | 'x86_64' | 'any' | string
+  computeBackend: 'Metal' | 'CUDA' | 'Vulkan' | 'DirectML' | 'CPU' | string
+  device: ComputeDevice
+  minimumRamGb?: number | null
+  recommendedRamGb?: number | null
+  minimumVramGb?: number | null
+  requiresAppleSilicon: boolean
+  validated: boolean
+  validationStatus?: TargetValidationStatus
+}
+
+export interface EngineManifest {
+  schemaVersion: number
+  id: string
+  name: string
+  description?: string | null
+  publisher?: string | null
+  upstreamUrl?: string | null
+  licenseIdentifier: string
+  engineRevision?: string | null
+  runtimeSpecPath?: string | null
+  adapter?: RuntimeAdapter | null
+  implemented: boolean
+  nativeHardwareRequired: boolean
+  supportedInputs: InputModality[]
+  materialCapabilities: MaterialCapabilities
+  resourceThresholds?: ResourceThresholds | null
+  capabilities: EngineCapabilities
+  targets: EngineTarget[]
+  knownLimits: string[]
+  notes?: string | null
+}
+
+export interface EngineAvailability {
+  engineId: string
+  available: boolean
+  device?: ComputeDevice | null
+  reason: string
+}
+
 /** Future adapters may launch a Python worker or native process; Rust owns orchestration. */
 export interface RuntimeDescriptor {
   id: RuntimeKind

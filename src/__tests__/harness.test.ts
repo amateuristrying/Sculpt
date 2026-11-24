@@ -320,3 +320,17 @@ describe('foreground preparation is independent of reconstruction', () => {
     expect(invoke).not.toHaveBeenCalled()
   })
 })
+
+describe('engine descriptor and capability contract', () => {
+  it('validates engine descriptor contract and truthful material channels', async () => {
+    const triposrDescriptor = (await import('../../backend/engines/triposr.json')).default
+    expect(triposrDescriptor.schemaVersion).toBe(1)
+    expect(triposrDescriptor.id).toBe('triposr')
+    expect(triposrDescriptor.supportedInputs).toEqual(['single_image'])
+    expect(triposrDescriptor.materialCapabilities.claimsPbr).toBe(false)
+    expect(triposrDescriptor.materialCapabilities.channels).toContain('vertex_color')
+    expect(triposrDescriptor.capabilities.supportedOutputFormats).toEqual(['glb', 'stl'])
+    expect(triposrDescriptor.targets.some((t: any) => t.platform === 'macos' && t.validated)).toBe(true)
+    expect(triposrDescriptor.targets.some((t: any) => t.platform === 'windows' && !t.validated)).toBe(true)
+  })
+})

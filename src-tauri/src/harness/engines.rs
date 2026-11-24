@@ -21,6 +21,8 @@ pub enum RuntimeAdapter {
 pub enum ComputeDevice {
     Mps,
     Cuda,
+    Vulkan,
+    Directml,
     Cpu,
 }
 
@@ -29,12 +31,198 @@ impl ComputeDevice {
         match self {
             Self::Mps => "mps",
             Self::Cuda => "cuda",
+            Self::Vulkan => "vulkan",
+            Self::Directml => "directml",
             Self::Cpu => "cpu",
         }
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+/// Supported input modalities for generation.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum InputModality {
+    SingleImage,
+    MultiImage,
+    TextPrompt,
+}
+
+fn default_supported_inputs() -> Vec<InputModality> {
+    vec![InputModality::SingleImage]
+}
+
+/// Explicit material channels produced by an engine.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum MaterialChannel {
+    VertexColor,
+    DiffuseColor,
+    Normal,
+    Roughness,
+    Metallic,
+    AmbientOcclusion,
+    Emissive,
+}
+
+/// Material capabilities. Enforces that full PBR is never claimed when channels are missing.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct MaterialCapabilities {
+    pub channels: Vec<MaterialChannel>,
+    #[serde(default)]
+    pub claims_pbr: bool,
+}
+
+impl MaterialCapabilities {
+    pub fn vertex_color_only() -> Self {
+        Self {
+            channels: vec![MaterialChannel::VertexColor],
+            claims_pbr: false,
+        }
+    }
+
+    /// Full PBR requires at minimum a color channel (diffuse or vertex color), normal, roughness,
+    /// and metallic.
+    pub fn has_full_pbr(&self) -> bool {
+        let has_color = self.channels.contains(&MaterialChannel::DiffuseColor)
+            || self.channels.contains(&MaterialChannel::VertexColor);
+        let has_normal = self.channels.contains(&MaterialChannel::Normal);
+        let has_roughness = self.channels.contains(&MaterialChannel::Roughness);
+        let has_metallic = self.channels.contains(&MaterialChannel::Metallic);
+        has_color && has_normal && has_roughness && has_metallic
+    }
+
+    pub fn validate(&self) -> Result<(), String> {
+        if self.channels.is_empty() {
+            return Err("Material capabilities must specify at least one output channel".into());
+        }
+        if self.claims_pbr && !self.has_full_pbr() {
+            return Err(
+                "Full PBR cannot be claimed when essential material channels (diffuse/albedo, normal, roughness, metallic) are missing"
+                    .into(),
+            );
+        }
+        Ok(())
+    }
+}
+
+impl Default for MaterialCapabilities {
+    fn default() -> Self {
+        Self::vertex_color_only()
+    }
+}
+
+/// Hardware resource thresholds for memory and disk usage.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ResourceThresholds {
+    #[serde(default)]
+    pub ram_min_gb: Option<f64>,
+    #[serde(default)]
+    pub ram_recommended_gb: Option<f64>,
+    #[serde(default)]
+    pub vram_min_gb: Option<f64>,
+    #[serde(default)]
+    pub vram_recommended_gb: Option<f64>,
+    #[serde(default)]
+    pub disk_download_bytes: Option<u64>,
+    #[serde(default)]
+    pub installed_footprint_bytes: Option<u64>,
+}
+
+impl ResourceThresholds {
+    pub fn validate(&self) -> Result<(), String> {
+        if let Some(ram) = self.ram_min_gb {
+            if !ram.is_finite() || ram <= 0.0 {
+                return Err("Minimum RAM must be a positive finite number".into());
+            }
+        }
+        if let Some(rec_ram) = self.ram_recommended_gb {
+            if !rec_ram.is_finite() || rec_ram <= 0.0 {
+                return Err("Recommended RAM must be a positive finite number".into());
+            }
+            if let Some(min_ram) = self.ram_min_gb {
+                if rec_ram < min_ram {
+                    return Err("Recommended RAM cannot be less than minimum RAM".into());
+                }
+            }
+        }
+        if let Some(vram) = self.vram_min_gb {
+            if !vram.is_finite() || vram <= 0.0 {
+                return Err("Minimum VRAM must be a positive finite number".into());
+            }
+        }
+        if let Some(rec_vram) = self.vram_recommended_gb {
+            if !rec_vram.is_finite() || rec_vram <= 0.0 {
+                return Err("Recommended VRAM must be a positive finite number".into());
+            }
+            if let Some(min_vram) = self.vram_min_gb {
+                if rec_vram < min_vram {
+                    return Err("Recommended VRAM cannot be less than minimum VRAM".into());
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Supported export formats for an engine.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum OutputFormat {
+    Glb,
+    Stl,
+    Obj,
+}
+
+/// Operational capabilities of an engine.
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct EngineCapabilities {
+    pub progress_reporting: bool,
+    pub cancellation: bool,
+    pub refinement: bool,
+    pub supported_output_formats: Vec<OutputFormat>,
+}
+
+impl Default for EngineCapabilities {
+    fn default() -> Self {
+        Self {
+            progress_reporting: true,
+            cancellation: true,
+            refinement: false,
+            supported_output_formats: vec![OutputFormat::Glb, OutputFormat::Stl],
+        }
+    }
+}
+
+impl EngineCapabilities {
+    pub fn validate(&self) -> Result<(), String> {
+        if self.supported_output_formats.is_empty() {
+            return Err("Engine must support at least one output format".into());
+        }
+        Ok(())
+    }
+}
+
+/// Explicit validation status per target.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum TargetValidationStatus {
+    Validated,
+    Supported,
+    Experimental,
+    CompatibleUnverified,
+    Unsupported,
+}
+
+impl TargetValidationStatus {
+    pub fn is_validated(self) -> bool {
+        matches!(self, Self::Validated | Self::Supported)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct EngineTarget {
     pub platform: String,
@@ -42,28 +230,150 @@ pub struct EngineTarget {
     pub compute_backend: String,
     pub device: ComputeDevice,
     /// Physical RAM admission floor; not a VRAM measurement or peak estimate.
+    #[serde(default)]
     pub minimum_ram_gb: Option<f64>,
+    #[serde(default)]
+    pub recommended_ram_gb: Option<f64>,
+    #[serde(default)]
+    pub minimum_vram_gb: Option<f64>,
+    #[serde(default)]
     pub requires_apple_silicon: bool,
+    #[serde(default)]
     pub validated: bool,
+    #[serde(default)]
+    pub validation_status: Option<TargetValidationStatus>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+impl EngineTarget {
+    pub fn is_target_validated(&self) -> bool {
+        if let Some(status) = self.validation_status {
+            status.is_validated()
+        } else {
+            self.validated
+        }
+    }
+
+    pub fn validate(&self) -> Result<(), String> {
+        if !["macos", "windows", "linux", "any"].contains(&self.platform.as_str()) {
+            return Err(format!("Unsupported target platform: {}", self.platform));
+        }
+        if !["arm64", "x86_64", "any"].contains(&self.architecture.as_str()) {
+            return Err(format!(
+                "Unsupported target architecture: {}",
+                self.architecture
+            ));
+        }
+        if !["Metal", "CUDA", "Vulkan", "DirectML", "CPU"].contains(&self.compute_backend.as_str())
+        {
+            return Err(format!(
+                "Unsupported compute backend: {}",
+                self.compute_backend
+            ));
+        }
+        if self.requires_apple_silicon && self.platform != "macos" {
+            return Err("requiresAppleSilicon can only be set for macOS targets".into());
+        }
+        if let Some(gb) = self.minimum_ram_gb {
+            if !gb.is_finite() || gb <= 0.0 {
+                return Err("minimumRamGb must be a positive finite number".into());
+            }
+        }
+        if let Some(rec) = self.recommended_ram_gb {
+            if !rec.is_finite() || rec <= 0.0 {
+                return Err("recommendedRamGb must be a positive finite number".into());
+            }
+            if let Some(min) = self.minimum_ram_gb {
+                if rec < min {
+                    return Err("recommendedRamGb cannot be less than minimumRamGb".into());
+                }
+            }
+        }
+        if let Some(vram) = self.minimum_vram_gb {
+            if !vram.is_finite() || vram <= 0.0 {
+                return Err("minimumVramGb must be a positive finite number".into());
+            }
+        }
+        match self.device {
+            ComputeDevice::Mps => {
+                if self.platform != "macos" || self.compute_backend != "Metal" {
+                    return Err("MPS compute device requires macOS and Metal backend".into());
+                }
+            }
+            ComputeDevice::Cuda => {
+                if self.compute_backend != "CUDA" {
+                    return Err("CUDA compute device requires CUDA backend".into());
+                }
+            }
+            ComputeDevice::Vulkan => {
+                if self.compute_backend != "Vulkan" {
+                    return Err("Vulkan compute device requires Vulkan backend".into());
+                }
+            }
+            ComputeDevice::Directml => {
+                if self.compute_backend != "DirectML"
+                    || (self.platform != "windows" && self.platform != "any")
+                {
+                    return Err(
+                        "DirectML compute device requires DirectML backend and Windows platform"
+                            .into(),
+                    );
+                }
+            }
+            ComputeDevice::Cpu => {
+                if self.compute_backend != "CPU" {
+                    return Err("CPU compute device requires CPU backend".into());
+                }
+            }
+        }
+        if let Some(status) = self.validation_status {
+            if self.validated && status == TargetValidationStatus::Unsupported {
+                return Err(
+                    "Target cannot have validated=true and validationStatus=unsupported".into(),
+                );
+            }
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct EngineManifest {
     pub schema_version: u32,
     pub id: String,
     pub name: String,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub publisher: Option<String>,
+    #[serde(default)]
+    pub upstream_url: Option<String>,
     /// Component license metadata, not a license audit of its dependencies.
     pub license_identifier: String,
+    #[serde(default)]
     pub engine_revision: Option<String>,
+    #[serde(default)]
     pub runtime_spec_path: Option<String>,
+    #[serde(default)]
     pub adapter: Option<RuntimeAdapter>,
     pub implemented: bool,
     pub native_hardware_required: bool,
+    #[serde(default = "default_supported_inputs")]
+    pub supported_inputs: Vec<InputModality>,
+    #[serde(default)]
+    pub material_capabilities: MaterialCapabilities,
+    #[serde(default)]
+    pub resource_thresholds: Option<ResourceThresholds>,
+    #[serde(default)]
+    pub capabilities: EngineCapabilities,
     pub targets: Vec<EngineTarget>,
+    #[serde(default)]
+    pub known_limits: Vec<String>,
+    #[serde(default)]
+    pub notes: Option<String>,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct EngineAvailability {
     pub engine_id: String,
@@ -86,7 +396,7 @@ impl EngineManifest {
         Ok(manifest)
     }
 
-    fn validate(&self) -> Result<(), String> {
+    pub fn validate(&self) -> Result<(), String> {
         if self.schema_version != 1 {
             return Err("Unsupported engine manifest schema".into());
         }
@@ -104,6 +414,15 @@ impl EngineManifest {
         if self.implemented && (self.adapter.is_none() || self.targets.is_empty()) {
             return Err("An implemented engine requires a compiled adapter and targets".into());
         }
+        if self.implemented && self.supported_inputs.is_empty() {
+            return Err("An implemented engine must support at least one input modality".into());
+        }
+        self.material_capabilities.validate()?;
+        if let Some(thresholds) = &self.resource_thresholds {
+            thresholds.validate()?;
+        }
+        self.capabilities.validate()?;
+
         // Runtime paths are descriptors, not user-provided filesystem paths. Add
         // new adapters here deliberately when their native integration exists.
         match self.adapter {
@@ -135,22 +454,7 @@ impl EngineManifest {
             None => {}
         }
         for target in &self.targets {
-            if !["macos", "windows", "linux", "any"].contains(&target.platform.as_str())
-                || !["arm64", "x86_64", "any"].contains(&target.architecture.as_str())
-                || target
-                    .minimum_ram_gb
-                    .is_some_and(|gb| !gb.is_finite() || gb <= 0.0)
-                || (target.requires_apple_silicon && target.platform != "macos")
-                || match target.device {
-                    ComputeDevice::Mps => {
-                        target.platform != "macos" || target.compute_backend != "Metal"
-                    }
-                    ComputeDevice::Cuda => target.compute_backend != "CUDA",
-                    ComputeDevice::Cpu => target.compute_backend != "CPU",
-                }
-            {
-                return Err("Invalid engine hardware target".into());
-            }
+            target.validate()?;
         }
         Ok(())
     }
@@ -172,11 +476,46 @@ pub fn manifests() -> &'static [EngineManifest] {
         );
         let demo = EngineManifest::parse(
             r#"{
-            "schemaVersion":1,"id":"demo","name":"Workspace Demo",
-            "licenseIdentifier":"NOASSERTION","engineRevision":null,"runtimeSpecPath":null,
-            "adapter":"demo","implemented":true,"nativeHardwareRequired":false,
-            "targets":[{"platform":"any","architecture":"any","computeBackend":"CPU",
-                "device":"cpu","minimumRamGb":null,"requiresAppleSilicon":false,"validated":true}]
+            "schemaVersion": 1,
+            "id": "demo",
+            "name": "Workspace Demo",
+            "description": "Procedural sample sculpture demonstrating viewport and controls without AI inference.",
+            "publisher": "Sculpt Project",
+            "upstreamUrl": null,
+            "licenseIdentifier": "MIT",
+            "engineRevision": null,
+            "runtimeSpecPath": null,
+            "adapter": "demo",
+            "implemented": true,
+            "nativeHardwareRequired": false,
+            "supportedInputs": ["single_image"],
+            "materialCapabilities": {
+                "channels": ["vertex_color"],
+                "claimsPbr": false
+            },
+            "resourceThresholds": null,
+            "capabilities": {
+                "progressReporting": true,
+                "cancellation": true,
+                "refinement": false,
+                "supportedOutputFormats": ["glb", "stl"]
+            },
+            "targets": [
+                {
+                    "platform": "any",
+                    "architecture": "any",
+                    "computeBackend": "CPU",
+                    "device": "cpu",
+                    "minimumRamGb": null,
+                    "requiresAppleSilicon": false,
+                    "validated": true,
+                    "validationStatus": "validated"
+                }
+            ],
+            "knownLimits": [
+                "Generates a static procedural knot rather than reconstructing input images."
+            ],
+            "notes": "Zero-dependency fallback demo for UI testing and navigation."
         }"#,
         )
         .expect("Valid bundled demo descriptor");
@@ -224,12 +563,20 @@ fn plan_engine(
     let validated: Vec<_> = manifest
         .targets
         .iter()
-        .filter(|target| target.validated)
+        .filter(|target| target.is_target_validated())
         .collect();
     for target in validated.iter().copied().filter(matches_backend) {
-        if let Some(minimum) = target.minimum_ram_gb {
+        let ram_threshold = target.minimum_ram_gb.or_else(|| {
+            manifest
+                .resource_thresholds
+                .as_ref()
+                .and_then(|r| r.ram_min_gb)
+        });
+        if let Some(minimum) = ram_threshold {
             if !hardware.memory_gb.is_finite() || hardware.memory_gb < minimum {
-                return Err(format!("This validated runtime requires at least {minimum} GB of detected system memory."));
+                return Err(format!(
+                    "This validated runtime requires at least {minimum} GB of detected system memory."
+                ));
             }
         }
         return Ok(target.device);
@@ -242,7 +589,10 @@ fn plan_engine(
             "The compute backend required by this validated runtime was not detected.".into(),
         );
     }
-    Err("This hardware has no validated Sculpt runtime for this engine. Installation and generation are unavailable.".into())
+    Err(
+        "This hardware has no validated Sculpt runtime for this engine. Installation and generation are unavailable."
+            .into(),
+    )
 }
 
 /// Pure planning: no downloads, process launches, filesystem reads or fallback.
@@ -312,6 +662,22 @@ mod tests {
         assert_eq!(selected.device, ComputeDevice::Mps);
         assert_eq!(selected.device.as_str(), "mps");
         assert_eq!(selected.manifest.id, "triposr");
+        assert_eq!(
+            selected.manifest.supported_inputs,
+            vec![InputModality::SingleImage]
+        );
+        assert_eq!(
+            selected.manifest.material_capabilities.channels,
+            vec![MaterialChannel::VertexColor, MaterialChannel::DiffuseColor]
+        );
+        assert!(!selected.manifest.material_capabilities.claims_pbr);
+        assert!(selected.manifest.capabilities.progress_reporting);
+        assert!(selected.manifest.capabilities.cancellation);
+        assert!(selected.manifest.capabilities.refinement);
+        assert_eq!(
+            selected.manifest.capabilities.supported_output_formats,
+            vec![OutputFormat::Glb, OutputFormat::Stl]
+        );
         assert!(plan(&m4(), manifests())[0].available);
     }
 
@@ -344,6 +710,81 @@ mod tests {
         assert!(resolve("triposr", &hardware)
             .unwrap_err()
             .contains("no validated"));
+    }
+
+    #[test]
+    fn hardware_detection_does_not_imply_model_support() {
+        // Case 1: Windows x64 with high-end NVIDIA GPU (CUDA detected)
+        let win_cuda = HardwareProfile {
+            os: "windows".into(),
+            os_version: "10.0.26100".into(),
+            architecture: "x86_64".into(),
+            chip: "AMD Ryzen 9 9950X".into(),
+            gpu: "NVIDIA GeForce RTX 4090".into(),
+            memory_gb: 64.0,
+            unified_memory: false,
+            is_apple_silicon: false,
+            compute_backends: vec!["CUDA".into(), "DirectML".into(), "CPU".into()],
+            detection_source: "native".into(),
+            storage_gb: Some(1024.0),
+        };
+        let err = resolve("triposr", &win_cuda).unwrap_err();
+        assert!(err.contains("no validated Sculpt runtime"));
+        let plan_res = plan(&win_cuda, manifests());
+        let triposr_plan = plan_res.iter().find(|e| e.engine_id == "triposr").unwrap();
+        assert!(!triposr_plan.available);
+
+        // Case 2: Windows ARM64 Snapdragon X Elite with Qualcomm NPU and Vulkan
+        let win_arm = HardwareProfile {
+            os: "windows".into(),
+            os_version: "11".into(),
+            architecture: "arm64".into(),
+            chip: "Snapdragon X Elite".into(),
+            gpu: "Qualcomm Adreno".into(),
+            memory_gb: 32.0,
+            unified_memory: true,
+            is_apple_silicon: false,
+            compute_backends: vec!["Vulkan".into(), "DirectML".into(), "CPU".into()],
+            detection_source: "native".into(),
+            storage_gb: Some(512.0),
+        };
+        assert!(resolve("triposr", &win_arm).is_err());
+
+        // Case 3: Linux x64 with NVIDIA H100
+        let linux_cuda = HardwareProfile {
+            os: "linux".into(),
+            os_version: "Ubuntu 22.04".into(),
+            architecture: "x86_64".into(),
+            chip: "Intel Xeon".into(),
+            gpu: "NVIDIA H100".into(),
+            memory_gb: 128.0,
+            unified_memory: false,
+            is_apple_silicon: false,
+            compute_backends: vec!["CUDA".into(), "CPU".into()],
+            detection_source: "native".into(),
+            storage_gb: Some(2048.0),
+        };
+        assert!(resolve("triposr", &linux_cuda).is_err());
+
+        // Case 4: Powerful CPU-only workstation does NOT grant CPU inference for TripoSR
+        let cpu_only = HardwareProfile {
+            os: "windows".into(),
+            os_version: "11".into(),
+            architecture: "x86_64".into(),
+            chip: "AMD Threadripper 7980X".into(),
+            gpu: "Basic Display Adapter".into(),
+            memory_gb: 128.0,
+            unified_memory: false,
+            is_apple_silicon: false,
+            compute_backends: vec!["CPU".into()],
+            detection_source: "native".into(),
+            storage_gb: Some(2048.0),
+        };
+        assert!(resolve("triposr", &cpu_only).is_err());
+        // But Demo is supported on CPU!
+        let demo_sel = resolve("demo", &cpu_only).unwrap();
+        assert_eq!(demo_sel.adapter, RuntimeAdapter::Demo);
+        assert_eq!(demo_sel.device, ComputeDevice::Cpu);
     }
 
     #[test]
@@ -380,5 +821,196 @@ mod tests {
         value["workerCommand"] = serde_json::json!("arbitrary-command");
         assert!(EngineManifest::parse(&value.to_string()).is_err());
         assert!(resolve("../triposr", &m4()).is_err());
+    }
+
+    #[test]
+    fn pbr_validation_enforces_material_channel_truth() {
+        // Case 1: Claims PBR but only has vertex color and diffuse -> must FAIL
+        let json = include_str!("../../../backend/engines/triposr.json");
+        let mut value: serde_json::Value = serde_json::from_str(json).unwrap();
+        value["materialCapabilities"]["claimsPbr"] = serde_json::json!(true);
+        let err = EngineManifest::parse(&value.to_string()).unwrap_err();
+        assert!(err.contains("Full PBR cannot be claimed"));
+
+        // Case 2: Claims PBR with complete channel set -> must SUCCEED
+        value["materialCapabilities"]["channels"] =
+            serde_json::json!(["diffuse_color", "normal", "roughness", "metallic"]);
+        let manifest = EngineManifest::parse(&value.to_string()).unwrap();
+        assert!(manifest.material_capabilities.claims_pbr);
+        assert!(manifest.material_capabilities.has_full_pbr());
+
+        // Case 3: Empty channels -> must FAIL
+        value["materialCapabilities"]["channels"] = serde_json::json!([]);
+        value["materialCapabilities"]["claimsPbr"] = serde_json::json!(false);
+        assert!(EngineManifest::parse(&value.to_string())
+            .unwrap_err()
+            .contains("at least one output channel"));
+    }
+
+    #[test]
+    fn resource_thresholds_validation() {
+        let json = include_str!("../../../backend/engines/triposr.json");
+        let mut value: serde_json::Value = serde_json::from_str(json).unwrap();
+
+        // Recommended RAM < Minimum RAM -> FAIL
+        value["resourceThresholds"]["ramMinGb"] = serde_json::json!(16.0);
+        value["resourceThresholds"]["ramRecommendedGb"] = serde_json::json!(8.0);
+        assert!(EngineManifest::parse(&value.to_string())
+            .unwrap_err()
+            .contains("Recommended RAM cannot be less"));
+
+        // Negative VRAM -> FAIL
+        value["resourceThresholds"]["ramRecommendedGb"] = serde_json::json!(16.0);
+        value["resourceThresholds"]["vramMinGb"] = serde_json::json!(-4.0);
+        assert!(EngineManifest::parse(&value.to_string())
+            .unwrap_err()
+            .contains("Minimum VRAM must be a positive finite number"));
+    }
+
+    #[test]
+    fn target_validation_and_consistency() {
+        let json = include_str!("../../../backend/engines/triposr.json");
+        let mut value: serde_json::Value = serde_json::from_str(json).unwrap();
+
+        // Mismatched device and backend: Cuda with Metal backend -> FAIL
+        value["targets"][0]["computeBackend"] = serde_json::json!("Metal");
+        value["targets"][0]["device"] = serde_json::json!("cuda");
+        assert!(EngineManifest::parse(&value.to_string())
+            .unwrap_err()
+            .contains("CUDA compute device requires CUDA backend"));
+
+        // DirectML on macOS -> FAIL
+        value["targets"][0]["computeBackend"] = serde_json::json!("DirectML");
+        value["targets"][0]["device"] = serde_json::json!("directml");
+        assert!(EngineManifest::parse(&value.to_string())
+            .unwrap_err()
+            .contains("DirectML compute device requires DirectML backend and Windows platform"));
+
+        // validated=true but validationStatus=unsupported -> FAIL
+        value["targets"][0]["computeBackend"] = serde_json::json!("Metal");
+        value["targets"][0]["device"] = serde_json::json!("mps");
+        value["targets"][0]["validated"] = serde_json::json!(true);
+        value["targets"][0]["validationStatus"] = serde_json::json!("unsupported");
+        assert!(EngineManifest::parse(&value.to_string())
+            .unwrap_err()
+            .contains("validated=true and validationStatus=unsupported"));
+    }
+
+    #[test]
+    fn roundtrip_serialization_and_backward_compatibility() {
+        // Roundtrip bundled TripoSR
+        let triposr_json = include_str!("../../../backend/engines/triposr.json");
+        let parsed = EngineManifest::parse(triposr_json).unwrap();
+        let serialized = serde_json::to_string_pretty(&parsed).unwrap();
+        let roundtrip = EngineManifest::parse(&serialized).unwrap();
+        assert_eq!(parsed, roundtrip);
+
+        // Minimal legacy descriptor without new optional fields
+        let legacy_json = r#"{
+            "schemaVersion": 1,
+            "id": "demo",
+            "name": "Legacy Demo",
+            "licenseIdentifier": "MIT",
+            "adapter": "demo",
+            "implemented": true,
+            "nativeHardwareRequired": false,
+            "targets": [
+                {
+                    "platform": "any",
+                    "architecture": "any",
+                    "computeBackend": "CPU",
+                    "device": "cpu",
+                    "requiresAppleSilicon": false,
+                    "validated": true
+                }
+            ]
+        }"#;
+        let legacy_manifest = EngineManifest::parse(legacy_json).unwrap();
+        assert_eq!(legacy_manifest.id, "demo");
+        assert_eq!(
+            legacy_manifest.supported_inputs,
+            vec![InputModality::SingleImage]
+        );
+        assert_eq!(
+            legacy_manifest.material_capabilities.channels,
+            vec![MaterialChannel::VertexColor]
+        );
+        assert!(!legacy_manifest.material_capabilities.claims_pbr);
+        assert!(legacy_manifest.capabilities.progress_reporting);
+        assert_eq!(
+            legacy_manifest.capabilities.supported_output_formats,
+            vec![OutputFormat::Glb, OutputFormat::Stl]
+        );
+        assert!(legacy_manifest.targets[0].is_target_validated());
+    }
+
+    #[test]
+    fn unimplemented_engines_cannot_be_resolved() {
+        let manifest = EngineManifest {
+            schema_version: 1,
+            id: "trellis-2".into(),
+            name: "TRELLIS.2".into(),
+            description: Some("Advanced 3D asset generation".into()),
+            publisher: Some("Microsoft".into()),
+            upstream_url: Some("https://github.com/microsoft/TRELLIS.2".into()),
+            license_identifier: "MIT".into(),
+            engine_revision: None,
+            runtime_spec_path: None,
+            adapter: None,
+            implemented: false,
+            native_hardware_required: true,
+            supported_inputs: vec![InputModality::SingleImage, InputModality::TextPrompt],
+            material_capabilities: MaterialCapabilities {
+                channels: vec![
+                    MaterialChannel::DiffuseColor,
+                    MaterialChannel::Normal,
+                    MaterialChannel::Roughness,
+                    MaterialChannel::Metallic,
+                ],
+                claims_pbr: true,
+            },
+            resource_thresholds: Some(ResourceThresholds {
+                ram_min_gb: Some(32.0),
+                ram_recommended_gb: Some(64.0),
+                vram_min_gb: Some(24.0),
+                vram_recommended_gb: Some(24.0),
+                disk_download_bytes: Some(15000000000),
+                installed_footprint_bytes: Some(30000000000),
+            }),
+            capabilities: EngineCapabilities {
+                progress_reporting: true,
+                cancellation: true,
+                refinement: true,
+                supported_output_formats: vec![
+                    OutputFormat::Glb,
+                    OutputFormat::Stl,
+                    OutputFormat::Obj,
+                ],
+            },
+            targets: vec![EngineTarget {
+                platform: "linux".into(),
+                architecture: "x86_64".into(),
+                compute_backend: "CUDA".into(),
+                device: ComputeDevice::Cuda,
+                minimum_ram_gb: Some(32.0),
+                recommended_ram_gb: Some(64.0),
+                minimum_vram_gb: Some(24.0),
+                requires_apple_silicon: false,
+                validated: false,
+                validation_status: Some(TargetValidationStatus::Experimental),
+            }],
+            known_limits: vec!["Requires minimum 24GB VRAM GPU".into()],
+            notes: Some("Experimental future engine".into()),
+        };
+        assert!(manifest.validate().is_ok());
+
+        // Attempting to plan this manifest on high-end hardware returns error
+        let mut hardware = m4();
+        hardware.os = "linux".into();
+        hardware.architecture = "x86_64".into();
+        hardware.compute_backends = vec!["CUDA".into()];
+        hardware.memory_gb = 64.0;
+        let err = plan_engine(&hardware, &manifest).unwrap_err();
+        assert!(err.contains("No validated runtime adapter"));
     }
 }
