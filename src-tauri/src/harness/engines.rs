@@ -749,13 +749,21 @@ pub fn manifests() -> &'static [EngineManifest] {
     })
 }
 
-fn platform_matches(target: &EngineTarget, hardware: &HardwareProfile) -> bool {
-    let platform = match hardware.os.to_ascii_lowercase().as_str() {
+fn normalize_platform(os: &str) -> &'static str {
+    let lower = os.trim().to_ascii_lowercase();
+    match lower.as_str() {
         "macos" | "darwin" => "macos",
         "windows" => "windows",
-        "linux" => "linux",
+        "linux" | "ubuntu" => "linux",
+        _ if lower.contains("ubuntu") || lower.contains("linux") => "linux",
+        _ if lower.contains("windows") => "windows",
+        _ if lower.contains("macos") || lower.contains("darwin") => "macos",
         _ => "unknown",
-    };
+    }
+}
+
+fn platform_matches(target: &EngineTarget, hardware: &HardwareProfile) -> bool {
+    let platform = normalize_platform(&hardware.os);
     let architecture = match hardware.architecture.as_str() {
         "aarch64" | "arm64" => "arm64",
         "x86_64" | "amd64" => "x86_64",
@@ -791,7 +799,7 @@ fn plan_engine(
         .iter()
         .filter(|target| target.is_target_validated())
         .collect();
-    for target in validated.iter().copied().filter(matches_backend) {
+    if let Some(target) = validated.iter().copied().find(matches_backend) {
         let ram_threshold = target.minimum_ram_gb.or_else(|| {
             manifest
                 .resource_thresholds

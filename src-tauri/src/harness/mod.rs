@@ -390,6 +390,8 @@ fn verified_scene_cache(
 #[cfg(test)]
 mod lifecycle_tests;
 #[cfg(test)]
+mod linux_shell_tests;
+#[cfg(test)]
 mod macos_regression_tests;
 #[cfg(test)]
 mod windows_shell_tests;

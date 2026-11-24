@@ -9,6 +9,8 @@ if (process.platform === 'darwin') {
   script = join(dir, 'verify-macos-bundle.mjs')
 } else if (process.platform === 'win32') {
   script = join(dir, 'verify-windows-bundle.mjs')
+} else if (process.platform === 'linux') {
+  script = join(dir, 'verify-linux-bundle.mjs')
 } else {
   console.error(`No bundle verifier is configured for platform: ${process.platform}`)
   process.exit(1)

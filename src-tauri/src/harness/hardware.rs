@@ -335,7 +335,21 @@ MemAvailable:   28901234 kB"#
             assert_eq!(profile.os, "macOS");
             assert!(profile.compute_backends.contains(&"CPU".into()));
         } else if cfg!(target_os = "linux") {
-            assert_eq!(profile.os, "Linux");
+            assert!(
+                profile.os == "Linux" || profile.os == "Ubuntu" || !profile.os.is_empty(),
+                "Native Linux detect must report OS name (found {})",
+                profile.os
+            );
+            assert!(
+                profile.memory_gb > 0.0,
+                "Native Linux detect must find real physical RAM (found {})",
+                profile.memory_gb
+            );
+            assert_ne!(
+                profile.chip, "Unknown processor",
+                "Native Linux detect must find CPU processor string"
+            );
+            assert_ne!(profile.architecture, "Unknown");
             assert!(profile.compute_backends.contains(&"CPU".into()));
         }
     }

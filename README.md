@@ -18,6 +18,19 @@ npm run desktop:verify:windows-arm64
 
 Replace `aarch64-pc-windows-msvc` / `windows-arm64` with `x86_64-pc-windows-msvc` / `windows-x64` when targeting Windows x64. This produces a per-user NSIS installer (`Sculpt_<version>_arm64-setup.exe` or `Sculpt_<version>_x64-setup.exe`) and stores local library and shell log data under `%LOCALAPPDATA%\com.sculpt.desktop\` (`library\`, `library-development\`, `logs\`). On Windows, local AI reconstruction (TripoSR) remains unvalidated and is not yet claimed as supported; the desktop shells run native host execution, hardware detection, native image import, local library persistence, the Workspace Demo, and GLB/STL export. See [Windows desktop shell notes (x64 & ARM64)](docs/windows-shell.md).
 
+## Run on Ubuntu 22.04 LTS x64 (desktop shell, `.deb`)
+
+Ubuntu 22.04 LTS x64 (`.deb` only) is the sole initial Linux target; AppImage, RPM, Snap, Flatpak, and other Linux distributions are not supported. Install Node.js 22+, a current stable Rust toolchain (`x86_64-unknown-linux-gnu`), and Tauri's WebKitGTK 4.1 system prerequisites (`libwebkit2gtk-4.1-dev`, `build-essential`, `curl`, `wget`, `file`, `libxdo-dev`, `libssl-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`, `patchelf`). From the project directory on Ubuntu 22.04:
+
+```sh
+npm ci
+npm test
+npm run desktop:build -- --target x86_64-unknown-linux-gnu --bundles deb
+npm run desktop:verify:linux-x64
+```
+
+This produces `Sculpt_<version>_amd64.deb` under `src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/` and stores local library and shell log data under `~/.local/share/com.sculpt.desktop/` (`library/`, `library-development/`, `logs/`). On Linux, local AI reconstruction (TripoSR) remains unvalidated and is not yet claimed as supported; clean Ubuntu 22.04 VM/CI `.deb` build, install, and launch verification remain pending an Ubuntu 22.04 host/runner. See [Ubuntu 22.04 desktop shell notes](docs/linux-shell.md).
+
 ## Run on macOS
 
 Install Node.js 22+, a current stable Rust toolchain, and Xcode Command Line Tools (`xcode-select --install`). Then, from the project directory:
@@ -92,7 +105,7 @@ The [real-photo evaluation](backend/evaluation/README.md) uses 34 independently 
 
 The [mask evaluation](docs/foreground-masks.md) compares U2Net and an optional, separately downloaded MIT BiRefNet model on all 34 photos. U2Net remains the default: observed median CPU worker times were 1.20 s versus 19.35 s, with mixed selections and no independent accuracy ground truth yet. A real corrected-mask reconstruction isolates the wooden-horse test subject; it does not establish a general reconstruction-quality improvement.
 
-CI uses macOS, Windows x64, and Windows ARM64 runners, without model weights or GPU inference. Public repositories run on push/PR; private repositories require manually starting the workflow (`workflow_dispatch`).
+CI uses macOS, Windows x64, Windows ARM64, and Ubuntu 22.04 x64 runners, without model weights or GPU inference. Public repositories run on push/PR; private repositories require manually starting the workflow (`workflow_dispatch`).
 
 ```sh
 npm run backend:test

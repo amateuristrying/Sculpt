@@ -196,3 +196,84 @@ jobs:
           path: src-tauri/target/aarch64-pc-windows-msvc/release/bundle/nsis/*-setup.exe
           retention-days: 14
           if-no-files-found: error
+
+  ubuntu-x64:
+    if: github.event.repository.private == false || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install Ubuntu 22.04 Tauri and WebKitGTK prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Frontend tests and build
+        run: |
+          npm test
+          npm run build
+      - name: Install Rust toolchain
+        run: rustup toolchain install stable --profile minimal --component rustfmt --target x86_64-unknown-linux-gnu
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ubuntu-22.04-x64-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+      - name: Native format, compile, and unit tests
+        working-directory: src-tauri
+        run: |
+          cargo +stable fmt --check
+          cargo +stable check --locked --target x86_64-unknown-linux-gnu
+          cargo +stable test --locked --target x86_64-unknown-linux-gnu
+      - name: Install UI test browser
+        run: npx playwright install chrome --with-deps
+      - name: Workspace UI tests
+        run: npm run test:ui
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Worker protocol tests (no ML dependencies or weights)
+        run: |
+          python -m pip install pytest
+          python -m pytest backend/tests/test_protocol.py -q
+      - name: Build and verify the Ubuntu 22.04 x64 desktop shell (.deb)
+        run: |
+          npm run desktop:build -- --target x86_64-unknown-linux-gnu --bundles deb
+          npm run desktop:verify:linux-x64
+      - name: Verify clean .deb install and uninstall on Ubuntu 22.04
+        run: |
+          DEB_PATH=$(find src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb -maxdepth 1 -name '*.deb' | head -n 1)
+          test -n "$DEB_PATH"
+          sudo apt-get install -y "$DEB_PATH"
+          test -x /usr/bin/sculpt
+          sudo apt-get remove -y sculpt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sculpt-Ubuntu-22.04-x64-shell
+          path: src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ubuntu-ui-failure-details
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
