@@ -5,6 +5,7 @@ import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { extname, join, relative, resolve } from 'node:path'
+import { verifyArtifactDirectory } from './verify-ci-hygiene.mjs'
 
 const root = resolve(import.meta.dirname, '..')
 const config = JSON.parse(readFileSync(join(root, 'src-tauri/tauri.conf.json'), 'utf8'))
@@ -198,6 +199,8 @@ for (const name of files) {
     `Packaged resource is stale: ${name}`,
   )
 }
+
+verifyArtifactDirectory(baseDir)
 
 console.log(
   JSON.stringify(

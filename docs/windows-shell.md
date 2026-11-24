@@ -72,3 +72,7 @@ Packaged Windows builds store local data under `%LOCALAPPDATA%\com.sculpt.deskto
 - `runtime\` — reserved for local inference runtime files (`%LOCALAPPDATA%\com.sculpt.desktop\runtime\` in packaged builds, `.sculpt-runtime\` in debug builds, or `SCULPT_RUNTIME_DIR`)
 
 The NSIS installer uses `currentUser` install mode (installing to `%LOCALAPPDATA%\Sculpt` without requiring administrator elevation) and leaves user library/log data intact on uninstall unless manually removed.
+
+## CI candidate builds
+
+`.github/workflows/ci.yml` runs `windows-x64` (`windows-latest`) and `windows-arm64` (`windows-11-arm`, Beta) with `contents: read` permissions and offline model-hub guards. After running `npm run ci:hygiene`, frontend tests/build, Rust `fmt`/`clippy`/`check`/`test --locked`, Python syntax/protocol checks, bundle verification, and artifact hygiene checks, CI retains the NSIS candidate installer and `SHA256SUMS.txt` (`Sculpt-Windows-x64-shell` and `Sculpt-Windows-arm64-shell`) for 14 days for human review only with no automatic release or deployment.

@@ -71,6 +71,8 @@ npm run desktop:verify
 
 The bundle verifier checks the app's executable, arm64 architecture, local
 signature and exact packaged resource bytes. It does not assert notarization
-or run the neural model. CI builds and uploads a ZIP of the verified app after
-its unit and UI suites pass; it does not download model weights or certify GPU
-hardware.
+or run the neural model. The `macos-arm64` Beta lane on `macos-15` builds and
+uploads `Sculpt-macOS-arm64-preview` (a ZIP of `Sculpt.app` plus `SHA256SUMS.txt`,
+retained for 14 days for human review only with no automatic release) after
+static/privacy hygiene, unit, Rust, Python, and UI suites pass; it does not
+download model weights or certify GPU hardware.

@@ -105,9 +105,10 @@ The [real-photo evaluation](backend/evaluation/README.md) uses 34 independently 
 
 The [mask evaluation](docs/foreground-masks.md) compares U2Net and an optional, separately downloaded MIT BiRefNet model on all 34 photos. U2Net remains the default: observed median CPU worker times were 1.20 s versus 19.35 s, with mixed selections and no independent accuracy ground truth yet. A real corrected-mask reconstruction isolates the wooden-horse test subject; it does not establish a general reconstruction-quality improvement.
 
-CI uses macOS, Windows x64, Windows ARM64, and Ubuntu 22.04 x64 runners, without model weights or GPU inference. Public repositories run on push/PR; private repositories require manually starting the workflow (`workflow_dispatch`).
+CI runs `.github/workflows/ci.yml` with read-only `contents: read` permissions and offline model-hub environment guards (`HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`), without model weights, GPU inference, or automatic release/deploy steps. The workflow checks repository privacy/ignore hygiene (`npm run ci:hygiene`) alongside cross-platform jobs for Windows x64 (`windows-latest`), Windows ARM64 Beta (`windows-11-arm`), Ubuntu 22.04 x64 Beta (`ubuntu-22.04`, `.deb` only), and macOS ARM64 Beta (`macos-15`): each platform lane runs frontend tests/type-check build, Rust `fmt`/`clippy`/`check`/`test --locked`, Python syntax/protocol checks (full locked CPU unit tests on macOS), Playwright UI tests (on `windows-x64`, `ubuntu-x64`, and `macos-arm64`), bundle verification, and artifact hygiene checks with `SHA256SUMS.txt`. Candidate artifacts (`Sculpt-Windows-x64-shell`, `Sculpt-Windows-arm64-shell`, `Sculpt-Ubuntu-22.04-x64-shell`, `Sculpt-macOS-arm64-preview`) are retained for 14 days for human review only. Public repositories run on push/PR; private repositories require manually starting the workflow (`workflow_dispatch`).
 
 ```sh
+npm run ci:hygiene
 npm run backend:test
 npm run test:ui                       # Workspace/lifecycle tests; requires Google Chrome
 SCULPT_BENCHMARK_OUTPUT=backend/outputs/YOUR_RUN npm run test:ui

@@ -11,18 +11,22 @@ permissions:
 
 concurrency:
   group: checks-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  CI: 'true'
+  HF_HUB_OFFLINE: '1'
+  TRANSFORMERS_OFFLINE: '1'
+  PIP_DISABLE_PIP_VERSION_CHECK: '1'
+  PYTHONDONTWRITEBYTECODE: '1'
 
 jobs:
-  desktop:
-    # Private repositories opt in manually to avoid unexpected macOS runner usage.
+  static-hygiene:
+    name: Static, privacy, and workflow hygiene
+    # Private repositories opt in manually to avoid unexpected runner usage.
     if: github.event.repository.private == false || github.event_name == 'workflow_dispatch'
-    # Standard Apple Silicon runner; no signing, model download, or GPU job.
-    runs-on: macos-15
-    timeout-minutes: 40
-    env:
-      HF_HUB_OFFLINE: '1'
-      TRANSFORMERS_OFFLINE: '1'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -31,58 +35,23 @@ jobs:
           cache: npm
       - name: Install frontend dependencies
         run: npm ci
-      - name: Frontend tests
+      - name: Verify CI workflow, ignore rules, and privacy hygiene
+        run: npm run ci:hygiene
+      - name: Frontend unit tests and type-check build
         run: |
           npm test
           npm run build
-      - name: Install Rust toolchain
-        run: rustup toolchain install stable --profile minimal --component rustfmt
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            src-tauri/target
-          key: ${{ runner.os }}-${{ runner.arch }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
-      - name: Native format, compile, and unit tests
-        working-directory: src-tauri
-        run: |
-          cargo +stable fmt --check
-          cargo +stable check --locked
-          cargo +stable test --locked
-      - name: Install UI test browser
-        run: npx playwright install chrome
-      - name: Workspace UI tests
-        run: npm run test:ui
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: pip
-          cache-dependency-path: backend/requirements.lock
-      - name: Install locked worker dependencies without models
-        run: python -m pip install --require-hashes -r backend/requirements.lock
-      - name: Worker unit tests (CPU only, no weights)
-        run: python -m pytest backend/tests -q
-      - name: Build and verify the Mac preview application
+      - name: Python syntax and protocol contract checks (no ML dependencies)
         run: |
-          npm run desktop:build -- --bundles app
-          npm run desktop:verify
-          ditto -c -k --sequesterRsrc --keepParent src-tauri/target/release/bundle/macos/Sculpt.app src-tauri/target/release/bundle/Sculpt-macOS-arm64.zip
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Sculpt-macOS-arm64-preview
-          path: src-tauri/target/release/bundle/Sculpt-macOS-arm64.zip
-          retention-days: 14
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: ui-failure-details
-          path: test-results/
-          retention-days: 7
-          if-no-files-found: ignore
+          python -B -c "import pathlib, py_compile, tempfile; td = tempfile.TemporaryDirectory(); [py_compile.compile(str(p), cfile=str(pathlib.Path(td.name) / (p.name + 'c')), doraise=True) for p in [pathlib.Path('backend/setup_runtime.py'), pathlib.Path('backend/download_models.py'), pathlib.Path('backend/worker.py'), *pathlib.Path('backend/sculpt_backend').glob('*.py')]]"
+          python -m pip install pytest
+          python -m pytest backend/tests/test_protocol.py -q
 
   windows-x64:
+    name: Windows x64 (NSIS shell)
     if: github.event.repository.private == false || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     timeout-minutes: 40
@@ -94,13 +63,15 @@ jobs:
           cache: npm
       - name: Install frontend dependencies
         run: npm ci
+      - name: Verify CI workflow, ignore rules, and privacy hygiene
+        run: npm run ci:hygiene
       - name: Frontend tests and build
         run: |
           npm test
           npm run build
       - name: Install Rust toolchain
         shell: pwsh
-        run: rustup toolchain install stable --profile minimal --component rustfmt --target x86_64-pc-windows-msvc
+        run: rustup toolchain install stable --profile minimal --component rustfmt,clippy --target x86_64-pc-windows-msvc
       - uses: actions/cache@v4
         with:
           path: |
@@ -108,11 +79,13 @@ jobs:
             ~/.cargo/git
             src-tauri/target
           key: ${{ runner.os }}-x64-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
-      - name: Native format, compile, and unit tests
+          restore-keys: ${{ runner.os }}-x64-cargo-
+      - name: Native format, lint, compile, and unit tests
         working-directory: src-tauri
         shell: pwsh
         run: |
           cargo +stable fmt --check
+          cargo +stable clippy --locked --target x86_64-pc-windows-msvc --no-deps
           cargo +stable check --locked --target x86_64-pc-windows-msvc
           cargo +stable test --locked --target x86_64-pc-windows-msvc
       - name: Install UI test browser
@@ -122,19 +95,24 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Worker protocol tests (no ML dependencies or weights)
+      - name: Python syntax and protocol contract tests (no ML dependencies or weights)
+        shell: pwsh
         run: |
+          python -B -c "import pathlib, py_compile, tempfile; td = tempfile.TemporaryDirectory(); [py_compile.compile(str(p), cfile=str(pathlib.Path(td.name) / (p.name + 'c')), doraise=True) for p in [pathlib.Path('backend/setup_runtime.py'), pathlib.Path('backend/download_models.py'), pathlib.Path('backend/worker.py'), *pathlib.Path('backend/sculpt_backend').glob('*.py')]]"
           python -m pip install pytest
           python -m pytest backend/tests/test_protocol.py -q
-      - name: Build and verify the Windows x64 desktop shell installer
+      - name: Build, verify, and audit Windows x64 candidate installer
         shell: pwsh
         run: |
           npm run desktop:build -- --target x86_64-pc-windows-msvc --bundles nsis
           npm run desktop:verify:windows-x64
+          node scripts/verify-ci-hygiene.mjs --check-artifact src-tauri/target/x86_64-pc-windows-msvc/release --artifact-glob "bundle/nsis/*-setup.exe" --write-checksums src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: Sculpt-Windows-x64-shell
-          path: src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*-setup.exe
+          path: |
+            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*-setup.exe
+            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/SHA256SUMS.txt
           retention-days: 14
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
@@ -146,6 +124,7 @@ jobs:
           if-no-files-found: ignore
 
   windows-arm64:
+    name: Windows ARM64 (Beta NSIS shell)
     if: github.event.repository.private == false || github.event_name == 'workflow_dispatch'
     runs-on: windows-11-arm
     timeout-minutes: 40
@@ -157,13 +136,15 @@ jobs:
           cache: npm
       - name: Install frontend dependencies
         run: npm ci
+      - name: Verify CI workflow, ignore rules, and privacy hygiene
+        run: npm run ci:hygiene
       - name: Frontend tests and build
         run: |
           npm test
           npm run build
       - name: Install Rust toolchain
         shell: pwsh
-        run: rustup toolchain install stable --profile minimal --component rustfmt --target aarch64-pc-windows-msvc
+        run: rustup toolchain install stable --profile minimal --component rustfmt,clippy --target aarch64-pc-windows-msvc
       - uses: actions/cache@v4
         with:
           path: |
@@ -171,33 +152,41 @@ jobs:
             ~/.cargo/git
             src-tauri/target
           key: ${{ runner.os }}-arm64-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
-      - name: Native format, compile, and unit tests
+          restore-keys: ${{ runner.os }}-arm64-cargo-
+      - name: Native format, lint, compile, and unit tests
         working-directory: src-tauri
         shell: pwsh
         run: |
           cargo +stable fmt --check
+          cargo +stable clippy --locked --target aarch64-pc-windows-msvc --no-deps
           cargo +stable check --locked --target aarch64-pc-windows-msvc
           cargo +stable test --locked --target aarch64-pc-windows-msvc
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Worker protocol tests (no ML dependencies or weights)
+      - name: Python syntax and protocol contract tests (no ML dependencies or weights)
+        shell: pwsh
         run: |
+          python -B -c "import pathlib, py_compile, tempfile; td = tempfile.TemporaryDirectory(); [py_compile.compile(str(p), cfile=str(pathlib.Path(td.name) / (p.name + 'c')), doraise=True) for p in [pathlib.Path('backend/setup_runtime.py'), pathlib.Path('backend/download_models.py'), pathlib.Path('backend/worker.py'), *pathlib.Path('backend/sculpt_backend').glob('*.py')]]"
           python -m pip install pytest
           python -m pytest backend/tests/test_protocol.py -q
-      - name: Build and verify the Windows ARM64 native desktop shell installer
+      - name: Build, verify, and audit Windows ARM64 candidate installer
         shell: pwsh
         run: |
           npm run desktop:build -- --target aarch64-pc-windows-msvc --bundles nsis
           npm run desktop:verify:windows-arm64
+          node scripts/verify-ci-hygiene.mjs --check-artifact src-tauri/target/aarch64-pc-windows-msvc/release --artifact-glob "bundle/nsis/*-setup.exe" --write-checksums src-tauri/target/aarch64-pc-windows-msvc/release/bundle/nsis/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
           name: Sculpt-Windows-arm64-shell
-          path: src-tauri/target/aarch64-pc-windows-msvc/release/bundle/nsis/*-setup.exe
+          path: |
+            src-tauri/target/aarch64-pc-windows-msvc/release/bundle/nsis/*-setup.exe
+            src-tauri/target/aarch64-pc-windows-msvc/release/bundle/nsis/SHA256SUMS.txt
           retention-days: 14
           if-no-files-found: error
 
   ubuntu-x64:
+    name: Ubuntu 22.04 x64 (Beta .deb shell)
     if: github.event.repository.private == false || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-22.04
     timeout-minutes: 40
@@ -223,12 +212,14 @@ jobs:
             patchelf
       - name: Install frontend dependencies
         run: npm ci
+      - name: Verify CI workflow, ignore rules, and privacy hygiene
+        run: npm run ci:hygiene
       - name: Frontend tests and build
         run: |
           npm test
           npm run build
       - name: Install Rust toolchain
-        run: rustup toolchain install stable --profile minimal --component rustfmt --target x86_64-unknown-linux-gnu
+        run: rustup toolchain install stable --profile minimal --component rustfmt,clippy --target x86_64-unknown-linux-gnu
       - uses: actions/cache@v4
         with:
           path: |
@@ -236,10 +227,12 @@ jobs:
             ~/.cargo/git
             src-tauri/target
           key: ubuntu-22.04-x64-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
-      - name: Native format, compile, and unit tests
+          restore-keys: ubuntu-22.04-x64-cargo-
+      - name: Native format, lint, compile, and unit tests
         working-directory: src-tauri
         run: |
           cargo +stable fmt --check
+          cargo +stable clippy --locked --target x86_64-unknown-linux-gnu --no-deps
           cargo +stable check --locked --target x86_64-unknown-linux-gnu
           cargo +stable test --locked --target x86_64-unknown-linux-gnu
       - name: Install UI test browser
@@ -249,14 +242,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Worker protocol tests (no ML dependencies or weights)
+      - name: Python syntax and protocol contract tests (no ML dependencies or weights)
         run: |
+          python -B -c "import pathlib, py_compile, tempfile; td = tempfile.TemporaryDirectory(); [py_compile.compile(str(p), cfile=str(pathlib.Path(td.name) / (p.name + 'c')), doraise=True) for p in [pathlib.Path('backend/setup_runtime.py'), pathlib.Path('backend/download_models.py'), pathlib.Path('backend/worker.py'), *pathlib.Path('backend/sculpt_backend').glob('*.py')]]"
           python -m pip install pytest
           python -m pytest backend/tests/test_protocol.py -q
-      - name: Build and verify the Ubuntu 22.04 x64 desktop shell (.deb)
+      - name: Build, verify, and audit Ubuntu 22.04 x64 candidate .deb
         run: |
           npm run desktop:build -- --target x86_64-unknown-linux-gnu --bundles deb
           npm run desktop:verify:linux-x64
+          node scripts/verify-ci-hygiene.mjs --check-artifact src-tauri/target/x86_64-unknown-linux-gnu/release --artifact-glob "bundle/deb/*.deb" --write-checksums src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/SHA256SUMS.txt
       - name: Verify clean .deb install and uninstall on Ubuntu 22.04
         run: |
           DEB_PATH=$(find src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb -maxdepth 1 -name '*.deb' | head -n 1)
@@ -267,13 +262,88 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Sculpt-Ubuntu-22.04-x64-shell
-          path: src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
+          path: |
+            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
+            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/SHA256SUMS.txt
           retention-days: 14
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: ubuntu-ui-failure-details
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  macos-arm64:
+    name: macOS ARM64 (Beta preview app)
+    if: github.event.repository.private == false || github.event_name == 'workflow_dispatch'
+    # Standard Apple Silicon runner; ad-hoc signing only, no model download or GPU inference job.
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Verify CI workflow, ignore rules, and privacy hygiene
+        run: npm run ci:hygiene
+      - name: Frontend tests and build
+        run: |
+          npm test
+          npm run build
+      - name: Install Rust toolchain
+        run: rustup toolchain install stable --profile minimal --component rustfmt,clippy
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: ${{ runner.os }}-${{ runner.arch }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-cargo-
+      - name: Native format, lint, compile, and unit tests
+        working-directory: src-tauri
+        run: |
+          cargo +stable fmt --check
+          cargo +stable clippy --locked --no-deps
+          cargo +stable check --locked
+          cargo +stable test --locked
+      - name: Install UI test browser
+        run: npx playwright install chrome
+      - name: Workspace UI tests
+        run: npm run test:ui
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: backend/requirements.lock
+      - name: Python syntax and locked worker unit tests (CPU only, no weights)
+        run: |
+          python -B -c "import pathlib, py_compile, tempfile; td = tempfile.TemporaryDirectory(); [py_compile.compile(str(p), cfile=str(pathlib.Path(td.name) / (p.name + 'c')), doraise=True) for p in [pathlib.Path('backend/setup_runtime.py'), pathlib.Path('backend/download_models.py'), pathlib.Path('backend/worker.py'), *pathlib.Path('backend/sculpt_backend').glob('*.py')]]"
+          python -m pip install --require-hashes -r backend/requirements.lock
+          python -m pytest backend/tests -q
+      - name: Build, verify, and audit macOS ARM64 Beta preview app
+        run: |
+          npm run desktop:build -- --bundles app
+          npm run desktop:verify
+          ditto -c -k --sequesterRsrc --keepParent src-tauri/target/release/bundle/macos/Sculpt.app src-tauri/target/release/bundle/Sculpt-macOS-arm64.zip
+          node scripts/verify-ci-hygiene.mjs --check-artifact src-tauri/target/release --artifact-glob "bundle/Sculpt-macOS-arm64.zip" --write-checksums src-tauri/target/release/bundle/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Sculpt-macOS-arm64-preview
+          path: |
+            src-tauri/target/release/bundle/Sculpt-macOS-arm64.zip
+            src-tauri/target/release/bundle/SHA256SUMS.txt
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: macos-ui-failure-details
           path: test-results/
           retention-days: 7
           if-no-files-found: ignore

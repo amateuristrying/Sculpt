@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { resolve, join } from 'node:path'
+import { verifyArtifactDirectory } from './verify-ci-hygiene.mjs'
 
 const root = resolve(import.meta.dirname, '..')
 const app = resolve(process.argv[2] ?? join(root, 'src-tauri/target/release/bundle/macos/Sculpt.app'))
@@ -26,6 +27,7 @@ for (const name of files) {
   assert.ok(readFileSync(join(resources, name)).equals(readFileSync(join(root, name))),
     `Packaged resource is missing or stale: ${name}`)
 }
+verifyArtifactDirectory(contents)
 console.log(JSON.stringify({ app, version: config.version, architecture: 'arm64',
   verifiedResources: files.length, executableSha256: createHash('sha256').update(readFileSync(executable)).digest('hex'),
   signing: 'Local signature verified; this does not establish Developer ID notarization' }, null, 2))

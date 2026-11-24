@@ -5,7 +5,7 @@
 > **Current scope and status:**
 > - **Packaging target:** `.deb` only (`src-tauri/tauri.linux.conf.json`). AppImage, RPM, Snap, Flatpak, Arch, and other Linux distributions are **not supported or packaged**.
 > - **AI inference status:** Local AI reconstruction (TripoSR) is **not claimed as supported** on Linux yet (`Experimental / unverified` when NVIDIA CUDA is detected; `Unsupported` on CPU-only machines; Workspace Demo is recommended).
-> - **Verification status:** Tauri `.deb` packaging configuration, Linux hardware discovery/engine catalog unit tests, `.deb` bundle verifier unit tests, Playwright UI smoke tests, and the `ubuntu-22.04` GitHub Actions job are implemented. Clean Ubuntu 22.04 VM / CI `.deb` build, install, and desktop launch verification remain **pending** execution on an Ubuntu 22.04 host/runner.
+> - **Verification status:** Tauri `.deb` packaging configuration, Linux hardware discovery/engine catalog unit tests, `.deb` bundle verifier unit tests, Playwright UI smoke tests, CI/artifact hygiene checks (`npm run ci:hygiene`), and the `ubuntu-22.04` GitHub Actions job (`Sculpt-Ubuntu-22.04-x64-shell` with `SHA256SUMS.txt`, retained 14 days for human review with no auto-release) are implemented. Clean Ubuntu 22.04 VM / CI `.deb` build, install, and desktop launch verification remain **pending** execution on an Ubuntu 22.04 host/runner.
 
 ## System prerequisites (Ubuntu 22.04 LTS x64)
 

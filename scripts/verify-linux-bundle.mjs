@@ -4,9 +4,10 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, openSync, readFileSync, readSync, readdirSync, statSync, closeSync } from 'node:fs'
+import { existsSync, openSync, readFileSync, readSync, readdirSync, realpathSync, statSync, closeSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath } from 'node:url'
+import { verifyArtifactDirectory } from './verify-ci-hygiene.mjs'
 
 const root = resolve(import.meta.dirname, '..')
 const CARGO_INTERNAL_DIRS = new Set([
@@ -351,6 +352,7 @@ export function verifyLinuxBundle(argv = process.argv.slice(2)) {
   })
   const contentsRaw = execFileSync('dpkg-deb', ['-c', debPath], { encoding: 'utf8' })
   const contentsSummary = verifyDebFileList(contentsRaw, files)
+  verifyArtifactDirectory(baseDir)
 
   const summary = {
     executable: exeInfo.path,
@@ -374,7 +376,15 @@ export function verifyLinuxBundle(argv = process.argv.slice(2)) {
   return summary
 }
 
-const isDirectExecution = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href
-if (isDirectExecution) {
+function isMainModule() {
+  if (!process.argv[1]) return false
+  try {
+    return realpathSync(resolve(process.argv[1])) === realpathSync(fileURLToPath(import.meta.url))
+  } catch {
+    return resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))
+  }
+}
+
+if (isMainModule()) {
   verifyLinuxBundle()
 }

@@ -21,6 +21,7 @@
     "desktop:verify:windows-arm64": "node scripts/verify-windows-bundle.mjs --target aarch64-pc-windows-msvc --expected-arch arm64",
     "desktop:verify:linux": "node scripts/verify-linux-bundle.mjs",
     "desktop:verify:linux-x64": "node scripts/verify-linux-bundle.mjs --target x86_64-unknown-linux-gnu --expected-arch x64",
+    "ci:hygiene": "node scripts/verify-ci-hygiene.mjs --check-repo",
     "test": "vitest run",
     "test:ui": "playwright test",
     "backend:setup": "node scripts/run-python.mjs system backend/setup_runtime.py",
